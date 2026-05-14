@@ -1,0 +1,7 @@
+@Nosyormi.Api_HostAddress = http://localhost:5034
+
+# Health check — should return {"status":"healthy", ...}
+GET {{Nosyormi.Api_HostAddress}}/health
+Accept: application/json
+
+###
