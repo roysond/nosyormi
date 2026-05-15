@@ -1,6 +1,9 @@
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
+using Nosyormi.Application.Csv;
+using Nosyormi.Infrastructure.Parsing;
 using Nosyormi.Infrastructure.Persistence;
+using Nosyormi.Application.Statements;
 
 // ─────────────────────────────────────────────────────────────────────
 // NOSYOR.M.I — API Entry Point
@@ -17,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 // dependency injection. As we build out Application & Infrastructure
 // layers, this is where their services get wired in.
 
+builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // ─── Database (EF Core + Postgres) ───────────────────────────────────
@@ -25,6 +29,11 @@ var connectionString = Environment.GetEnvironmentVariable("DATABASE_CONNECTION_S
 
 builder.Services.AddDbContext<NosyormiDbContext>(options =>
     options.UseNpgsql(connectionString, npgsql => npgsql.UseVector()));
+
+// ─── Application Services ─────────────────────────────────────────────
+builder.Services.AddScoped<ICsvStatementParser, CsvStatementParser>();
+builder.Services.AddScoped<StatementUploadService>();
+builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
 
 var app = builder.Build();
 
@@ -41,6 +50,8 @@ if (app.Environment.IsDevelopment())
 // Health check endpoint — confirms the API is alive and responding.
 // This is the only endpoint defined directly in Program.cs. All
 // feature-specific endpoints will live in dedicated controllers.
+
+app.MapControllers();
 
 app.MapGet("/health", () => Results.Ok(new
 {
