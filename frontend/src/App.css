@@ -1,0 +1,84 @@
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  color: #e8ecf4;
+}
+
+h1 {
+  font-size: 48px;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+}
+
+.tagline {
+  color: #7a8aaa;
+  font-style: italic;
+  margin: 8px 0 48px;
+}
+
+h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  color: #b8c2d4;
+}
+
+.statement-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.statement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px;
+
+  /* Crystal Teal frosted-glass surface */
+  background: linear-gradient(
+    135deg,
+    rgba(0, 99, 124, 0.35) 0%,
+    rgba(0, 99, 124, 0.18) 100%
+  );
+  border: 1px solid rgba(0, 200, 220, 0.18);
+  border-radius: 12px;
+  margin-bottom: 10px;
+
+  /* The "ground glass" feel */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  /* Soft outer glow */
+  box-shadow:
+    0 4px 24px rgba(0, 99, 124, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.statement-item:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 6px 32px rgba(0, 99, 124, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.statement-item strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.statement-item span {
+  color: #d8e2f0;
+  font-size: 14px;
+}
+
+.statement-item .date {
+  color: #a8b8d0;
+  font-size: 13px;
+}

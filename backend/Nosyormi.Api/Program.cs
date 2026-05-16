@@ -21,6 +21,20 @@ var builder = WebApplication.CreateBuilder(args);
 // layers, this is where their services get wired in.
 
 builder.Services.AddControllers();
+
+// ─── CORS ─────────────────────────────────────────────────────────────
+var frontendOrigin = Environment.GetEnvironmentVariable("FRONTEND_ORIGIN")
+    ?? "http://localhost:5173";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.WithOrigins(frontendOrigin)
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddOpenApi();
 
 // ─── Database (EF Core + Postgres) ───────────────────────────────────
@@ -51,6 +65,8 @@ if (app.Environment.IsDevelopment())
 // Health check endpoint — confirms the API is alive and responding.
 // This is the only endpoint defined directly in Program.cs. All
 // feature-specific endpoints will live in dedicated controllers.
+
+app.UseCors("AllowFrontend");
 
 app.MapControllers();
 
