@@ -8,10 +8,14 @@ namespace Nosyormi.Api.Controllers;
 public class StatementsController : ControllerBase
 {
     private readonly StatementUploadService _uploadService;
+    private readonly StatementQueryService _queryService;
 
-    public StatementsController(StatementUploadService uploadService)
+    public StatementsController(
+        StatementUploadService uploadService,
+        StatementQueryService queryService)
     {
         _uploadService = uploadService;
+        _queryService = queryService;
     }
 
     [HttpPost("upload")]
@@ -38,5 +42,23 @@ public class StatementsController : ControllerBase
             transactionCount = result.TransactionCount,
             fileName = file.FileName
         });
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+    {
+        var statements = await _queryService.GetAllAsync(cancellationToken);
+        return Ok(statements);
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var statement = await _queryService.GetByIdAsync(id, cancellationToken);
+
+        if (statement is null)
+            return NotFound(new { error = $"Statement {id} not found." });
+
+        return Ok(statement);
     }
 }

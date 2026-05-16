@@ -33,6 +33,7 @@ builder.Services.AddDbContext<NosyormiDbContext>(options =>
 // ─── Application Services ─────────────────────────────────────────────
 builder.Services.AddScoped<ICsvStatementParser, CsvStatementParser>();
 builder.Services.AddScoped<StatementUploadService>();
+builder.Services.AddScoped<StatementQueryService>();
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
 
 var app = builder.Build();
