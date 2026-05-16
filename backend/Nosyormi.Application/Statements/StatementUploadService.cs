@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Nosyormi.Application.Analysis;
 using Nosyormi.Application.Categorization;
 using Nosyormi.Application.Csv;
 using Nosyormi.Domain.Entities;
@@ -9,15 +10,18 @@ public class StatementUploadService
 {
     private readonly ICsvStatementParser _parser;
     private readonly ICategoryClassifier _classifier;
+    private readonly IAnomalyDetector _anomalyDetector;
     private readonly DbContext _db;
 
     public StatementUploadService(
         ICsvStatementParser parser,
         ICategoryClassifier classifier,
+        IAnomalyDetector anomalyDetector,
         DbContext db)
     {
         _parser = parser;
         _classifier = classifier;
+        _anomalyDetector = anomalyDetector;
         _db = db;
     }
 
@@ -39,6 +43,7 @@ public class StatementUploadService
 
         // 3. Classify rows and convert into Transaction entities
         var transactions = new List<Transaction>();
+        var categoryNamesById = new Dictionary<Guid, string>();
 
         foreach (var row in rows)
         {
@@ -48,6 +53,8 @@ public class StatementUploadService
                 cancellationToken);
 
             var category = await GetOrCreateCategoryAsync(result.Category, cancellationToken);
+
+            categoryNamesById[category.Id] = category.Name;
 
             transactions.Add(new Transaction
             {
@@ -62,7 +69,24 @@ public class StatementUploadService
             });
         }
 
-        // 4. Save everything in one transaction
+        // 4. Detect anomalies
+        var transactionInputs = transactions
+            .Select(t => new TransactionInput(
+                t.Id,
+                categoryNamesById[t.CategoryId!.Value],
+                t.Amount))
+            .ToList();
+
+        var anomalyResults = await _anomalyDetector.DetectAsync(
+            transactionInputs,
+            cancellationToken);
+
+        var transactionsById = transactions.ToDictionary(t => t.Id);
+
+        foreach (var result in anomalyResults.Where(r => r.IsAnomaly))
+            transactionsById[result.TransactionId].IsAnomaly = true;
+
+        // 5. Save everything in one transaction
         _db.Add(statement);
         _db.AddRange(transactions);
         await _db.SaveChangesAsync(cancellationToken);
