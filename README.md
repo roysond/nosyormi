@@ -1,9 +1,9 @@
-# NOSYOR.M.I
-> *A mirror for your money.*
+# NOSYOR.M.I — Money Intelligence
+> *Your money, reflected.*
 
 You glance at your balance and freeze. The number is smaller than it should be — and you have no idea why. There's a hole somewhere in the month, and you can't see it.
 
-**NOSYOR.M.I is the mirror that shows you the holes.**
+**NOSYOR.M.I reflects the holes you couldn't see.**
 
 Upload a bank statement. The app reads it, categorizes every transaction, spots the spending that doesn't match your usual pattern, forecasts where next month is heading, and lets you ask plain-English questions like *"Where did I overspend in March?"* — answers tied to the same charts you're looking at.
 

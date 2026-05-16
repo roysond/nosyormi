@@ -1,6 +1,6 @@
 # NOSYOR.M.I — System Architecture
 
-> *A mirror for your money.*
+> *Money Intelligence. Your money, reflected.*
 
 This document is the architectural source of truth for NOSYOR.M.I. It describes how the system is organized, why those organizational choices were made, and what principles every line of code is expected to honor. When a decision needs to be made — a new feature designed, a refactor proposed, a tool considered — it is checked against this document.
 
@@ -269,8 +269,11 @@ A running record of significant architectural and product decisions, with ration
 
 ### 2026-05-11 — Brand and Identity
 
+### 2026-05-11 — Brand and Identity
+
 - **Product name:** NOSYOR.M.I — chosen for the embedded reversal (`I.M. ROYSON`) and as a brand-first identity rather than a feature description. Pronounced as a single word.
-- **Tagline:** *A mirror for your money.* Drives the visual language (reflection, glass, clarity).
+- **Product descriptor:** **Money Intelligence**. The `M.I.` carries dual meaning — forward reads as the product category (Money Intelligence, in the spirit of "AI" or "BI"); backward, the letters complete the `I.M. ROYSON` reveal. A single abbreviation doing two jobs.
+- **Tagline:** *Your money, reflected.* Three words. The word "reflected" carries the mirror metaphor without naming it — visual reflection (charts), data representation (insight), and contemplation (user behavior) at once.
 - **Code namespace:** `Nosyormi` (no dots, PascalCase) — separates brand-facing presentation from compiler-facing identifiers.
 
 ### 2026-05-11 — License
@@ -338,4 +341,4 @@ As the corresponding parts of the system are built, the following sections will 
 
 ---
 
-*Last updated: Friday, May 15, 2026 — Sections 6 (Clean Code + SOLID), 7 (Folder Structure), and 9 (Decision Log) added.*
+*Last updated: Friday, May 15, 2026 — Brand alignment: "Money Intelligence" descriptor added, tagline updated to "Your money, reflected."*

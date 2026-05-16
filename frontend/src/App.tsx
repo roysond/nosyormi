@@ -35,7 +35,7 @@ function App() {
   return (
     <div className="container">
       <h1>NOSYOR.M.I</h1>
-      <p className="tagline">A mirror for your money.</p>
+      <p className="tagline">Your money, reflected.</p>
 
       <h2>Uploaded Statements</h2>
       {statements.length === 0 ? (
