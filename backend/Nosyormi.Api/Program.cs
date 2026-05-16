@@ -1,6 +1,8 @@
 using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
+using Nosyormi.Application.Categorization;
 using Nosyormi.Application.Csv;
+using Nosyormi.Infrastructure.Categorization;
 using Nosyormi.Infrastructure.Parsing;
 using Nosyormi.Infrastructure.Persistence;
 using Nosyormi.Application.Statements;
@@ -49,6 +51,7 @@ builder.Services.AddScoped<ICsvStatementParser, CsvStatementParser>();
 builder.Services.AddScoped<StatementUploadService>();
 builder.Services.AddScoped<StatementQueryService>();
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
+builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier>();
 
 var app = builder.Build();
 
