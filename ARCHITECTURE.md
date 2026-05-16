@@ -143,19 +143,199 @@ The selected model is `openai/text-embedding-3-small`, producing 1536-dimensiona
 
 ---
 
-## Next Sections (To Be Added)
+## 6. Clean Code + SOLID Commitment
 
-The following sections will be added as the corresponding parts of the system are built:
+NOSYOR.M.I is built under explicit commitments to Clean Code and SOLID principles. These are not aspirational tags — they are enforced through architectural choices documented elsewhere in this file. This section captures the principles themselves and the pragmatic tradeoffs that have been made.
 
-- **Section 4 — Database Schema Design** *(to be added before PostgreSQL setup)*
-- **Section 5 — The Chat-to-Visualization Bridge** *(to be added before the chat feature is implemented)*
-- **Section 6 — Clean Code + SOLID Commitment** *(to be added before the first significant Cursor coding session)*
-- **Section 7 — Folder Structure** *(to be added during backend scaffolding)*
-- **Section 8 — Configuration & Environment** *(to be added with Section 7)*
-- **Section 9 — Decision Log** *(maintained incrementally throughout the project)*
+### The Commitments
+
+**Single Responsibility (SRP).** Every class has one clear purpose. Controllers handle HTTP only. Services handle business logic. Repositories handle data access. Entities are pure data shapes. When a class begins to take on a second responsibility, it is split.
+
+**Open/Closed (OCP).** New behavior is added by extending existing structures rather than modifying them. New transaction categories, new AI models, and new data sources are accommodated by adding new implementations behind existing interfaces — not by editing core code.
+
+**Liskov Substitution (LSP).** Any class implementing an interface must be fully substitutable for any other implementation of that interface. The CSV parser today is `CsvStatementParser`; tomorrow it could be a PDF parser, and the rest of the system would not notice.
+
+**Interface Segregation (ISP).** Interfaces are kept narrow and purpose-built. There is no `IEverythingService`. Each interface defines exactly what its callers need.
+
+**Dependency Inversion (DIP).** High-level code depends on abstractions, never on concrete implementations. The upload service depends on `ICsvStatementParser`, not on `CsvHelper` directly. This is what makes the codebase testable and the layered architecture enforceable.
+
+### The Pragmatic Tradeoff
+
+Pure Clean Architecture mandates that the Application layer has zero dependencies on framework code. In NOSYOR.M.I, the Application layer references `Microsoft.EntityFrameworkCore` so that services can directly interact with the `DbContext`.
+
+This is a deliberate tradeoff. The textbook-pure alternative (repository pattern with custom interfaces wrapping every DB call) adds 2-3 files per feature and slows development meaningfully. For a 3-week project with a single developer, the cost-benefit favors pragmatism over purity.
+
+**The principle still holds where it matters most:** business logic does not call EF Core directly in patterns that would be hard to test. When testability becomes a concrete requirement (e.g., when unit testing the orchestrators), the repository pattern will be introduced selectively at that boundary.
+
+### The Cursor Architectural Directive
+
+Every significant Cursor coding session begins with the following directive, ensuring generated code aligns with these principles:
+
+> *"Build this following Clean Code principles and SOLID design. Specifically: Single Responsibility — each class/component should have one clear purpose. Use dependency injection for all services; never instantiate dependencies directly inside a class. Separate concerns: Controllers handle HTTP only, Services handle business logic, Repositories handle data access, Models are pure data structures. Favor interfaces over concrete implementations for any service injected elsewhere. Keep methods focused (ideally under 20 lines) and named so they explain themselves. No magic strings or magic numbers — use constants or enums. Throw meaningful exceptions with context; don't swallow errors silently. Write code that a junior developer could read without comments — and where comments are needed, explain WHY, not WHAT."*
+
+## 7. Folder Structure
+
+This section documents the concrete folder layout of the NOSYOR.M.I codebase, mapping each location to the architectural layer it represents.
+
+### Repository Root
+
+```
+nosyormi/
+├── backend/                     # .NET 10 Web API
+├── frontend/                    # React + TypeScript (Vite)
+├── sample-data/                 # Test CSVs and fixture data
+├── ARCHITECTURE.md              # This document
+├── README.md                    # Public-facing project description
+├── LICENSE                      # PolyForm Noncommercial 1.0.0
+├── .env                         # Local secrets (gitignored)
+├── .env.example                 # Template for environment variables
+└── .gitignore                   # Excludes secrets, builds, node_modules
+```
+
+### Backend — `/backend`
+
+The backend is organized as a single .NET solution (`Nosyormi.slnx`) containing four projects that enforce the four-layer architecture described in Section 2.
+
+```
+backend/
+├── Nosyormi.slnx                # Solution file (.slnx — .NET 10 default)
+├── Nosyormi.Domain/             # Layer 1 (innermost): pure entities
+│   └── Entities/
+│       ├── Statement.cs
+│       ├── Transaction.cs
+│       └── Category.cs
+├── Nosyormi.Application/        # Layer 1-4 business logic & contracts
+│   ├── Csv/
+│   │   ├── ICsvStatementParser.cs
+│   │   └── ParsedTransactionRow.cs
+│   └── Statements/
+│       ├── StatementUploadService.cs
+│       └── StatementQueryService.cs
+├── Nosyormi.Infrastructure/     # External dependencies & implementations
+│   ├── Migrations/              # EF Core migration history
+│   ├── Parsing/
+│   │   └── CsvStatementParser.cs
+│   └── Persistence/
+│       └── NosyormiDbContext.cs
+└── Nosyormi.Api/                # Outermost: HTTP & composition root
+    ├── Controllers/
+    │   └── StatementsController.cs
+    ├── Program.cs               # Service registration, middleware pipeline
+    ├── appsettings.json         # Default configuration (no secrets)
+    └── Nosyormi.Api.http        # Local request-testing fixtures
+```
+
+**Dependency direction (sacred):**
+
+```
+Api ──→ Application ──→ Domain
+            ↑
+Infrastructure
+```
+
+This direction is enforced by .NET project references. Domain depends on nothing. Application depends only on Domain. Infrastructure depends on Application (which transitively gives it Domain). Api depends on Application and Infrastructure — the latter exclusively so that the Composition Root in `Program.cs` can wire concrete implementations to their interfaces.
+
+### Frontend — `/frontend`
+
+The frontend is a Vite-scaffolded React + TypeScript single-page application. It is intentionally lightweight at this stage and will grow as design and feature work progresses.
+
+```
+frontend/
+├── src/
+│   ├── App.tsx                  # Top-level component
+│   ├── App.css                  # Component-scoped styling
+│   ├── main.tsx                 # Entry point — mounts <App /> to #root
+│   ├── index.css                # Global resets and base styles
+│   └── assets/                  # Static assets bundled by Vite
+├── public/                      # Static files served at root path
+├── index.html                   # Single HTML shell — Vite injects scripts
+├── package.json                 # Dependency manifest
+├── tsconfig.json                # TypeScript configuration
+├── vite.config.ts               # Vite build configuration
+└── .gitignore                   # Frontend-specific exclusions
+```
+
+The frontend communicates with the backend exclusively via HTTP, calling endpoints under `http://localhost:5034/api/*`. CORS is enabled on the backend specifically for the frontend's origin (configured via `FRONTEND_ORIGIN` in `.env`).
+
+### Test Data — `/sample-data`
+
+Holds CSV files used for development and manual testing of the upload pipeline. Not committed to production; pure development fixtures.
+
+---
+
+## 9. Decision Log
+
+A running record of significant architectural and product decisions, with rationale. This log is maintained incrementally throughout the project. Each entry captures *what* was decided, *why*, and the *context* at the time — so future-Royson (or any reviewer) understands the reasoning, not just the outcome.
+
+### 2026-05-11 — Brand and Identity
+
+- **Product name:** NOSYOR.M.I — chosen for the embedded reversal (`I.M. ROYSON`) and as a brand-first identity rather than a feature description. Pronounced as a single word.
+- **Tagline:** *A mirror for your money.* Drives the visual language (reflection, glass, clarity).
+- **Code namespace:** `Nosyormi` (no dots, PascalCase) — separates brand-facing presentation from compiler-facing identifiers.
+
+### 2026-05-11 — License
+
+- **Chosen:** PolyForm Noncommercial 1.0.0
+- **Rationale:** Preserves future commercial rights without sacrificing reviewability. Reviewers, recruiters, and students may freely run and learn from the code. Commercial use requires a separate license. Less restrictive than fully proprietary, more protective than MIT for a project that may become a business.
+
+### 2026-05-12 — Stack Decisions
+
+- **Backend:** .NET 10 Web API (mandated by capstone).
+- **Frontend:** React + TypeScript via Vite (over Create React App for speed and modern tooling).
+- **Database:** PostgreSQL 16 with `pgvector` 0.8.1 extension.
+- **AI Provider:** OpenRouter (single API, multiple model providers — enables multi-model routing).
+- **Architecture pattern:** Clean Architecture with four projects (Domain, Application, Infrastructure, Api).
+
+### 2026-05-12 — Multi-Model Routing Over Single-LLM
+
+Adopted a three-tier model routing strategy (`MODEL_LIGHT`, `MODEL_NARRATION`, `MODEL_CHAT`) rather than routing all AI calls through a single model. Rationale: cost discipline, latency optimization, and right-tool-for-the-job alignment with the four-layer architecture. Documented fully in Section 3.
+
+### 2026-05-12 — Embeddings: Single Model, Fixed Dimensions
+
+- **Model:** `openai/text-embedding-3-small`
+- **Dimensions:** 1536
+- **Rationale:** Embeddings from different models are not comparable; changing the model post-data requires full re-embedding. Selected dimension is the documented sweet spot for short, repetitive financial text — larger dimensions offer no meaningful retrieval gain at this scale.
+
+### 2026-05-12 — Orchestrator Pattern (per Hannan)
+
+When multiple APIs (OpenRouter LIGHT, NARRATION, CHAT, embeddings, statistical models) are involved, a centralized orchestrator owns coordination, retries, fallbacks, and logging. Controllers and services never call external APIs directly — they call orchestrators. To be implemented as `IAIOrchestrator` and `IAnalysisOrchestrator` in the Application layer when AI integration begins.
+
+### 2026-05-12 — Database Stays Outside the Pod (per Hannan)
+
+In production/Minikube deployment, PostgreSQL runs as its own Docker container, *not* as a Kubernetes pod. Rationale: data persistence must not depend on disposable pod lifecycles. Application pods may be recreated; the database remains stable in its own container.
+
+### 2026-05-13 — Local Dev: Postgres.app, Not Docker
+
+For local development, PostgreSQL runs via Postgres.app (already installed with `pgvector` 0.8.1 enabled). Docker deferred to Week 3 deployment phase. Rationale: existing tooling familiarity, faster start, no `pgvector` install friction. Migration risk mitigated by discipline rules: all config in `.env`, all schema via EF Core migrations, identical Postgres major version in deployment, mid-project dry-run deployment scheduled.
+
+### 2026-05-13 — Solution File Format
+
+Solution generated as `.slnx` (XML) rather than legacy `.sln`. Rationale: .NET 10's new default. Cleaner format, fewer Git merge conflicts, better long-term maintainability.
+
+### 2026-05-14 — EF Core in Application Layer (Pragmatic Tradeoff)
+
+Application layer references `Microsoft.EntityFrameworkCore` directly, rather than abstracting all data access behind repository interfaces. Rationale: pure Clean Architecture would add 2-3 files per feature for marginal architectural benefit at a 3-week capstone timeline. The repository pattern will be introduced selectively when testability becomes a concrete need (e.g., orchestrator unit tests). Documented in Section 6.
+
+### 2026-05-15 — Chat Guardrails via System Prompts
+
+The conversational chat interface (`MODEL_CHAT`) will be strictly scoped via a guardrailed system prompt. The chat answers only questions related to the user's uploaded bank statements and financial behavior visible therein. Off-topic queries are deflected gracefully, without preaching. Rationale: brand integrity, cost control, and user trust. Each model tier (`MODEL_LIGHT`, `MODEL_NARRATION`, `MODEL_CHAT`) will receive its own purpose-built system prompt. To be documented in detail in Section 5 when the chat-to-visualization bridge is designed.
+
+### 2026-05-15 — CORS for Frontend ↔ Backend
+
+Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_ORIGIN` (`http://localhost:5173` for local dev). Rationale: standard fullstack pattern — browser security blocks cross-origin requests by default; the backend must explicitly trust the frontend's origin.
+
+---
+
+## Sections Still To Be Added
+
+As the corresponding parts of the system are built, the following sections will be written:
+
+- **Section 4 — Database Schema Design** *(to be added when more entities are designed; current entities documented in Section 7)*
+- **Section 5 — The Chat-to-Visualization Bridge** *(to be added before the chat feature is implemented — will also include full system-prompt strategy for all model tiers)*
+- **Section 8 — Configuration & Environment** *(to be added when AI integration begins, since the configuration model will expand significantly then)*
 - **Section 10 — Out-of-Scope** *(to be added at end of Week 1)*
 - **Section 11 — Future Considerations** *(to be added at end of project)*
 
 ---
 
-*Last updated: Tuesday, May 12, 2026 — Sections 1–3 (Foundation)*
+*Last updated: Friday, May 15, 2026 — Sections 6 (Clean Code + SOLID), 7 (Folder Structure), and 9 (Decision Log) added.*
