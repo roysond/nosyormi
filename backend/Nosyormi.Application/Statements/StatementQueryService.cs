@@ -44,7 +44,8 @@ public class StatementQueryService
                 t.TransactionDate,
                 t.Description,
                 t.Amount,
-                t.IsAnomaly
+                t.IsAnomaly,
+                t.Category != null ? t.Category.Name : "Other"
             ))
             .ToListAsync(cancellationToken);
 
@@ -74,4 +75,5 @@ public record TransactionSummary(
     DateOnly TransactionDate,
     string Description,
     decimal Amount,
-    bool IsAnomaly);
+    bool IsAnomaly,
+    string? Category);

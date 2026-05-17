@@ -3,6 +3,7 @@ import { NavLink, Route, Routes } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
 import UploadPage from './pages/UploadPage';
 import ChatPage from './pages/ChatPage';
+import StatementDetailPage from './pages/StatementDetailPage';
 
 const colors = {
   background: '#070d1a',
@@ -127,6 +128,7 @@ export default function App() {
       <main style={styles.main}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
+          <Route path="/dashboard/:id" element={<StatementDetailPage />} />
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/chat" element={<ChatPage />} />
         </Routes>
