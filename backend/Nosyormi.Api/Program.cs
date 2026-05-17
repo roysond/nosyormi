@@ -2,9 +2,11 @@ using DotNetEnv;
 using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Analysis;
 using Nosyormi.Application.Categorization;
+using Nosyormi.Application.Chat;
 using Nosyormi.Application.Csv;
 using Nosyormi.Application.Embeddings;
 using Nosyormi.Infrastructure.Analysis;
+using Nosyormi.Infrastructure.Chat;
 using Nosyormi.Infrastructure.Categorization;
 using Nosyormi.Infrastructure.Embeddings;
 using Nosyormi.Infrastructure.Parsing;
@@ -57,8 +59,10 @@ builder.Services.AddScoped<StatementQueryService>();
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
 builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier>();
 builder.Services.AddHttpClient<IEmbeddingService, OpenRouterEmbeddingService>();
+builder.Services.AddHttpClient<IChatService, OpenRouterChatService>();
 builder.Services.AddScoped<IAnomalyDetector, ZScoreAnomalyDetector>();
 builder.Services.AddScoped<IForecastingService, MovingAverageForecastingService>();
+builder.Services.AddScoped<ITimeSeriesService, TimeSeriesService>();
 
 var app = builder.Build();
 

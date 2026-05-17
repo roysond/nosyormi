@@ -31,7 +31,7 @@ public class CsvStatementParser : ICsvStatementParser
         {
             var row = new ParsedTransactionRow
             {
-                TransactionDate = ParseDate(csv.GetField("Date")),
+                TransactionDate = ParseDate(csv.GetField("Date") ?? string.Empty),
                 Description = csv.GetField("Description") ?? string.Empty,
                 Amount = ParseAmount(csv.GetField("Amount"))
             };
@@ -42,21 +42,33 @@ public class CsvStatementParser : ICsvStatementParser
         return rows;
     }
 
-    private static DateOnly ParseDate(string? value)
+    private static DateOnly ParseDate(string rawDate)
     {
-        if (string.IsNullOrWhiteSpace(value))
-            return DateOnly.MinValue;
-
-        // Try common US formats first (per our locale default)
-        string[] formats = { "MM/dd/yyyy", "M/d/yyyy", "yyyy-MM-dd" };
-
-        if (DateOnly.TryParseExact(value, formats, CultureInfo.InvariantCulture,
-            DateTimeStyles.None, out var parsed))
+        var formats = new[]
         {
-            return parsed;
+            "MM/dd/yyyy",
+            "yyyy-MM-dd",
+            "dd/MM/yyyy",
+            "dd-MMM-yyyy",
+            "MMM dd, yyyy",
+            "M/d/yyyy",
+            "d/M/yyyy"
+        };
+
+        var trimmed = rawDate.Trim();
+
+        foreach (var format in formats)
+        {
+            if (DateOnly.TryParseExact(trimmed, format,
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var result))
+            {
+                return result;
+            }
         }
 
-        return DateOnly.MinValue;
+        throw new FormatException($"Unable to parse date '{rawDate}'. Supported formats: MM/dd/yyyy, yyyy-MM-dd, dd/MM/yyyy, dd-MMM-yyyy.");
     }
 
     private static decimal ParseAmount(string? value)
