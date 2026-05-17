@@ -55,6 +55,7 @@ builder.Services.AddScoped<StatementQueryService>();
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
 builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier>();
 builder.Services.AddScoped<IAnomalyDetector, ZScoreAnomalyDetector>();
+builder.Services.AddScoped<IForecastingService, MovingAverageForecastingService>();
 
 var app = builder.Build();
 
