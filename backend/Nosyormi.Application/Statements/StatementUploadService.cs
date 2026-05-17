@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Analysis;
 using Nosyormi.Application.Categorization;
 using Nosyormi.Application.Csv;
+using Nosyormi.Application.Embeddings;
 using Nosyormi.Domain.Entities;
 
 namespace Nosyormi.Application.Statements;
@@ -11,17 +12,20 @@ public class StatementUploadService
     private readonly ICsvStatementParser _parser;
     private readonly ICategoryClassifier _classifier;
     private readonly IAnomalyDetector _anomalyDetector;
+    private readonly IEmbeddingService _embeddingService;
     private readonly DbContext _db;
 
     public StatementUploadService(
         ICsvStatementParser parser,
         ICategoryClassifier classifier,
         IAnomalyDetector anomalyDetector,
+        IEmbeddingService embeddingService,
         DbContext db)
     {
         _parser = parser;
         _classifier = classifier;
         _anomalyDetector = anomalyDetector;
+        _embeddingService = embeddingService;
         _db = db;
     }
 
@@ -86,7 +90,17 @@ public class StatementUploadService
         foreach (var result in anomalyResults.Where(r => r.IsAnomaly))
             transactionsById[result.TransactionId].IsAnomaly = true;
 
-        // 5. Save everything in one transaction
+        // 5. Generate embeddings
+        foreach (var transaction in transactions)
+        {
+            var embedding = await _embeddingService.GetEmbeddingAsync(
+                transaction.Description,
+                cancellationToken);
+
+            transaction.Embedding = embedding;
+        }
+
+        // 6. Save everything in one transaction
         _db.Add(statement);
         _db.AddRange(transactions);
         await _db.SaveChangesAsync(cancellationToken);

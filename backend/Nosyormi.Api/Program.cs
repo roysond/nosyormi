@@ -3,8 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Analysis;
 using Nosyormi.Application.Categorization;
 using Nosyormi.Application.Csv;
+using Nosyormi.Application.Embeddings;
 using Nosyormi.Infrastructure.Analysis;
 using Nosyormi.Infrastructure.Categorization;
+using Nosyormi.Infrastructure.Embeddings;
 using Nosyormi.Infrastructure.Parsing;
 using Nosyormi.Infrastructure.Persistence;
 using Nosyormi.Application.Statements;
@@ -54,6 +56,7 @@ builder.Services.AddScoped<StatementUploadService>();
 builder.Services.AddScoped<StatementQueryService>();
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
 builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier>();
+builder.Services.AddHttpClient<IEmbeddingService, OpenRouterEmbeddingService>();
 builder.Services.AddScoped<IAnomalyDetector, ZScoreAnomalyDetector>();
 builder.Services.AddScoped<IForecastingService, MovingAverageForecastingService>();
 

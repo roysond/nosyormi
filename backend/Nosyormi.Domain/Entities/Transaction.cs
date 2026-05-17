@@ -20,6 +20,8 @@ public class Transaction
     // Anomaly flag — set by the Statistical Layer later
     public bool IsAnomaly { get; set; }
 
+    public float[]? Embedding { get; set; }
+
     // When this row was created in our DB (audit trail)
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
