@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
+  Area,
   Bar,
   BarChart,
   CartesianGrid,
@@ -258,24 +259,64 @@ export default function ChatPage() {
 
     if (type === 'pie' || !chartUpdate?.type) {
       return (
-        <ResponsiveContainer width="100%" height={280}>
-          <PieChart>
-            <Pie
-              data={categoryTotals}
-              dataKey="value"
-              nameKey="name"
-              cx="40%"
-              cy="50%"
-              outerRadius={90}
-            >
-              {categoryTotals.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip content={<GlassTooltip />} />
-            <Legend layout="vertical" align="right" verticalAlign="middle" />
-          </PieChart>
-        </ResponsiveContainer>
+        <>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={categoryTotals}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                innerRadius={50}
+                paddingAngle={3}
+              >
+                {categoryTotals.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip content={<GlassTooltip />} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              justifyContent: 'center',
+              marginTop: 12,
+            }}
+          >
+            {categoryTotals.map((category, index) => (
+              <div
+                key={category.name}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 999,
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  color: '#e8ecf4',
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: COLORS[index % COLORS.length],
+                    flexShrink: 0,
+                  }}
+                />
+                {category.name}: ${category.value.toFixed(0)}
+              </div>
+            ))}
+          </div>
+        </>
       );
     }
 
@@ -287,15 +328,24 @@ export default function ChatPage() {
 
       return (
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={barData}>
-            <CartesianGrid stroke="rgba(255,255,255,0.08)" />
+          <BarChart
+            data={barData}
+            margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(255,255,255,0.05)"
+            />
             <XAxis
               dataKey="name"
-              tick={{ fill: colors.muted, fontSize: 11 }}
-              stroke="rgba(255,255,255,0.2)"
+              tick={{ fill: '#7a8aaa', fontSize: 10 }}
+              angle={-35}
+              textAnchor="end"
+              height={60}
+              interval={0}
             />
             <YAxis
-              tick={{ fill: colors.muted, fontSize: 11 }}
+              tick={{ fill: '#7a8aaa', fontSize: 11 }}
               stroke="rgba(255,255,255,0.2)"
             />
             <Tooltip content={<GlassTooltip />} cursor={{ fill: 'rgba(0, 99, 124, 0.1)' }} />
@@ -320,17 +370,32 @@ export default function ChatPage() {
       return (
         <ResponsiveContainer width="100%" height={280}>
           <LineChart data={lineData}>
-            <CartesianGrid stroke="rgba(255,255,255,0.08)" />
+            <defs>
+              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(0,99,124,0.3)" />
+                <stop offset="100%" stopColor="rgba(0,99,124,0)" />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="rgba(255,255,255,0.05)"
+            />
             <XAxis
               dataKey="date"
-              tick={{ fill: colors.muted, fontSize: 11 }}
+              tick={{ fill: '#7a8aaa', fontSize: 11 }}
               stroke="rgba(255,255,255,0.2)"
             />
             <YAxis
-              tick={{ fill: colors.muted, fontSize: 11 }}
+              tick={{ fill: '#7a8aaa', fontSize: 11 }}
               stroke="rgba(255,255,255,0.2)"
             />
             <Tooltip content={<GlassTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="amount"
+              fill="url(#lineGradient)"
+              stroke="none"
+            />
             <Line
               type="monotone"
               dataKey="amount"
@@ -390,6 +455,9 @@ export default function ChatPage() {
                   fontFamily: 'monospace',
                   fontSize: 13,
                   color: colors.white,
+                  flexShrink: 0,
+                  minWidth: 80,
+                  textAlign: 'right',
                 }}
               >
                 -${Math.abs(tx.amount).toFixed(2)}
@@ -433,7 +501,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ display: 'flex', height: 'calc(100vh - 0px)', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
       <style>{`
         @keyframes chat-dot-pulse {
           0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
@@ -462,10 +530,10 @@ export default function ChatPage() {
       {/* Left panel */}
       <div
         style={{
-          flex: '0 0 60%',
+          flex: '0 0 55%',
+          height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          height: '100%',
           borderRight: '1px solid rgba(255,255,255,0.07)',
         }}
       >
@@ -609,11 +677,12 @@ export default function ChatPage() {
       {/* Right panel */}
       <div
         style={{
-          flex: '0 0 40%',
-          padding: 24,
+          flex: '0 0 45%',
+          height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          minWidth: 0,
+          padding: '24px',
+          overflow: 'hidden',
         }}
       >
         <h3
@@ -626,7 +695,18 @@ export default function ChatPage() {
         >
           {getChartTitle()}
         </h3>
-        <div style={{ flex: 1, minHeight: 0 }}>{renderChart()}</div>
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            overflowX: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 12,
+          }}
+        >
+          {renderChart()}
+        </div>
         <p style={{ margin: '12px 0 0', color: colors.muted, fontSize: 12 }}>
           {getChartHint()}
         </p>

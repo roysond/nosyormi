@@ -1,113 +1,142 @@
+import { useState } from 'react';
 import type { CSSProperties } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
-import UploadPage from './pages/UploadPage';
+import TransactionsPage from './pages/TransactionsPage';
 import ChatPage from './pages/ChatPage';
 import StatementDetailPage from './pages/StatementDetailPage';
-
-const colors = {
-  background: '#070d1a',
-  sidebar: '#0d1526',
-  text: '#e8ecf4',
-  teal: '#00637C',
-  sidebarBorder: 'rgba(255,255,255,0.07)',
-};
 
 const styles = {
   app: {
     display: 'flex',
-    minHeight: '100vh',
-    background: colors.background,
-    color: colors.text,
-    fontFamily: "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+    height: '100vh',
+    width: '100vw',
+    overflow: 'hidden',
+    background: '#F8FAFC',
   },
   sidebar: {
-    position: 'fixed' as const,
-    top: 0,
-    left: 0,
-    width: 220,
+    width: '220px',
+    minWidth: '220px',
+    maxWidth: '220px',
     height: '100vh',
-    background: colors.sidebar,
-    borderRight: `1px solid ${colors.sidebarBorder}`,
-    boxSizing: 'border-box' as const,
+    background: '#F1F5F9',
+    borderRight: '1px solid #E2E8F0',
     display: 'flex',
     flexDirection: 'column' as const,
-    padding: '28px 0 24px',
+    padding: '24px 12px',
+    boxSizing: 'border-box' as const,
+    flexShrink: 0,
   },
   brand: {
-    fontWeight: 700,
-    fontSize: '1.15rem',
-    color: colors.teal,
-    padding: '0 20px',
-    marginBottom: 6,
-    letterSpacing: '0.02em',
+    padding: '0 12px 28px',
+    borderBottom: '1px solid #E2E8F0',
+    marginBottom: '16px',
   },
-  tagline: {
-    margin: 0,
-    padding: '0 20px 28px',
-    fontSize: '0.8rem',
-    fontStyle: 'italic',
-    color: 'rgba(232, 236, 244, 0.55)',
+  brandName: {
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#00637C',
+    letterSpacing: '-0.02em',
+    whiteSpace: 'nowrap' as const,
+  },
+  brandTagline: {
+    fontSize: '11px',
+    color: '#94A3B8',
+    fontStyle: 'italic' as const,
+    marginTop: '2px',
+    whiteSpace: 'nowrap' as const,
   },
   nav: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: 4,
-    padding: '0 12px',
+    gap: '4px',
+    flex: 1,
   },
   main: {
-    marginLeft: 220,
     flex: 1,
-    minHeight: '100vh',
-    boxSizing: 'border-box' as const,
+    height: '100vh',
+    overflow: 'auto',
+    background: '#F8FAFC',
+    minWidth: 0,
+  },
+  version: {
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    fontSize: '10px',
+    color: '#CBD5E1',
+    padding: '0 12px',
+    marginTop: 'auto',
   },
 };
 
-function navLinkStyle(isActive: boolean): CSSProperties {
-  return {
+function navItemStyle(isActive: boolean, isHovered: boolean): CSSProperties {
+  const base: CSSProperties = {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '12px 20px',
-    borderRadius: 8,
-    color: colors.text,
+    padding: isActive ? '10px 14px 10px 11px' : '10px 14px',
+    borderRadius: 10,
+    cursor: 'pointer',
     textDecoration: 'none',
-    fontSize: '0.95rem',
-    borderLeft: `3px solid ${isActive ? colors.teal : 'transparent'}`,
-    background: isActive ? 'rgba(0, 99, 124, 0.25)' : 'transparent',
-    transition: 'background 0.15s ease',
+    fontSize: '13.5px',
+    fontWeight: isActive ? 600 : 500,
+    color: isActive ? '#00637C' : '#475569',
+    border: isActive ? '1px solid rgba(0,99,124,0.2)' : '1px solid transparent',
+    borderLeft: isActive ? '3px solid #00637C' : '1px solid transparent',
+    transition: 'all 0.15s ease',
   };
+
+  if (isActive) {
+    return {
+      ...base,
+      background: 'rgba(0,99,124,0.08)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      boxShadow:
+        '0 1px 8px rgba(0,99,124,0.08), inset 0 1px 0 rgba(255,255,255,0.6)',
+    };
+  }
+
+  if (isHovered) {
+    return {
+      ...base,
+      background: 'rgba(0,99,124,0.06)',
+      color: '#00637C',
+    };
+  }
+
+  return base;
 }
 
-function SidebarNavLink({
-  to,
+function NavItem({
   icon,
   label,
+  to,
 }: {
-  to: string;
   icon: string;
   label: string;
+  to: string;
 }) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <NavLink to={to} style={{ textDecoration: 'none' }}>
-      {({ isActive }) => (
-        <span
-          style={navLinkStyle(isActive)}
-          onMouseEnter={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.background = 'rgba(0, 99, 124, 0.15)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!isActive) {
-              e.currentTarget.style.background = 'transparent';
-            }
-          }}
-        >
-          <span aria-hidden>{icon}</span>
-          {label}
-        </span>
-      )}
+    <NavLink
+      to={to}
+      end={to === '/'}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={({ isActive }) => navItemStyle(isActive, isHovered)}
+    >
+      <span
+        style={{
+          fontSize: '16px',
+          display: 'inline-flex',
+          alignItems: 'center',
+        }}
+        aria-hidden
+      >
+        {icon}
+      </span>
+      <span style={{ flex: 1 }}>{label}</span>
     </NavLink>
   );
 }
@@ -116,21 +145,26 @@ export default function App() {
   return (
     <div style={styles.app}>
       <aside style={styles.sidebar}>
-        <div style={styles.brand}>NOSYOR.M.I</div>
-        <p style={styles.tagline}>Your money, reflected.</p>
+        <div style={styles.brand}>
+          <div style={styles.brandName}>NOSYOR.M.I</div>
+          <div style={styles.brandTagline}>Your money, reflected.</div>
+        </div>
+
         <nav style={styles.nav}>
-          <SidebarNavLink to="/" icon="📊" label="Dashboard" />
-          <SidebarNavLink to="/upload" icon="⬆️" label="Upload" />
-          <SidebarNavLink to="/chat" icon="💬" label="Chat" />
+          <NavItem to="/" icon="⌂" label="Dashboard" />
+          <NavItem to="/transactions" icon="▤" label="Transactions" />
+          <NavItem to="/chat" icon="◉" label="NOSYOR.M.I Chat" />
         </nav>
+
+        <div style={styles.version}>NOSYOR.M.I · v1.0</div>
       </aside>
 
       <main style={styles.main}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
-          <Route path="/dashboard/:id" element={<StatementDetailPage />} />
-          <Route path="/upload" element={<UploadPage />} />
+          <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/dashboard/:id" element={<StatementDetailPage />} />
         </Routes>
       </main>
     </div>
