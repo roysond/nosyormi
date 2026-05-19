@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Area,
   Bar,
@@ -11,10 +11,12 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Sector,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
+import type { PieSectorShapeProps } from 'recharts';
 
 const STATEMENT_ID = '3574c93a-16ac-43e6-a142-a5463437d542';
 const API_BASE = 'http://localhost:5034';
@@ -58,6 +60,10 @@ interface CategoryTotal {
   value: number;
 }
 
+interface CategoryTotalWithPercentage extends CategoryTotal {
+  percentage: number;
+}
+
 interface ForecastItem {
   category: string;
   actualAverage: number;
@@ -65,23 +71,64 @@ interface ForecastItem {
 }
 
 const colors = {
-  text: '#e8ecf4',
-  muted: '#7a8aaa',
+  text: '#1E293B',
+  muted: '#64748B',
+  hint: '#94A3B8',
   teal: '#00637C',
   amber: '#f4a623',
   white: '#ffffff',
 };
 
-const tooltipBoxStyle: CSSProperties = {
-  background: 'rgba(13, 21, 38, 0.92)',
-  border: '1px solid rgba(0, 200, 220, 0.25)',
-  borderRadius: '10px',
-  padding: '10px 16px',
-  backdropFilter: 'blur(12px)',
-  WebkitBackdropFilter: 'blur(12px)',
-  boxShadow: '0 4px 24px rgba(0, 99, 124, 0.2)',
-  color: '#e8ecf4',
-  fontSize: '13px',
+const UniversalTooltip = ({ active, payload }: any) => {
+  if (!active || !payload || !payload.length) return null;
+  const item = payload[0];
+  return (
+    <div
+      style={{
+        background: 'rgba(255, 255, 255, 0.75)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        border: '1px solid rgba(0, 99, 124, 0.3)',
+        borderRadius: '12px',
+        padding: '10px 14px',
+        boxShadow:
+          '0 8px 32px rgba(0, 99, 124, 0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
+        minWidth: '140px',
+        animation: 'tooltipFadeIn 0.15s ease-out',
+        zIndex: 9999,
+        position: 'relative' as const,
+      }}
+    >
+      <div
+        style={{
+          fontSize: '11px',
+          fontWeight: 600,
+          color: '#00637C',
+          marginBottom: '4px',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase' as const,
+        }}
+      >
+        {item.payload?.fullName || item.payload?.name || ''}
+      </div>
+      {item.payload?.date && (
+        <div style={{ fontSize: '10px', color: '#94A3B8', marginBottom: '4px' }}>
+          {item.payload.date}
+        </div>
+      )}
+      <div style={{ fontSize: '16px', fontWeight: 700, color: '#1E293B', marginBottom: '2px' }}>
+        ${typeof item.value === 'number' ? item.value.toFixed(2) : item.value}
+      </div>
+      {item.payload?.isAnomaly && (
+        <div style={{ fontSize: '10px', color: '#F59E0B', marginTop: '4px' }}>⚠ ANOMALY</div>
+      )}
+      {item.payload?.percentage && (
+        <div style={{ fontSize: '11px', color: '#64748B' }}>
+          {item.payload.percentage.toFixed(1)}% of total
+        </div>
+      )}
+    </div>
+  );
 };
 
 function formatShortDate(dateStr: string): string {
@@ -89,6 +136,43 @@ function formatShortDate(dateStr: string): string {
     month: 'short',
     day: 'numeric',
   });
+}
+
+function hexWithOpacity(hex: string, alphaHex = '66'): string {
+  return `${hex}${alphaHex}`;
+}
+
+function formatPieCenterAmount(amount: number): string {
+  return `$${amount.toLocaleString('en-US', {
+    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+  })}`;
+}
+
+function renderActivePieShape(props: PieSectorShapeProps) {
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  return (
+    <Sector
+      cx={cx}
+      cy={cy}
+      innerRadius={innerRadius}
+      outerRadius={(outerRadius ?? 0) + 8}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      fill={fill}
+    />
+  );
+}
+
+function renderPieSector(
+  props: PieSectorShapeProps,
+  index: number,
+  hoveredPieIndex: number | null,
+) {
+  if (index === hoveredPieIndex) {
+    return renderActivePieShape(props);
+  }
+  return <Sector {...props} />;
 }
 
 function buildCategoryTotals(expenses: Transaction[]): CategoryTotal[] {
@@ -113,6 +197,7 @@ export default function ChatPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inputFocused, setInputFocused] = useState(false);
+  const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
 
   const expenses = useMemo(
     () => transactions.filter((t) => t.amount < 0),
@@ -153,50 +238,6 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
-
-  const GlassTooltip = ({
-    active,
-    payload,
-    label,
-  }: {
-    active?: boolean;
-    payload?: Array<{ name?: string; value?: number; payload?: { isAnomaly?: boolean } }>;
-    label?: string;
-  }) => {
-    if (!active || !payload?.length) return null;
-    const value = Number(payload[0].value ?? 0);
-    return (
-      <div style={tooltipBoxStyle}>
-        {label && (
-          <div
-            style={{
-              color: colors.muted,
-              marginBottom: 4,
-              fontFamily: 'monospace',
-              fontSize: 11,
-            }}
-          >
-            {label}
-          </div>
-        )}
-        {!label && payload[0].name && (
-          <div
-            style={{
-              color: colors.muted,
-              marginBottom: 4,
-              fontFamily: 'monospace',
-              fontSize: 11,
-            }}
-          >
-            {payload[0].name}
-          </div>
-        )}
-        <div style={{ color: colors.white, fontWeight: 600 }}>
-          ${value.toFixed(2)}
-        </div>
-      </div>
-    );
-  };
 
   const sendMessage = async () => {
     const trimmed = input.trim();
@@ -239,7 +280,12 @@ export default function ChatPage() {
   const getChartTitle = (): string => {
     const type = chartUpdate?.type;
     if (!type || type === 'pie') return 'Spending Overview';
-    if (type === 'bar') return 'Category Breakdown';
+    if (type === 'bar') {
+      if (chartUpdate?.category !== null && chartUpdate?.category !== undefined) {
+        return `${chartUpdate.category} Breakdown`;
+      }
+      return 'Category Breakdown';
+    }
     if (type === 'line') return 'Spending Over Time';
     if (type === 'anomalies') return 'Anomalies Detected';
     return 'Next Month Forecast';
@@ -258,27 +304,119 @@ export default function ChatPage() {
     const type = chartUpdate?.type ?? 'pie';
 
     if (type === 'pie' || !chartUpdate?.type) {
+      const totalSpend = categoryTotals.reduce((sum, c) => sum + c.value, 0);
+      const pieData: CategoryTotalWithPercentage[] = categoryTotals.map((c) => ({
+        ...c,
+        percentage:
+          totalSpend > 0 ? Math.round((c.value / totalSpend) * 1000) / 10 : 0,
+      }));
+      const hoveredCategory =
+        hoveredPieIndex !== null ? pieData[hoveredPieIndex] : null;
+
       return (
-        <>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
+        <div
+          key={chartUpdate?.type ?? 'pie'}
+          style={{
+            animation: 'chartFadeIn 0.3s ease-out',
+            width: '100%',
+          }}
+        >
+          <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
+            <div style={{ width: '100%' }}>
+            <ResponsiveContainer width="100%" height={340}>
+              <PieChart>
               <Pie
-                data={categoryTotals}
+                data={pieData}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
                 cy="50%"
-                outerRadius={100}
-                innerRadius={50}
-                paddingAngle={3}
+                outerRadius={130}
+                innerRadius={78}
+                paddingAngle={2}
+                shape={(props, index) =>
+                  renderPieSector(props, index, hoveredPieIndex)
+                }
+                onMouseEnter={(_: unknown, index: number) =>
+                  setHoveredPieIndex(index)
+                }
+                onMouseLeave={() => setHoveredPieIndex(null)}
               >
-                {categoryTotals.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
+                {pieData.map((_, index) => {
+                  const color = COLORS[index % COLORS.length];
+                  const isHighlighted = index === hoveredPieIndex;
+                  const hasHighlight = hoveredPieIndex !== null;
+                  const fill =
+                    hasHighlight && !isHighlighted
+                      ? hexWithOpacity(color)
+                      : color;
+                  return <Cell key={`cell-${index}`} fill={fill} />;
+                })}
               </Pie>
-              <Tooltip content={<GlassTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+              <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+              </PieChart>
+            </ResponsiveContainer>
+            </div>
+            <div
+              style={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                zIndex: 0,
+                textAlign: 'center',
+              }}
+            >
+              {hoveredPieIndex === null ? (
+                <>
+                  <div
+                    style={{
+                      fontSize: 18,
+                      fontWeight: 700,
+                      color: '#1E293B',
+                    }}
+                  >
+                    {formatPieCenterAmount(totalSpend)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: '#94A3B8',
+                      marginTop: 2,
+                    }}
+                  >
+                    total spend
+                  </div>
+                </>
+              ) : (
+                hoveredCategory && (
+                  <>
+                    <div
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: '#1E293B',
+                      }}
+                    >
+                      {formatPieCenterAmount(hoveredCategory.value)}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: '#94A3B8',
+                        marginTop: 2,
+                      }}
+                    >
+                      {hoveredCategory.name.length > 12
+                        ? `${hoveredCategory.name.slice(0, 12)}…`
+                        : hoveredCategory.name}
+                    </div>
+                  </>
+                )
+              )}
+            </div>
+          </div>
           <div
             style={{
               display: 'flex',
@@ -288,70 +426,165 @@ export default function ChatPage() {
               marginTop: 12,
             }}
           >
-            {categoryTotals.map((category, index) => (
-              <div
-                key={category.name}
-                style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 999,
-                  padding: '4px 10px',
-                  fontSize: 11,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  color: '#e8ecf4',
-                }}
-              >
-                <span
+            {pieData.map((category, index) => {
+              const isActive = index === hoveredPieIndex;
+              return (
+                <div
+                  key={category.name}
+                  onMouseEnter={() => setHoveredPieIndex(index)}
+                  onMouseLeave={() => setHoveredPieIndex(null)}
                   style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: COLORS[index % COLORS.length],
-                    flexShrink: 0,
+                    background: isActive
+                      ? 'rgba(0,99,124,0.08)'
+                      : 'white',
+                    border: isActive
+                      ? '1px solid rgba(0,99,124,0.25)'
+                      : '1px solid #E2E8F0',
+                    borderRadius: 999,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    color: isActive ? '#00637C' : '#475569',
+                    fontWeight: isActive ? 600 : 400,
                   }}
-                />
-                {category.name}: ${category.value.toFixed(0)}
-              </div>
-            ))}
+                >
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: COLORS[index % COLORS.length],
+                      flexShrink: 0,
+                    }}
+                  />
+                  {category.name}: ${category.value.toFixed(0)}
+                </div>
+              );
+            })}
           </div>
-        </>
+        </div>
       );
     }
 
     if (type === 'bar') {
-      const filtered = chartUpdate.category
-        ? expenses.filter((t) => (t.category || 'Other') === chartUpdate.category)
-        : expenses;
-      const barData = buildCategoryTotals(filtered);
+      const isDrillDown =
+        chartUpdate?.category !== null && chartUpdate?.category !== undefined;
+
+      const drillDownData = isDrillDown
+        ? expenses
+            .filter((t) => (t.category || 'Other') === chartUpdate.category)
+            .map((t) => ({
+              id: t.id,
+              name:
+                t.description.length > 14
+                  ? `${t.description.substring(0, 14)}...`
+                  : t.description,
+              fullName: t.description,
+              value: Math.abs(t.amount),
+              isAnomaly: t.isAnomaly,
+              date: t.transactionDate,
+            }))
+        : [];
+
+      const barData = isDrillDown ? drillDownData : buildCategoryTotals(expenses);
+
+      const AnomalyBarShape = (props: any) => {
+        const { x, y, width, height, index } = props;
+        if (!height || height <= 0) return null;
+        const entry = drillDownData[index];
+        const isAnomaly = entry?.isAnomaly;
+        return (
+          <g
+            style={
+              isAnomaly
+                ? { animation: 'barAnomalyGlow 2s ease-in-out infinite' }
+                : {}
+            }
+          >
+            <rect
+              x={x}
+              y={y}
+              width={width}
+              height={height}
+              fill={isAnomaly ? '#F59E0B' : '#00637C'}
+              rx={4}
+              ry={4}
+            />
+          </g>
+        );
+      };
+
+      const DrillDownTick = ({ x, y, payload }: any) => {
+        const entry = drillDownData.find((d: { id: string }) => d.id === payload.value);
+        const label = entry?.name || payload.value;
+        return (
+          <g transform={`translate(${x},${y})`}>
+            <text
+              x={0}
+              y={0}
+              dy={12}
+              textAnchor="end"
+              fill="#64748B"
+              fontSize={10}
+              transform="rotate(-35)"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      };
 
       return (
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart
-            data={barData}
-            margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
-            />
-            <XAxis
-              dataKey="name"
-              tick={{ fill: '#7a8aaa', fontSize: 10 }}
-              angle={-35}
-              textAnchor="end"
-              height={60}
-              interval={0}
-            />
-            <YAxis
-              tick={{ fill: '#7a8aaa', fontSize: 11 }}
-              stroke="rgba(255,255,255,0.2)"
-            />
-            <Tooltip content={<GlassTooltip />} cursor={{ fill: 'rgba(0, 99, 124, 0.1)' }} />
-            <Bar dataKey="value" fill={colors.teal} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div
+          key={chartUpdate?.type ?? 'pie'}
+          style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
+        >
+          <div style={{ width: '100%' }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={barData}
+                margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="#E2E8F0"
+                />
+                {isDrillDown ? (
+                  <XAxis
+                    dataKey="id"
+                    tick={<DrillDownTick />}
+                    height={65}
+                    interval={0}
+                  />
+                ) : (
+                  <XAxis
+                    dataKey="name"
+                    tick={{ fill: '#64748B', fontSize: 10 }}
+                    angle={-35}
+                    textAnchor="end"
+                    height={60}
+                    interval={0}
+                  />
+                )}
+                <YAxis
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                />
+                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                {isDrillDown ? (
+                  <Bar
+                    dataKey="value"
+                    shape={(props: any) => <AnomalyBarShape {...props} />}
+                  />
+                ) : (
+                  <Bar dataKey="value" fill="#00637C" radius={[4, 4, 0, 0]} />
+                )}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       );
     }
 
@@ -368,43 +601,50 @@ export default function ChatPage() {
         }));
 
       return (
-        <ResponsiveContainer width="100%" height={280}>
-          <LineChart data={lineData}>
-            <defs>
-              <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(0,99,124,0.3)" />
-                <stop offset="100%" stopColor="rgba(0,99,124,0)" />
-              </linearGradient>
-            </defs>
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="rgba(255,255,255,0.05)"
-            />
-            <XAxis
-              dataKey="date"
-              tick={{ fill: '#7a8aaa', fontSize: 11 }}
-              stroke="rgba(255,255,255,0.2)"
-            />
-            <YAxis
-              tick={{ fill: '#7a8aaa', fontSize: 11 }}
-              stroke="rgba(255,255,255,0.2)"
-            />
-            <Tooltip content={<GlassTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="amount"
-              fill="url(#lineGradient)"
-              stroke="none"
-            />
-            <Line
-              type="monotone"
-              dataKey="amount"
-              stroke={colors.teal}
-              strokeWidth={2}
-              dot={false}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <div
+          key={chartUpdate?.type ?? 'pie'}
+          style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
+        >
+          <div style={{ width: '100%' }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={lineData}>
+                <defs>
+                  <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="rgba(0,99,124,0.3)" />
+                    <stop offset="100%" stopColor="rgba(0,99,124,0)" />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  stroke="rgba(0,0,0,0.06)"
+                />
+                <XAxis
+                  dataKey="date"
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                />
+                <YAxis
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                />
+                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Area
+                  type="monotone"
+                  dataKey="amount"
+                  fill="url(#lineGradient)"
+                  stroke="none"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#00637C"
+                  strokeWidth={2.5}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       );
     }
 
@@ -416,14 +656,27 @@ export default function ChatPage() {
 
       if (anomalyRows.length === 0) {
         return (
-          <p style={{ color: colors.muted, fontSize: 14, textAlign: 'center', marginTop: 40 }}>
-            No anomalies detected in this statement.
-          </p>
+          <div
+            key={chartUpdate?.type ?? 'pie'}
+            style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
+          >
+            <p style={{ color: colors.muted, fontSize: 14, textAlign: 'center', marginTop: 40 }}>
+              No anomalies detected in this statement.
+            </p>
+          </div>
         );
       }
 
       return (
-        <div style={{ overflowY: 'auto', maxHeight: 280 }}>
+        <div
+          key={chartUpdate?.type ?? 'pie'}
+          style={{
+            animation: 'chartFadeIn 0.3s ease-out',
+            width: '100%',
+            overflowY: 'auto',
+            maxHeight: 280,
+          }}
+        >
           {anomalyRows.map((tx) => (
             <div
               key={tx.id}
@@ -435,8 +688,8 @@ export default function ChatPage() {
                 alignItems: 'center',
                 padding: '12px 10px',
                 marginBottom: 8,
-                borderLeft: `3px solid ${colors.amber}`,
-                background: 'rgba(244,166,35,0.06)',
+                borderLeft: '3px solid rgba(245,158,11,0.6)',
+                background: 'rgba(245,158,11,0.04)',
                 borderRadius: 4,
               }}
             >
@@ -444,7 +697,7 @@ export default function ChatPage() {
                 style={{
                   fontFamily: 'monospace',
                   fontSize: 11,
-                  color: colors.muted,
+                  color: colors.hint,
                 }}
               >
                 {formatShortDate(tx.transactionDate)}
@@ -454,7 +707,7 @@ export default function ChatPage() {
                 style={{
                   fontFamily: 'monospace',
                   fontSize: 13,
-                  color: colors.white,
+                  color: '#EF4444',
                   flexShrink: 0,
                   minWidth: 80,
                   textAlign: 'right',
@@ -476,24 +729,34 @@ export default function ChatPage() {
       }));
 
       return (
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={chartData}>
-            <CartesianGrid stroke="rgba(255,255,255,0.08)" />
-            <XAxis
-              dataKey="name"
-              tick={{ fill: colors.muted, fontSize: 10 }}
-              stroke="rgba(255,255,255,0.2)"
-            />
-            <YAxis
-              tick={{ fill: colors.muted, fontSize: 11 }}
-              stroke="rgba(255,255,255,0.2)"
-            />
-            <Tooltip content={<GlassTooltip />} />
-            <Legend />
-            <Bar dataKey="actual" name="Actual Avg" fill={colors.teal} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="forecast" name="Forecast" fill={colors.amber} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div
+          key={chartUpdate?.type ?? 'pie'}
+          style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
+        >
+          <div style={{ width: '100%' }}>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart
+                data={chartData}
+                margin={{ top: 10, right: 20, left: 0, bottom: 30 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  angle={-25}
+                  textAnchor="end"
+                  height={50}
+                  stroke="#E2E8F0"
+                />
+                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
+                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Legend />
+                <Bar dataKey="actual" name="Actual Avg" fill="#00637C" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="forecast" name="Forecast" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       );
     }
 
@@ -501,8 +764,20 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#F8FAFC' }}>
       <style>{`
+        @keyframes tooltipFadeIn {
+          from { opacity: 0; transform: translateY(4px) scale(0.97); }
+          to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes chartFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes barAnomalyGlow {
+          0%, 100% { filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5)); }
+          50% { filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.9)); }
+        }
         @keyframes chat-dot-pulse {
           0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
           40% { opacity: 1; transform: scale(1); }
@@ -519,7 +794,7 @@ export default function ChatPage() {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #7a8aaa;
+          background: #94A3B8;
           margin-right: 4px;
           animation: chat-dot-pulse 1.2s ease-in-out infinite;
         }
@@ -534,14 +809,21 @@ export default function ChatPage() {
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          borderRight: '1px solid rgba(255,255,255,0.07)',
+          background: 'white',
+          borderRight: '1px solid #E2E8F0',
         }}
       >
-        <div style={{ padding: '24px 28px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <h2 style={{ margin: 0, color: colors.white, fontSize: '1.35rem', fontWeight: 600 }}>
+        <div
+          style={{
+            padding: '24px 28px',
+            background: 'white',
+            borderBottom: '1px solid #E2E8F0',
+          }}
+        >
+          <h2 style={{ margin: 0, color: '#1E293B', fontSize: '1.35rem', fontWeight: 600 }}>
             Ask NOSYOR.M.I
           </h2>
-          <p style={{ margin: '6px 0 0', color: colors.muted, fontSize: 13 }}>
+          <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: 13 }}>
             Reflecting on sample_statement.csv
           </p>
           {error && (
@@ -557,6 +839,7 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
+            background: 'white',
           }}
         >
           {messages.length === 0 && !loading && (
@@ -573,7 +856,7 @@ export default function ChatPage() {
               <span style={{ fontSize: 48, marginBottom: 16 }} aria-hidden>
                 🪞
               </span>
-              <p style={{ margin: 0, color: colors.muted, fontSize: 15 }}>
+              <p style={{ margin: 0, color: colors.hint, fontSize: 15 }}>
                 Ask me about your spending, anomalies, or forecasts.
               </p>
             </div>
@@ -585,18 +868,14 @@ export default function ChatPage() {
               style={{
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 background:
-                  msg.role === 'user'
-                    ? 'rgba(0,99,124,0.35)'
-                    : 'rgba(255,255,255,0.04)',
+                  msg.role === 'user' ? '#00637C' : '#F8FAFC',
                 border:
-                  msg.role === 'user'
-                    ? '1px solid rgba(0,200,220,0.2)'
-                    : '1px solid rgba(255,255,255,0.08)',
+                  msg.role === 'user' ? 'none' : '1px solid #E2E8F0',
                 borderRadius:
                   msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
                 padding: '12px 16px',
                 maxWidth: msg.role === 'user' ? '75%' : '80%',
-                color: colors.text,
+                color: msg.role === 'user' ? 'white' : '#1E293B',
                 fontSize: 14,
                 lineHeight: 1.5,
               }}
@@ -609,8 +888,8 @@ export default function ChatPage() {
             <div
               style={{
                 alignSelf: 'flex-start',
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
                 borderRadius: '16px 16px 16px 4px',
                 padding: '14px 18px',
               }}
@@ -627,7 +906,8 @@ export default function ChatPage() {
         <div
           style={{
             padding: '16px 28px',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
+            background: 'white',
+            borderTop: '1px solid #E2E8F0',
             display: 'flex',
             gap: 12,
           }}
@@ -645,11 +925,11 @@ export default function ChatPage() {
             disabled={loading}
             style={{
               flex: 1,
-              background: 'rgba(255,255,255,0.05)',
-              border: `1px solid ${inputFocused ? 'rgba(0,200,220,0.4)' : 'rgba(255,255,255,0.1)'}`,
+              background: '#F8FAFC',
+              border: `1px solid ${inputFocused ? '#00637C' : '#E2E8F0'}`,
               borderRadius: 12,
               padding: '14px 18px',
-              color: colors.text,
+              color: '#1E293B',
               fontSize: 14,
               outline: 'none',
             }}
@@ -683,14 +963,16 @@ export default function ChatPage() {
           flexDirection: 'column',
           padding: '24px',
           overflow: 'hidden',
+          background: '#F8FAFC',
+          borderLeft: '1px solid #E2E8F0',
         }}
       >
         <h3
           style={{
             margin: '0 0 16px',
-            color: colors.white,
-            fontSize: 16,
-            fontWeight: 600,
+            color: '#1E293B',
+            fontSize: 15,
+            fontWeight: 700,
           }}
         >
           {getChartTitle()}
@@ -702,12 +984,14 @@ export default function ChatPage() {
             overflowX: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
           }}
         >
           {renderChart()}
         </div>
-        <p style={{ margin: '12px 0 0', color: colors.muted, fontSize: 12 }}>
+        <p style={{ margin: '12px 0 0', color: colors.hint, fontSize: 12 }}>
           {getChartHint()}
         </p>
       </div>
