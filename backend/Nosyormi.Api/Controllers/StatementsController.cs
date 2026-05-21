@@ -34,14 +34,21 @@ public class StatementsController : ControllerBase
         }
 
         await using var stream = file.OpenReadStream();
-        var result = await _uploadService.UploadAsync(file.FileName, stream, cancellationToken);
-
-        return Ok(new
+        try
         {
-            statementId = result.StatementId,
-            transactionCount = result.TransactionCount,
-            fileName = file.FileName
-        });
+            var result = await _uploadService.UploadAsync(file.FileName, stream, cancellationToken);
+
+            return Ok(new
+            {
+                statementId = result.StatementId,
+                transactionCount = result.TransactionCount,
+                fileName = file.FileName
+            });
+        }
+        catch (InvalidOperationException ex) when (ex.Message.StartsWith("DUPLICATE_FILE_HASH:"))
+        {
+            return Conflict(new { error = "This file has already been uploaded. Duplicate statements are not allowed." });
+        }
     }
 
     [HttpGet]

@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Analysis;
 using Nosyormi.Application.Categorization;
@@ -34,14 +35,29 @@ public class StatementUploadService
         Stream csvStream,
         CancellationToken cancellationToken = default)
     {
+        using var readBuffer = new MemoryStream();
+        await csvStream.CopyToAsync(readBuffer, cancellationToken);
+        var fileBytes = readBuffer.ToArray();
+
+        var fileHash = Convert.ToHexString(SHA256.HashData(fileBytes)).ToLowerInvariant();
+
+        var isDuplicate = await _db.Set<Statement>()
+            .AnyAsync(s => s.FileHash == fileHash, cancellationToken);
+
+        if (isDuplicate)
+            throw new InvalidOperationException($"DUPLICATE_FILE_HASH:{fileHash}");
+
+        await using var parseStream = new MemoryStream(fileBytes);
+
         // 1. Parse the CSV
-        var rows = await _parser.ParseAsync(csvStream, cancellationToken);
+        var rows = await _parser.ParseAsync(parseStream, cancellationToken);
 
         // 2. Create the statement record
         var statement = new Statement
         {
             Id = Guid.NewGuid(),
             FileName = fileName,
+            FileHash = fileHash,
             UploadedAt = DateTime.UtcNow
         };
 
