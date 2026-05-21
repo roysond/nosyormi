@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const API_BASE = 'http://localhost:5034';
 
@@ -186,6 +187,13 @@ export default function StatementsPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteHoverId, setDeleteHoverId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const loadStatements = useCallback(async () => {
     setLoading(true);
@@ -245,6 +253,60 @@ export default function StatementsPage() {
     }
   };
 
+  function isCsvFile(file: File): boolean {
+    return file.name.toLowerCase().endsWith('.csv');
+  }
+
+  const closeUploadModal = () => {
+    setShowUploadModal(false);
+    setUploadFile(null);
+    setUploadError(null);
+    setDragOver(false);
+    setUploadSuccess(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const selectUploadFile = (candidate: File | undefined) => {
+    if (!candidate) return;
+    if (!isCsvFile(candidate)) {
+      setUploadError('Only .csv files are supported.');
+      setUploadFile(null);
+      return;
+    }
+    setUploadError(null);
+    setUploadFile(candidate);
+  };
+
+  const handleUpload = async () => {
+    if (!uploadFile || uploading) return;
+    setUploading(true);
+    setUploadError(null);
+    const formData = new FormData();
+    formData.append('file', uploadFile);
+    try {
+      const response = await fetch(`${API_BASE}/api/statements/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const message = body?.error ?? `Upload failed with status ${response.status}.`;
+        throw new Error(message);
+      }
+      setUploadSuccess(true);
+      await loadStatements();
+      setTimeout(() => {
+        closeUploadModal();
+      }, 1500);
+    } catch (err: unknown) {
+      setUploadError(
+        err instanceof Error ? err.message : 'Upload failed. Please try again.',
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div style={styles.page}>
       <style>{`
@@ -256,6 +318,22 @@ export default function StatementsPage() {
 
       <header style={styles.header}>
         <h1 style={styles.headerTitle}>Statements</h1>
+        <button
+          type="button"
+          style={{
+            background: '#00637C',
+            color: 'white',
+            border: 'none',
+            borderRadius: 8,
+            padding: '9px 18px',
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: 'pointer',
+          }}
+          onClick={() => setShowUploadModal(true)}
+        >
+          + Upload Statement
+        </button>
       </header>
 
       {loading && (
@@ -275,7 +353,7 @@ export default function StatementsPage() {
         >
           <p style={styles.emptyTitle}>No statements uploaded yet.</p>
           <p style={styles.emptySubtext}>
-            Upload a CSV from the Dashboard to get started.
+            Click Upload Statement to get started.
           </p>
         </div>
       )}
@@ -294,6 +372,21 @@ export default function StatementsPage() {
                 {statement.transactionCount} transaction
                 {statement.transactionCount === 1 ? '' : 's'}
               </span>
+              <Link
+                to={`/dashboard/${statement.id}`}
+                style={{
+                  fontSize: 13,
+                  color: '#00637C',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  padding: '7px 16px',
+                  border: '1px solid rgba(0,99,124,0.3)',
+                  borderRadius: 8,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                View Details →
+              </Link>
               <button
                 type="button"
                 style={{
@@ -366,6 +459,224 @@ export default function StatementsPage() {
                 {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showUploadModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.3)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={closeUploadModal}
+          role="presentation"
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: 16,
+              padding: 32,
+              width: 480,
+              maxWidth: '90vw',
+              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-modal-title"
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 24,
+              }}
+            >
+              <h2
+                id="upload-modal-title"
+                style={{
+                  margin: 0,
+                  fontSize: 18,
+                  fontWeight: 700,
+                  color: '#1E293B',
+                }}
+              >
+                Upload Statement
+              </h2>
+              <button
+                type="button"
+                onClick={closeUploadModal}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  fontSize: 20,
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  lineHeight: 1,
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+
+            {uploadSuccess ? (
+              <div style={{ textAlign: 'center', padding: '24px 0' }}>
+                <span style={{ fontSize: 32, display: 'block', marginBottom: 12 }}>
+                  ✓
+                </span>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: '#00637C',
+                  }}
+                >
+                  Statement reflected successfully
+                </p>
+              </div>
+            ) : (
+              <>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  style={{
+                    border: `2px dashed ${dragOver ? '#00637C' : 'rgba(0,99,124,0.3)'}`,
+                    background: dragOver
+                      ? 'rgba(0,99,124,0.08)'
+                      : 'rgba(0,99,124,0.03)',
+                    borderRadius: 12,
+                    padding: 40,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    marginBottom: 16,
+                  }}
+                  onClick={() => fileInputRef.current?.click()}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      fileInputRef.current?.click();
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    setDragOver(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(false);
+                    selectUploadFile(e.dataTransfer.files[0]);
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: 36,
+                      display: 'block',
+                      marginBottom: 12,
+                    }}
+                    aria-hidden
+                  >
+                    ⬆
+                  </span>
+                  {uploadFile ? (
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        color: '#00637C',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {uploadFile.name}
+                    </p>
+                  ) : (
+                    <>
+                      <p
+                        style={{
+                          margin: '0 0 6px',
+                          fontSize: 15,
+                          fontWeight: 500,
+                          color: '#1E293B',
+                        }}
+                      >
+                        Drop your CSV here
+                      </p>
+                      <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>
+                        or click to browse
+                      </p>
+                    </>
+                  )}
+                  <p
+                    style={{
+                      margin: '12px 0 0',
+                      fontSize: 11,
+                      color: '#94A3B8',
+                    }}
+                  >
+                    Accepts .csv files from any bank
+                  </p>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  style={{ display: 'none' }}
+                  onChange={(e) => selectUploadFile(e.target.files?.[0])}
+                />
+
+                {uploadError && (
+                  <p
+                    style={{
+                      margin: '0 0 12px',
+                      fontSize: 13,
+                      color: '#F59E0B',
+                    }}
+                  >
+                    {uploadError}
+                  </p>
+                )}
+
+                {uploadFile && (
+                  <button
+                    type="button"
+                    onClick={handleUpload}
+                    disabled={uploading}
+                    style={{
+                      width: '100%',
+                      padding: '12px 24px',
+                      border: 'none',
+                      borderRadius: 8,
+                      background: '#00637C',
+                      color: 'white',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: uploading ? 'not-allowed' : 'pointer',
+                      opacity: uploading ? 0.7 : 1,
+                    }}
+                  >
+                    {uploading ? 'Uploading...' : 'Reflect on this statement'}
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
