@@ -9,7 +9,6 @@ import {
 } from 'recharts';
 import type { PieSectorShapeProps } from 'recharts';
 
-const STATEMENT_ID = '3574c93a-16ac-43e6-a142-a5463437d542';
 const API_BASE = 'http://localhost:5034';
 const COLORS = [
   '#00637C',
@@ -29,6 +28,13 @@ interface Transaction {
   amount: number;
   isAnomaly: boolean;
   category?: string;
+}
+
+interface StatementSummary {
+  id: string;
+  fileName: string;
+  uploadedAt: string;
+  transactionCount: number;
 }
 
 interface Statement {
@@ -308,6 +314,7 @@ export default function DashboardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [statement, setStatement] = useState<Statement | null>(null);
+  const [hasNoStatements, setHasNoStatements] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'spending' | 'income'>('spending');
@@ -328,15 +335,32 @@ export default function DashboardPage() {
     if (showLoading) {
       setLoading(true);
       setError(null);
+      setHasNoStatements(false);
     }
     try {
-      const res = await fetch(`${API_BASE}/api/statements/${STATEMENT_ID}`);
-      if (!res.ok) {
-        throw new Error(`Failed to load statement (HTTP ${res.status}).`);
+      const listRes = await fetch(`${API_BASE}/api/statements`);
+      if (!listRes.ok) {
+        throw new Error(`Failed to load statements (HTTP ${listRes.status}).`);
       }
-      const data: Statement = await res.json();
+      const summaries: StatementSummary[] = await listRes.json();
+
+      if (summaries.length === 0) {
+        setStatement(null);
+        setHasNoStatements(true);
+        return;
+      }
+
+      const newest = summaries[0];
+      const detailRes = await fetch(`${API_BASE}/api/statements/${newest.id}`);
+      if (!detailRes.ok) {
+        throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
+      }
+      const data: Statement = await detailRes.json();
       setStatement(data);
+      setHasNoStatements(false);
     } catch (err: unknown) {
+      setStatement(null);
+      setHasNoStatements(false);
       setError(err instanceof Error ? err.message : 'Failed to load statement.');
     } finally {
       if (showLoading) setLoading(false);
@@ -694,7 +718,32 @@ export default function DashboardPage() {
         <p style={{ ...styles.centered, ...styles.error }}>{error}</p>
       )}
 
-      {!loading && !error && statement && (
+      {!loading && !error && hasNoStatements && (
+        <div
+          style={{
+            ...styles.centered,
+            flexDirection: 'column',
+            gap: 8,
+            textAlign: 'center',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 16,
+              fontWeight: 600,
+              color: '#1E293B',
+            }}
+          >
+            No statements uploaded yet.
+          </p>
+          <p style={{ margin: 0, fontSize: 14, color: '#94A3B8' }}>
+            Upload a bank statement CSV to get started.
+          </p>
+        </div>
+      )}
+
+      {!loading && !error && !hasNoStatements && statement && (
         <>
           <div style={styles.statsRow}>
             <div style={styles.statCard}>
