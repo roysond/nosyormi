@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 
-const STATEMENT_ID = '3574c93a-16ac-43e6-a142-a5463437d542';
 const API_BASE = 'http://localhost:5034';
 
 interface Transaction {
@@ -10,6 +9,13 @@ interface Transaction {
   amount: number;
   isAnomaly: boolean;
   category?: string;
+}
+
+interface StatementSummary {
+  id: string;
+  fileName: string;
+  uploadedAt: string;
+  transactionCount: number;
 }
 
 interface Statement {
@@ -97,21 +103,30 @@ export default function TransactionsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/statements/${STATEMENT_ID}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Failed to load statement (HTTP ${res.status}).`);
+    (async () => {
+      try {
+        const listRes = await fetch(`${API_BASE}/api/statements`);
+        if (!listRes.ok) {
+          throw new Error(`Failed to load statements (HTTP ${listRes.status}).`);
         }
-        return res.json();
-      })
-      .then((data: Statement) => {
+        const summaries: StatementSummary[] = await listRes.json();
+        if (summaries.length === 0) {
+          setError('No statements uploaded yet. Upload a CSV from the Dashboard.');
+          setLoading(false);
+          return;
+        }
+        const detailRes = await fetch(`${API_BASE}/api/statements/${summaries[0].id}`);
+        if (!detailRes.ok) {
+          throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
+        }
+        const data: Statement = await detailRes.json();
         setStatement(data);
         setLoading(false);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load statement.');
         setLoading(false);
-      });
+      }
+    })();
   }, []);
 
   const allTransactions = useMemo(() => {

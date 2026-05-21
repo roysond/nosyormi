@@ -18,7 +18,6 @@ import {
 } from 'recharts';
 import type { PieSectorShapeProps } from 'recharts';
 
-const STATEMENT_ID = '3574c93a-16ac-43e6-a142-a5463437d542';
 const API_BASE = 'http://localhost:5034';
 const COLORS = [
   '#00637C',
@@ -44,6 +43,13 @@ interface ChartUpdate {
 interface ChatResponse {
   answer: string;
   chartUpdate: ChartUpdate | null;
+}
+
+interface StatementSummary {
+  id: string;
+  fileName: string;
+  uploadedAt: string;
+  transactionCount: number;
 }
 
 interface Transaction {
@@ -194,6 +200,8 @@ export default function ChatPage() {
   const [chartUpdate, setChartUpdate] = useState<ChartUpdate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forecastData, setForecastData] = useState<ForecastItem[]>([]);
+  const [statementId, setStatementId] = useState<string | null>(null);
+  const [statementFileName, setStatementFileName] = useState<string>('your statement');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [inputFocused, setInputFocused] = useState(false);
@@ -210,30 +218,43 @@ export default function ChatPage() {
   );
 
   useEffect(() => {
-    fetch(`${API_BASE}/api/statements/${STATEMENT_ID}`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`Failed to load statement (HTTP ${res.status}).`);
-        return res.json();
-      })
-      .then((data) => {
+    (async () => {
+      try {
+        const listRes = await fetch(`${API_BASE}/api/statements`);
+        if (!listRes.ok) {
+          throw new Error(`Failed to load statements (HTTP ${listRes.status}).`);
+        }
+        const summaries: StatementSummary[] = await listRes.json();
+        if (summaries.length === 0) {
+          setError('No statements uploaded yet. Upload a CSV from the Dashboard.');
+          return;
+        }
+        const id = summaries[0].id;
+        setStatementId(id);
+        setStatementFileName(summaries[0].fileName);
+        const detailRes = await fetch(`${API_BASE}/api/statements/${id}`);
+        if (!detailRes.ok) {
+          throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
+        }
+        const data = await detailRes.json();
         setTransactions(data.transactions ?? []);
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'Failed to load statement.');
-      });
+      }
+    })();
   }, []);
 
   useEffect(() => {
-    if (chartUpdate?.type !== 'forecast') return;
+    if (chartUpdate?.type !== 'forecast' || statementId === null) return;
 
-    fetch(`${API_BASE}/api/forecast/${STATEMENT_ID}`)
+    fetch(`${API_BASE}/api/forecast/${statementId}`)
       .then((res) => {
         if (!res.ok) throw new Error(`Failed to load forecast (HTTP ${res.status}).`);
         return res.json();
       })
       .then((data: ForecastItem[]) => setForecastData(data))
       .catch(() => setForecastData([]));
-  }, [chartUpdate?.type]);
+  }, [chartUpdate?.type, statementId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -241,7 +262,7 @@ export default function ChatPage() {
 
   const sendMessage = async () => {
     const trimmed = input.trim();
-    if (!trimmed || loading) return;
+    if (!trimmed || loading || statementId === null) return;
 
     const userMessage: ChatMessage = { role: 'user', content: trimmed };
     const history = messages;
@@ -252,7 +273,7 @@ export default function ChatPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE}/api/chat/${STATEMENT_ID}`, {
+      const response = await fetch(`${API_BASE}/api/chat/${statementId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: trimmed, history }),
@@ -824,7 +845,7 @@ export default function ChatPage() {
             Ask NOSYOR.M.I
           </h2>
           <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: 13 }}>
-            Reflecting on sample_statement.csv
+            Reflecting on {statementFileName}
           </p>
           {error && (
             <p style={{ margin: '8px 0 0', color: colors.amber, fontSize: 12 }}>{error}</p>
