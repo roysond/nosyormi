@@ -42,18 +42,25 @@ interface CategoryTotal {
 }
 
 const colors = {
-  text: '#e8ecf4',
-  muted: '#7a8aaa',
+  text: '#1E293B',
+  muted: '#64748B',
+  hint: '#94A3B8',
   teal: '#00637C',
-  amber: '#f4a623',
-  white: '#ffffff',
-  income: '#5ad97a',
+  amber: '#F59E0B',
+  white: '#FFFFFF',
+  income: '#10B981',
+  expense: '#EF4444',
+  border: '#E2E8F0',
+  surfaceMuted: '#F1F5F9',
+  pageBg: '#F8FAFC',
 };
 
 const styles = {
   page: {
     padding: '8px 24px 40px',
     maxWidth: 960,
+    background: colors.pageBg,
+    minHeight: '100%',
   },
   backLink: {
     display: 'inline-block',
@@ -82,28 +89,29 @@ const styles = {
   },
   statCard: {
     flex: '1 1 180px',
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.07)',
-    borderRadius: 10,
-    padding: '20px 24px',
+    background: colors.white,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 12,
+    padding: '16px 20px',
   },
   statLabel: {
     margin: '0 0 8px',
-    fontSize: '0.8rem',
-    color: colors.muted,
+    fontSize: 11,
+    fontWeight: 600,
+    color: colors.hint,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.06em',
   },
   statValue: (color: string) => ({
     margin: 0,
-    fontSize: '1.75rem',
-    fontWeight: 600,
+    fontSize: 24,
+    fontWeight: 700,
     color,
   }),
   tabs: {
     display: 'flex',
     gap: 4,
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
+    borderBottom: `1px solid ${colors.border}`,
     marginBottom: 24,
   },
   tab: (active: boolean) => ({
@@ -111,10 +119,10 @@ const styles = {
     border: 'none',
     borderBottom: active ? `2px solid ${colors.teal}` : '2px solid transparent',
     background: 'transparent',
-    color: active ? colors.white : colors.muted,
+    color: active ? colors.teal : colors.muted,
     cursor: 'pointer',
     fontSize: '0.95rem',
-    fontWeight: active ? 500 : 400,
+    fontWeight: active ? 600 : 400,
     marginBottom: -1,
   }),
   transactionRow: (isAnomaly: boolean) => ({
@@ -122,35 +130,35 @@ const styles = {
     gridTemplateColumns: '100px 1fr auto',
     gap: 16,
     alignItems: 'center',
-    padding: '14px 12px',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
-    borderLeft: isAnomaly ? `3px solid ${colors.amber}` : '3px solid transparent',
-    background: isAnomaly ? 'rgba(244,166,35,0.06)' : 'transparent',
-    animation: isAnomaly ? 'anomaly-row-pulse 2s ease-in-out infinite' : undefined,
+    padding: isAnomaly ? '14px 12px 14px 10px' : '14px 12px',
+    borderBottom: `1px solid ${colors.surfaceMuted}`,
+    borderLeft: isAnomaly ? '3px solid rgba(245,158,11,0.8)' : '3px solid transparent',
+    background: colors.white,
+    animation: isAnomaly ? 'rowAnomalyGlow 2.5s ease-in-out infinite' : undefined,
   }),
   txDate: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
     fontSize: 12,
-    color: colors.muted,
+    color: colors.hint,
   },
   txDescription: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
     flexWrap: 'wrap' as const,
-    color: colors.white,
-    fontSize: '0.95rem',
+    color: colors.text,
+    fontSize: 14,
   },
   anomalyBadge: {
     fontSize: 11,
     color: colors.amber,
-    fontWeight: 500,
+    fontWeight: 600,
   },
   txAmount: (positive: boolean) => ({
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
     fontSize: '0.95rem',
-    fontWeight: 500,
-    color: positive ? colors.income : colors.white,
+    fontWeight: 600,
+    color: positive ? colors.income : colors.expense,
     textAlign: 'right' as const,
   }),
   loading: {
@@ -158,7 +166,7 @@ const styles = {
     animation: 'dashboard-pulse 1.6s ease-in-out infinite',
   },
   error: {
-    color: colors.amber,
+    color: colors.expense,
   },
 };
 
@@ -350,19 +358,33 @@ export default function StatementDetailPage() {
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div style={{
-          background: 'rgba(13, 21, 38, 0.92)',
-          border: '1px solid rgba(0, 200, 220, 0.25)',
-          borderRadius: '10px',
-          padding: '10px 16px',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          boxShadow: '0 4px 24px rgba(0, 99, 124, 0.2)',
-          color: '#e8ecf4',
-          fontSize: '13px',
-        }}>
-          <div style={{ color: '#7a8aaa', marginBottom: '4px', fontFamily: 'monospace', fontSize: '11px' }}>{payload[0].name}</div>
-          <div style={{ color: '#ffffff', fontWeight: 600 }}>${payload[0].value.toFixed(2)}</div>
+        <div
+          style={{
+            background: 'rgba(255, 255, 255, 0.75)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(0, 99, 124, 0.3)',
+            borderRadius: '12px',
+            padding: '10px 14px',
+            boxShadow:
+              '0 8px 32px rgba(0, 99, 124, 0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
+            minWidth: '140px',
+          }}
+        >
+          <div
+            style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: '#00637C',
+              marginBottom: '4px',
+              letterSpacing: '0.02em',
+            }}
+          >
+            {payload[0].name}
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
+            ${payload[0].value.toFixed(2)}
+          </div>
         </div>
       );
     }
@@ -376,9 +398,9 @@ export default function StatementDetailPage() {
           0%, 100% { opacity: 0.45; }
           50% { opacity: 1; }
         }
-        @keyframes anomaly-row-pulse {
-          0%, 100% { box-shadow: inset 0 0 0 0 rgba(244,166,35,0); }
-          50% { box-shadow: inset 0 0 24px rgba(244,166,35,0.12); }
+        @keyframes rowAnomalyGlow {
+          0%, 100% { background: rgba(245,158,11,0.12); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.35); }
+          50% { background: rgba(245,158,11,0.25); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.6), 0 0 20px rgba(245,158,11,0.15); }
         }
       `}</style>
 
@@ -409,13 +431,13 @@ export default function StatementDetailPage() {
           <div style={styles.statsRow}>
             <div style={styles.statCard}>
               <p style={styles.statLabel}>Total Spend</p>
-              <p style={styles.statValue(colors.white)}>
+              <p style={styles.statValue(colors.text)}>
                 ${derived.totalSpend.toFixed(2)}
               </p>
             </div>
             <div style={styles.statCard}>
               <p style={styles.statLabel}>Total Income</p>
-              <p style={styles.statValue(colors.teal)}>
+              <p style={styles.statValue(colors.income)}>
                 ${derived.totalIncome.toFixed(2)}
               </p>
             </div>
@@ -423,7 +445,7 @@ export default function StatementDetailPage() {
               <p style={styles.statLabel}>Anomalies</p>
               <p
                 style={styles.statValue(
-                  derived.anomalyCount > 0 ? colors.amber : colors.white,
+                  derived.anomalyCount > 0 ? colors.amber : colors.muted,
                 )}
               >
                 {derived.anomalyCount}
@@ -449,7 +471,7 @@ export default function StatementDetailPage() {
           </div>
 
           {activeTab === 'transactions' && (
-            <div>
+            <div style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}` }}>
               {statement.transactions.map((tx) => (
                 <div key={tx.id} style={styles.transactionRow(tx.isAnomaly)}>
                   <span style={styles.txDate}>
@@ -472,7 +494,7 @@ export default function StatementDetailPage() {
           )}
 
           {activeTab === 'charts' && (
-            <div>
+            <div style={{ background: colors.pageBg }}>
               <div
                 style={{
                   display: 'flex',
@@ -492,13 +514,9 @@ export default function StatementDetailPage() {
                         setActiveCategoryIndex(null);
                       }}
                       style={{
-                        background: isActive
-                          ? '#00637C'
-                          : 'rgba(255,255,255,0.05)',
-                        color: isActive ? '#ffffff' : '#7a8aaa',
-                        border: isActive
-                          ? 'none'
-                          : '1px solid rgba(255,255,255,0.1)',
+                        background: isActive ? '#00637C' : '#FFFFFF',
+                        color: isActive ? '#ffffff' : '#64748B',
+                        border: isActive ? 'none' : '1px solid #E2E8F0',
                         borderRadius: 999,
                         padding: '6px 16px',
                         fontSize: 12,
@@ -515,9 +533,10 @@ export default function StatementDetailPage() {
                 <div style={{ width: '40%', minWidth: 0 }}>
                   <div
                     style={{
-                      color: colors.muted,
-                      fontSize: 12,
-                      fontFamily: 'monospace',
+                      color: colors.hint,
+                      fontSize: 11,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
                       marginBottom: 12,
                     }}
                   >
@@ -564,7 +583,7 @@ export default function StatementDetailPage() {
                             gap: 12,
                             transition: 'background 0.15s',
                             background: isActive
-                              ? 'rgba(0,99,124,0.15)'
+                              ? 'rgba(0,99,124,0.08)'
                               : 'transparent',
                             borderLeft: isActive
                               ? '3px solid #00637C'
@@ -573,7 +592,7 @@ export default function StatementDetailPage() {
                           onMouseEnter={(e) => {
                             if (!isActive) {
                               e.currentTarget.style.background =
-                                'rgba(255,255,255,0.04)';
+                                '#F1F5F9';
                             }
                           }}
                           onMouseLeave={(e) => {
@@ -594,16 +613,16 @@ export default function StatementDetailPage() {
                           <span
                             style={{
                               flex: 1,
-                              fontSize: 13,
-                              color: '#e8ecf4',
+                              fontSize: 14,
+                              color: '#1E293B',
                             }}
                           >
                             {cat.name}
                           </span>
                           <span
                             style={{
-                              fontSize: 13,
-                              color: '#e8ecf4',
+                              fontSize: 14,
+                              color: '#1E293B',
                               fontWeight: 600,
                             }}
                           >
@@ -611,8 +630,8 @@ export default function StatementDetailPage() {
                           </span>
                           <span
                             style={{
-                              fontSize: 11,
-                              color: '#7a8aaa',
+                              fontSize: 12,
+                              color: '#94A3B8',
                               marginLeft: 4,
                             }}
                           >
@@ -633,7 +652,7 @@ export default function StatementDetailPage() {
                           borderRadius: 8,
                           padding: '10px 14px',
                           fontSize: 12,
-                          color: '#f4a623',
+                          color: '#F59E0B',
                         }}
                       >
                         {'\u26a0'} Anomaly detected in{' '}
@@ -696,8 +715,8 @@ export default function StatementDetailPage() {
                           <div
                             style={{
                               fontSize: 22,
-                              fontWeight: 600,
-                              color: '#e8ecf4',
+                              fontWeight: 700,
+                              color: '#1E293B',
                             }}
                           >
                             ${chartsDerived.totalFilteredSpend.toFixed(0)}
@@ -705,7 +724,7 @@ export default function StatementDetailPage() {
                           <div
                             style={{
                               fontSize: 11,
-                              color: colors.muted,
+                              color: colors.hint,
                               marginTop: 4,
                             }}
                           >
@@ -719,7 +738,7 @@ export default function StatementDetailPage() {
                               style={{
                                 fontSize: 22,
                                 fontWeight: 600,
-                                color: '#e8ecf4',
+                                color: '#1E293B',
                               }}
                             >
                               ${chartsDerived.activeCategory.value.toFixed(0)}
@@ -727,11 +746,11 @@ export default function StatementDetailPage() {
                             <div
                               style={{
                                 fontSize: 11,
-                                color: colors.muted,
-                                marginTop: 4,
-                              }}
-                            >
-                              {chartsDerived.activeCategory.name.length > 10
+                              color: colors.hint,
+                              marginTop: 4,
+                            }}
+                          >
+                            {chartsDerived.activeCategory.name.length > 10
                                 ? `${chartsDerived.activeCategory.name.slice(0, 10)}…`
                                 : chartsDerived.activeCategory.name}
                             </div>
