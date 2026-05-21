@@ -35,6 +35,15 @@ public class NosyormiDbContext : DbContext
                 )
             );
 
+        modelBuilder.Entity<Statement>()
+            .Property(s => s.FileHash)
+            .HasMaxLength(64)
+            .IsRequired();
+
+        modelBuilder.Entity<Statement>()
+            .HasIndex(s => s.FileHash)
+            .IsUnique();
+
         base.OnModelCreating(modelBuilder);
     }
 }
