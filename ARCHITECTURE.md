@@ -327,6 +327,87 @@ The conversational chat interface (`MODEL_CHAT`) will be strictly scoped via a g
 
 Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_ORIGIN` (`http://localhost:5173` for local dev). Rationale: standard fullstack pattern — browser security blocks cross-origin requests by default; the backend must explicitly trust the frontend's origin.
 
+### 2026-05-20 — Multi-Statement Architecture Refactor
+
+- **Decision:** Shifted from a single hardcoded statement ID to a 
+  dynamic multi-statement model. The Dashboard, Transactions, and Chat 
+  pages now call `GET /api/statements` on mount, take the most recently 
+  uploaded statement, and load it dynamically.
+- **Rationale:** The hardcoded UUID (`STATEMENT_ID` constant) was a 
+  development shortcut that broke the stated product purpose. Forecasting 
+  and anomaly detection are only meaningful over accumulated data. A 
+  single hardcoded statement ID made the app unable to reflect new 
+  uploads without redeploying. The refactor closes that gap and enables 
+  genuine multi-statement accumulation.
+- **What changed:** `DashboardPage`, `TransactionsPage`, and `ChatPage` 
+  all remove their `STATEMENT_ID` constants. All three call 
+  `GET /api/statements` first, then load the first (most recent) result.
+
+### 2026-05-20 — Statements Management Page
+
+- **Decision:** Added a dedicated `StatementsPage` at `/statements` for 
+  statement provenance and management. Upload, list, view details, and 
+  delete all live here. The Dashboard is now a pure analysis view.
+- **Rationale:** The Dashboard was violating SRP — it was simultaneously 
+  an analysis view and a file management view. Separating concerns gives 
+  each page one job: Dashboard = analysis, Statements = management.
+- **Upload moved from Dashboard to Statements:** The `+ Upload Statement` 
+  button and modal were removed from `DashboardPage` and relocated to 
+  `StatementsPage`. This is the architecturally correct home for an action 
+  that creates a new resource.
+
+### 2026-05-20 — Statement Uniqueness via SHA-256 Hash
+
+- **Decision:** Statements are deduplicated by SHA-256 hash of the 
+  uploaded file bytes. A unique index on `Statement.FileHash` enforces 
+  this at the database level. Duplicate uploads return `409 Conflict`.
+- **Rationale:** Silent duplicate ingestion would double-count 
+  transactions and corrupt forecasting, anomaly baselines, and spending 
+  totals. The hash check is cheap, deterministic, and catches accidental 
+  re-uploads before any AI processing runs.
+- **Implementation:** Hash computed in `StatementUploadService` before 
+  CSV parsing. The stream is read into a `MemoryStream` first (to allow 
+  both hashing and re-reading for parsing). Migration 
+  `20260521031445_AddFileHashToStatement` adds the column and index.
+
+### 2026-05-20 — Hard Delete with Cascade
+
+- **Decision:** Deleting a statement hard-deletes the row and all child 
+  transactions via EF Core cascade delete. Embeddings are deleted 
+  automatically as they live on the `Transaction` row.
+- **Rationale:** Soft delete adds schema complexity and query overhead 
+  for no benefit at this stage. A personal finance app where the user 
+  manages their own data does not need an audit trail or undo capability 
+  in the MVP. Soft delete is noted as a future consideration.
+- **Confirmation UX:** A modal displays the filename and transaction 
+  count before deletion. The delete button shows "Deleting..." while in 
+  flight. This prevents accidental data loss without adding friction for 
+  intentional deletes.
+
+### 2026-05-20 — StatementQueryService Moved to Infrastructure
+
+- **Decision:** `StatementQueryService` was moved from 
+  `Nosyormi.Application` to `Nosyormi.Infrastructure`. An 
+  `IStatementQueryService` interface was created in Application as its 
+  contract. The `DeleteAsync` method was added to both.
+- **Rationale:** The original placement was a Clean Architecture 
+  violation — the class directly injected `DbContext`, an Infrastructure 
+  concern, into the Application layer. The fix aligns with the Dependency 
+  Inversion Principle: Application defines the interface, Infrastructure 
+  provides the implementation.
+
+### 2026-05-20 — Multi-Bank Support Deferred to Post-MVP
+
+- **Decision:** Multi-bank filtering (per-bank statement grouping, bank 
+  selector in sidebar) was scoped out of the capstone build.
+- **Rationale:** The analytical core — categorization, anomaly detection, 
+  forecasting, chat — is bank-agnostic. Multi-bank adds a filter 
+  dimension to every page and a piece of app-wide state, both worth 
+  building properly rather than rushing. The architecture supports it 
+  cleanly: add `BankName` (string) to `Statement`, capture at upload, 
+  add optional `?bank=` query parameter to aggregate endpoints, add a 
+  selector in the sidebar header.
+
 ---
 
 ## Sections Still To Be Added
@@ -341,4 +422,6 @@ As the corresponding parts of the system are built, the following sections will 
 
 ---
 
-*Last updated: Friday, May 15, 2026 — Brand alignment: "Money Intelligence" descriptor added, tagline updated to "Your money, reflected."*
+*Last updated: Wednesday, May 20, 2026 — Multi-statement refactor, 
+Statements management page, SHA-256 deduplication, cascade delete, 
+architectural fixes.*
