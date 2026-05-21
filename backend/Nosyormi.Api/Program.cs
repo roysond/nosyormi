@@ -94,3 +94,5 @@ app.MapGet("/health", () => Results.Ok(new
 .WithName("HealthCheck");
 
 app.Run();
+
+public partial class Program { }
