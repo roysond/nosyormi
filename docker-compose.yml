@@ -1,0 +1,54 @@
+version: '3.9'
+
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: nosyormi-postgres
+    environment:
+      POSTGRES_DB: nosyormi
+      POSTGRES_USER: nosyormi
+      POSTGRES_PASSWORD: nosyormi_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nosyormi"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nosyormi-api
+    ports:
+      - "5034:8080"
+    environment:
+      DATABASE_CONNECTION_STRING: "Host=postgres;Port=5432;Database=nosyormi;Username=nosyormi;Password=nosyormi_password"
+      FRONTEND_ORIGIN: "http://localhost:5173"
+      MODEL_LIGHT: "${MODEL_LIGHT}"
+      MODEL_NARRATION: "${MODEL_NARRATION}"
+      MODEL_CHAT: "${MODEL_CHAT}"
+      OPENROUTER_API_KEY: "${OPENROUTER_API_KEY}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: "http://localhost:5034"
+    container_name: nosyormi-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:

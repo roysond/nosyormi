@@ -9,7 +9,7 @@ import {
 } from 'recharts';
 import type { PieSectorShapeProps } from 'recharts';
 
-const API_BASE = 'http://localhost:5034';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = [
   '#00637C',
   '#0891B2',

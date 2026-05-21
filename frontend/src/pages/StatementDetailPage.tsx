@@ -10,6 +10,8 @@ import {
 } from 'recharts';
 import type { PieSectorShapeProps } from 'recharts';
 
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
+
 const COLORS = [
   '#00637C',
   '#38c9b0',
@@ -243,7 +245,7 @@ export default function StatementDetailPage() {
       return;
     }
 
-    fetch(`http://localhost:5034/api/statements/${id}`)
+    fetch(`${API_BASE}/api/statements/${id}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Failed to load statement (HTTP ${res.status}).`);

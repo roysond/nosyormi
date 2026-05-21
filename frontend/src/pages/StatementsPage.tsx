@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
-const API_BASE = 'http://localhost:5034';
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
 interface StatementSummary {
   id: string;
