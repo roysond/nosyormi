@@ -12,6 +12,7 @@ using Nosyormi.Infrastructure.Embeddings;
 using Nosyormi.Infrastructure.Parsing;
 using Nosyormi.Infrastructure.Persistence;
 using Nosyormi.Application.Statements;
+using Nosyormi.Infrastructure.Statements;
 
 // ─────────────────────────────────────────────────────────────────────
 // NOSYOR.M.I — API Entry Point
@@ -55,7 +56,7 @@ builder.Services.AddDbContext<NosyormiDbContext>(options =>
 // ─── Application Services ─────────────────────────────────────────────
 builder.Services.AddScoped<ICsvStatementParser, CsvStatementParser>();
 builder.Services.AddScoped<StatementUploadService>();
-builder.Services.AddScoped<StatementQueryService>();
+builder.Services.AddScoped<IStatementQueryService, StatementQueryService>();
 builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbContext>());
 builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier>();
 builder.Services.AddHttpClient<IEmbeddingService, OpenRouterEmbeddingService>();

@@ -8,11 +8,11 @@ namespace Nosyormi.Api.Controllers;
 public class StatementsController : ControllerBase
 {
     private readonly StatementUploadService _uploadService;
-    private readonly StatementQueryService _queryService;
+    private readonly IStatementQueryService _queryService;
 
     public StatementsController(
         StatementUploadService uploadService,
-        StatementQueryService queryService)
+        IStatementQueryService queryService)
     {
         _uploadService = uploadService;
         _queryService = queryService;

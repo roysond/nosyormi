@@ -1,9 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Nosyormi.Application.Statements;
 using Nosyormi.Domain.Entities;
 
-namespace Nosyormi.Application.Statements;
+namespace Nosyormi.Infrastructure.Statements;
 
-public class StatementQueryService
+public class StatementQueryService : IStatementQueryService
 {
     private readonly DbContext _db;
 
@@ -57,23 +58,3 @@ public class StatementQueryService
         );
     }
 }
-
-public record StatementSummary(
-    Guid Id,
-    string FileName,
-    DateTime UploadedAt,
-    int TransactionCount);
-
-public record StatementDetail(
-    Guid Id,
-    string FileName,
-    DateTime UploadedAt,
-    IReadOnlyList<TransactionSummary> Transactions);
-
-public record TransactionSummary(
-    Guid Id,
-    DateOnly TransactionDate,
-    string Description,
-    decimal Amount,
-    bool IsAnomaly,
-    string? Category);
