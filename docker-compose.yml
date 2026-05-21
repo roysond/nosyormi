@@ -33,6 +33,7 @@ services:
       MODEL_NARRATION: "${MODEL_NARRATION}"
       MODEL_CHAT: "${MODEL_CHAT}"
       OPENROUTER_API_KEY: "${OPENROUTER_API_KEY}"
+      EMBEDDING_MODEL: "${EMBEDDING_MODEL}"
     depends_on:
       postgres:
         condition: service_healthy
