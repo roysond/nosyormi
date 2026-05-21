@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
+import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
 import StatementDetailPage from './pages/StatementDetailPage';
 
@@ -153,6 +154,7 @@ export default function App() {
         <nav style={styles.nav}>
           <NavItem to="/" icon="⌂" label="Dashboard" />
           <NavItem to="/transactions" icon="▤" label="Transactions" />
+          <NavItem to="/statements" icon="📁" label="Statements" />
           <NavItem to="/chat" icon="◉" label="NOSYOR.M.I Chat" />
         </nav>
 
@@ -163,6 +165,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
+          <Route path="/statements" element={<StatementsPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/dashboard/:id" element={<StatementDetailPage />} />
         </Routes>
