@@ -68,4 +68,15 @@ public class StatementsController : ControllerBase
 
         return Ok(statement);
     }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var deleted = await _queryService.DeleteAsync(id, cancellationToken);
+
+        if (!deleted)
+            return NotFound(new { error = $"Statement {id} not found." });
+
+        return NoContent();
+    }
 }

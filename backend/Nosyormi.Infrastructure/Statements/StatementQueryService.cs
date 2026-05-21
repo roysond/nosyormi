@@ -57,4 +57,17 @@ public class StatementQueryService : IStatementQueryService
             transactions
         );
     }
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var statement = await _db.Set<Statement>()
+            .FirstOrDefaultAsync(s => s.Id == id, cancellationToken);
+
+        if (statement is null)
+            return false;
+
+        _db.Remove(statement);
+        await _db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }
