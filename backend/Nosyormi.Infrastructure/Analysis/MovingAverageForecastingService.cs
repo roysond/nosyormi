@@ -1,46 +1,28 @@
-using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Analysis;
-using Nosyormi.Domain.Entities;
 
 namespace Nosyormi.Infrastructure.Analysis;
 
 public class MovingAverageForecastingService : IForecastingService
 {
-    private const string IncomeCategory = "Income";
-
-    private readonly DbContext _db;
-
-    public MovingAverageForecastingService(DbContext db)
-    {
-        _db = db;
-    }
-
-    public async Task<IReadOnlyList<CategoryForecast>> ForecastAsync(
-        Guid statementId,
+    public Task<IReadOnlyList<CategoryForecast>> ForecastAsync(
+        IReadOnlyList<MonthlySpend> transactions,
         CancellationToken cancellationToken = default)
     {
-        var transactions = await _db.Set<Transaction>()
-            .Include(t => t.Category)
-            .Where(t => t.StatementId == statementId)
-            .Where(t => t.Amount < 0)
-            .Where(t => t.Category != null && t.Category.Name != IncomeCategory)
-            .ToListAsync(cancellationToken);
-
         var forecasts = transactions
-            .GroupBy(t => t.Category!.Name)
+            .GroupBy(t => t.Category)
             .Select(BuildCategoryForecast)
             .OrderByDescending(f => f.ForecastedAmount)
             .ToList();
 
-        return forecasts;
+        return Task.FromResult<IReadOnlyList<CategoryForecast>>(forecasts);
     }
 
-    private static CategoryForecast BuildCategoryForecast(IGrouping<string, Transaction> categoryGroup)
+    private static CategoryForecast BuildCategoryForecast(IGrouping<string, MonthlySpend> categoryGroup)
     {
-        var monthlyTotals = GetMonthlyTotals(categoryGroup)
+        var monthlyTotals = categoryGroup
             .OrderBy(m => m.Year)
             .ThenBy(m => m.Month)
-            .Select(m => m.Total)
+            .Select(m => m.Amount)
             .ToList();
 
         var actualAverage = CalculateActualAverage(monthlyTotals);
@@ -51,17 +33,6 @@ public class MovingAverageForecastingService : IForecastingService
             actualAverage,
             forecastedAmount,
             monthlyTotals.Count);
-    }
-
-    private static IEnumerable<(int Year, int Month, decimal Total)> GetMonthlyTotals(
-        IEnumerable<Transaction> transactions)
-    {
-        return transactions
-            .GroupBy(t => new { t.TransactionDate.Year, t.TransactionDate.Month })
-            .Select(g => (
-                g.Key.Year,
-                g.Key.Month,
-                Total: g.Sum(t => Math.Abs(t.Amount))));
     }
 
     private static decimal CalculateActualAverage(IReadOnlyList<decimal> monthlyTotals)

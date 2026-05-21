@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Analysis;
+using Nosyormi.Infrastructure.Analysis;
 
 namespace Nosyormi.Api.Controllers;
 
@@ -8,10 +10,12 @@ namespace Nosyormi.Api.Controllers;
 public class ForecastController : ControllerBase
 {
     private readonly IForecastingService _forecastingService;
+    private readonly DbContext _db;
 
-    public ForecastController(IForecastingService forecastingService)
+    public ForecastController(IForecastingService forecastingService, DbContext db)
     {
         _forecastingService = forecastingService;
+        _db = db;
     }
 
     [HttpGet("{statementId:guid}")]
@@ -19,10 +23,15 @@ public class ForecastController : ControllerBase
         Guid statementId,
         CancellationToken cancellationToken)
     {
-        var forecasts = await _forecastingService.ForecastAsync(statementId, cancellationToken);
+        var monthlySpend = await StatementMonthlySpendLoader.LoadAsync(
+            _db,
+            statementId,
+            cancellationToken);
 
-        if (forecasts.Count == 0)
+        if (monthlySpend.Count == 0)
             return NotFound(new { error = $"Statement {statementId} not found." });
+
+        var forecasts = await _forecastingService.ForecastAsync(monthlySpend, cancellationToken);
 
         return Ok(forecasts);
     }
