@@ -7,7 +7,6 @@ COPY Nosyormi.Domain/Nosyormi.Domain.csproj Nosyormi.Domain/
 COPY Nosyormi.Application/Nosyormi.Application.csproj Nosyormi.Application/
 COPY Nosyormi.Infrastructure/Nosyormi.Infrastructure.csproj Nosyormi.Infrastructure/
 COPY Nosyormi.Api/Nosyormi.Api.csproj Nosyormi.Api/
-COPY Nosyormi.Tests/Nosyormi.Tests.csproj Nosyormi.Tests/
 
 # Restore dependencies
 RUN dotnet restore Nosyormi.Api/Nosyormi.Api.csproj
