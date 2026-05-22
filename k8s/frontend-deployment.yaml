@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nosyormi-frontend
+  labels:
+    app: nosyormi-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nosyormi-frontend
+  template:
+    metadata:
+      labels:
+        app: nosyormi-frontend
+    spec:
+      containers:
+        - name: nosyormi-frontend
+          image: nosyormi-frontend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nosyormi-frontend
+spec:
+  selector:
+    app: nosyormi-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+      nodePort: 30080
+  type: NodePort

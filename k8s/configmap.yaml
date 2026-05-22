@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  DATABASE_CONNECTION_STRING: Host=host.minikube.internal;Port=5433;Database=nosyormi;Username=nosyormi;Password=nosyormi_password
+  EMBEDDING_MODEL: openai/text-embedding-3-small
+  FRONTEND_ORIGIN: http://localhost:5173
+  MODEL_CHAT: anthropic/claude-sonnet-4-5
+  MODEL_LIGHT: openai/gpt-4o-mini
+  MODEL_NARRATION: anthropic/claude-sonnet-4-5
+kind: ConfigMap
+metadata:
+  name: nosyormi-config

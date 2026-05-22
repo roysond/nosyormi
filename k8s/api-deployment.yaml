@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nosyormi-api
+  labels:
+    app: nosyormi-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nosyormi-api
+  template:
+    metadata:
+      labels:
+        app: nosyormi-api
+    spec:
+      containers:
+        - name: nosyormi-api
+          image: nosyormi-api:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: nosyormi-config
+          env:
+            - name: OPENROUTER_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nosyormi-secrets
+                  key: OPENROUTER_API_KEY
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nosyormi-api
+spec:
+  selector:
+    app: nosyormi-api
+  ports:
+    - protocol: TCP
+      port: 5034
+      targetPort: 8080
+  type: ClusterIP
