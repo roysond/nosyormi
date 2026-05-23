@@ -320,6 +320,10 @@ export default function StatementsPage() {
           0%, 100% { opacity: 0.45; }
           50% { opacity: 1; }
         }
+        @keyframes nosyormi-upload-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.97); }
+          50% { opacity: 1; transform: scale(1.03); }
+        }
       `}</style>
 
       <header style={styles.header}>
@@ -590,54 +594,71 @@ export default function StatementsPage() {
                     selectUploadFile(e.dataTransfer.files[0]);
                   }}
                 >
-                  <span
-                    style={{
-                      fontSize: 36,
-                      display: 'block',
-                      marginBottom: 12,
-                    }}
-                    aria-hidden
-                  >
-                    ⬆
-                  </span>
-                  {uploadFile ? (
-                    <p
+                  {uploading ? (
+                    <div
                       style={{
-                        margin: 0,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: '#00637C',
-                        wordBreak: 'break-word',
+                        animation: 'nosyormi-upload-pulse 1.8s ease-in-out infinite',
+                        textAlign: 'center',
+                        padding: '20px 0',
                       }}
                     >
-                      {uploadFile.name}
-                    </p>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>🪞</div>
+                      <div style={{ color: '#00637C', fontSize: 14, fontWeight: 500 }}>
+                        Reflecting on your data...
+                      </div>
+                    </div>
                   ) : (
                     <>
+                      <span
+                        style={{
+                          fontSize: 36,
+                          display: 'block',
+                          marginBottom: 12,
+                        }}
+                        aria-hidden
+                      >
+                        ⬆
+                      </span>
+                      {uploadFile ? (
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: '#00637C',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {uploadFile.name}
+                        </p>
+                      ) : (
+                        <>
+                          <p
+                            style={{
+                              margin: '0 0 6px',
+                              fontSize: 15,
+                              fontWeight: 500,
+                              color: '#1E293B',
+                            }}
+                          >
+                            Drop your CSV here
+                          </p>
+                          <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>
+                            or click to browse
+                          </p>
+                        </>
+                      )}
                       <p
                         style={{
-                          margin: '0 0 6px',
-                          fontSize: 15,
-                          fontWeight: 500,
-                          color: '#1E293B',
+                          margin: '12px 0 0',
+                          fontSize: 11,
+                          color: '#94A3B8',
                         }}
                       >
-                        Drop your CSV here
-                      </p>
-                      <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>
-                        or click to browse
+                        Accepts .csv files from any bank
                       </p>
                     </>
                   )}
-                  <p
-                    style={{
-                      margin: '12px 0 0',
-                      fontSize: 11,
-                      color: '#94A3B8',
-                    }}
-                  >
-                    Accepts .csv files from any bank
-                  </p>
                 </div>
 
                 <input
