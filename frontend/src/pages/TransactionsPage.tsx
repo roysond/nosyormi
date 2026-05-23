@@ -101,6 +101,7 @@ export default function TransactionsPage() {
   );
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -127,6 +128,19 @@ export default function TransactionsPage() {
         setLoading(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const mainEl = document.querySelector('main');
+    if (!mainEl) return;
+
+    const handleScroll = () => {
+      setScrolled(mainEl.scrollTop > 40);
+    };
+
+    handleScroll();
+    mainEl.addEventListener('scroll', handleScroll, { passive: true });
+    return () => mainEl.removeEventListener('scroll', handleScroll);
   }, []);
 
   const allTransactions = useMemo(() => {
@@ -511,8 +525,7 @@ export default function TransactionsPage() {
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
-        overflow: 'hidden',
+        minHeight: '100%',
         background: '#F8FAFC',
       }}
     >
@@ -533,21 +546,26 @@ export default function TransactionsPage() {
 
       <header
         style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
           background: 'white',
           borderBottom: '1px solid #E2E8F0',
-          padding: '16px 32px',
+          padding: scrolled ? '10px 32px' : '16px 32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexShrink: 0,
+          transition: 'padding 0.25s ease, font-size 0.25s ease',
         }}
       >
         <h1
           style={{
-            fontSize: 20,
+            fontSize: scrolled ? 15 : 20,
             fontWeight: 700,
             color: '#1E293B',
             margin: 0,
+            transition: 'font-size 0.25s ease',
           }}
         >
           Transactions
@@ -656,16 +674,11 @@ export default function TransactionsPage() {
         <div
           style={{
             display: 'flex',
-            flex: 1,
-            overflow: 'hidden',
             padding: '24px 32px',
             gap: 24,
-            minHeight: 0,
           }}
         >
-          <div
-            style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}
-          >
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 display: 'flex',
