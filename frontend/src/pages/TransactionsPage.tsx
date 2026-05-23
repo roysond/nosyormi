@@ -111,7 +111,7 @@ export default function TransactionsPage() {
         }
         const summaries: StatementSummary[] = await listRes.json();
         if (summaries.length === 0) {
-          setError('No statements uploaded yet. Upload a CSV from the Dashboard.');
+          setError('No statements uploaded yet. Upload a CSV from the Statements page.');
           setLoading(false);
           return;
         }
