@@ -299,6 +299,7 @@ export default function StatementsPage() {
         throw new Error(message);
       }
       setUploadSuccess(true);
+      window.dispatchEvent(new CustomEvent('nosyormi-statement-uploaded'));
       await loadStatements();
       setTimeout(() => {
         closeUploadModal();

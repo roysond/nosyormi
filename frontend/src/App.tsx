@@ -6,6 +6,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
 import StatementDetailPage from './pages/StatementDetailPage';
+import StatementPill from './components/StatementPill';
 
 const styles = {
   app: {
@@ -157,6 +158,8 @@ export default function App() {
           <NavItem to="/statements" icon="📁" label="Statements" />
           <NavItem to="/chat" icon="◉" label="NOSYOR.M.I Chat" />
         </nav>
+
+        <StatementPill />
 
         <div style={styles.version}>NOSYOR.M.I · v1.0</div>
       </aside>
