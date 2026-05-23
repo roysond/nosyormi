@@ -218,6 +218,24 @@ export default function ChatPage() {
   );
 
   useEffect(() => {
+    const savedMessages = sessionStorage.getItem('nosyormi-chat-messages');
+    if (savedMessages) {
+      try {
+        const parsed = JSON.parse(savedMessages) as ChatMessage[];
+        if (Array.isArray(parsed)) {
+          setMessages(parsed);
+        }
+      } catch {
+        // ignore invalid persisted chat history
+      }
+    }
+
+    const savedStatementId = sessionStorage.getItem('nosyormi-chat-statement-id');
+    const savedStatementFileName = sessionStorage.getItem('nosyormi-chat-statement-filename');
+    if (savedStatementFileName) {
+      setStatementFileName(savedStatementFileName);
+    }
+
     (async () => {
       try {
         const listRes = await fetch(`${API_BASE}/api/statements`);
@@ -229,9 +247,14 @@ export default function ChatPage() {
           setError('No statements uploaded yet. Upload a CSV from the Dashboard.');
           return;
         }
-        const id = summaries[0].id;
+        const persistedSummary =
+          savedStatementId != null
+            ? summaries.find((s) => s.id === savedStatementId)
+            : undefined;
+        const summary = persistedSummary ?? summaries[0];
+        const id = summary.id;
         setStatementId(id);
-        setStatementFileName(summaries[0].fileName);
+        setStatementFileName(summary.fileName);
         const detailRes = await fetch(`${API_BASE}/api/statements/${id}`);
         if (!detailRes.ok) {
           throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
@@ -260,12 +283,26 @@ export default function ChatPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
 
+  useEffect(() => {
+    sessionStorage.setItem('nosyormi-chat-messages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    if (statementId !== null) {
+      sessionStorage.setItem('nosyormi-chat-statement-id', statementId);
+    }
+  }, [statementId]);
+
+  useEffect(() => {
+    sessionStorage.setItem('nosyormi-chat-statement-filename', statementFileName);
+  }, [statementFileName]);
+
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading || statementId === null) return;
 
     const userMessage: ChatMessage = { role: 'user', content: trimmed };
-    const history = messages;
+    const history = [...messages, userMessage];
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -671,9 +708,12 @@ export default function ChatPage() {
 
     if (type === 'anomalies') {
       const highlightIds = new Set(chartUpdate.highlightTransactionIds ?? []);
-      const anomalyRows = transactions.filter(
-        (t) => t.isAnomaly || highlightIds.has(t.id),
+      const dbAnomalies = transactions.filter((t) => t.isAnomaly);
+      const shownIds = new Set(dbAnomalies.map((t) => t.id));
+      const highlightedExtras = transactions.filter(
+        (t) => highlightIds.has(t.id) && !shownIds.has(t.id),
       );
+      const anomalyRows = [...dbAnomalies, ...highlightedExtras];
 
       if (anomalyRows.length === 0) {
         return (
@@ -728,13 +768,15 @@ export default function ChatPage() {
                 style={{
                   fontFamily: 'monospace',
                   fontSize: 13,
-                  color: '#EF4444',
+                  color: tx.amount > 0 ? '#10B981' : '#EF4444',
                   flexShrink: 0,
                   minWidth: 80,
                   textAlign: 'right',
                 }}
               >
-                -${Math.abs(tx.amount).toFixed(2)}
+                {tx.amount >= 0
+                  ? `$${tx.amount.toFixed(2)}`
+                  : `-$${Math.abs(tx.amount).toFixed(2)}`}
               </span>
             </div>
           ))}
