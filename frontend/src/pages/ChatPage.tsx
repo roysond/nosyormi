@@ -315,6 +315,25 @@ export default function ChatPage() {
     }
   }, [chartUpdate]);
 
+  const clearChat = () => {
+    sessionStorage.removeItem('nosyormi-chat-messages');
+    sessionStorage.removeItem('nosyormi-chat-chart-update');
+    sessionStorage.removeItem('nosyormi-chat-statement-id');
+    sessionStorage.removeItem('nosyormi-chat-statement-filename');
+    setMessages([]);
+    setChartUpdate(null);
+  };
+
+  useEffect(() => {
+    const handleStatementDeleted = () => {
+      clearChat();
+    };
+
+    window.addEventListener('nosyormi-statement-deleted', handleStatementDeleted);
+    return () =>
+      window.removeEventListener('nosyormi-statement-deleted', handleStatementDeleted);
+  }, []);
+
   const sendMessage = async () => {
     const trimmed = input.trim();
     if (!trimmed || loading || statementId === null) return;
@@ -899,16 +918,40 @@ export default function ChatPage() {
             padding: '24px 28px',
             background: 'white',
             borderBottom: '1px solid #E2E8F0',
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            gap: 12,
           }}
         >
-          <h2 style={{ margin: 0, color: '#1E293B', fontSize: '1.35rem', fontWeight: 600 }}>
-            Ask NOSYOR.M.I
-          </h2>
-          <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: 13 }}>
-            Reflecting on {statementFileName}
-          </p>
-          {error && (
-            <p style={{ margin: '8px 0 0', color: colors.amber, fontSize: 12 }}>{error}</p>
+          <div>
+            <h2 style={{ margin: 0, color: '#1E293B', fontSize: '1.35rem', fontWeight: 600 }}>
+              Ask NOSYOR.M.I
+            </h2>
+            <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: 13 }}>
+              Reflecting on {statementFileName}
+            </p>
+            {error && (
+              <p style={{ margin: '8px 0 0', color: colors.amber, fontSize: 12 }}>{error}</p>
+            )}
+          </div>
+          {messages.length > 0 && (
+            <button
+              type="button"
+              onClick={clearChat}
+              style={{
+                background: 'transparent',
+                border: '1px solid #CBD5E1',
+                color: '#94A3B8',
+                borderRadius: 6,
+                padding: '4px 10px',
+                fontSize: 11,
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+            >
+              Clear chat
+            </button>
           )}
         </div>
 

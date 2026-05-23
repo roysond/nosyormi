@@ -242,6 +242,11 @@ export default function StatementsPage() {
       }
 
       setStatements((prev) => prev.filter((s) => s.id !== confirmDelete.id));
+      sessionStorage.removeItem('nosyormi-chat-messages');
+      sessionStorage.removeItem('nosyormi-chat-chart-update');
+      sessionStorage.removeItem('nosyormi-chat-statement-id');
+      sessionStorage.removeItem('nosyormi-chat-statement-filename');
+      window.dispatchEvent(new CustomEvent('nosyormi-statement-deleted'));
       setConfirmDelete(null);
       setDeleteError(null);
     } catch (err: unknown) {
