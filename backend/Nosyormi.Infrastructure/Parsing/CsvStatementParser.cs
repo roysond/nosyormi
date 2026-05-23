@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Nosyormi.Application.Csv;
@@ -19,8 +20,12 @@ public class CsvStatementParser : ICsvStatementParser
             BadDataFound = null
         };
 
-        using var reader = new StreamReader(csvStream);
-        using var csv = new CsvReader(reader, config);
+        var headerReader = await CreateReaderStartingAtHeaderAsync(csvStream);
+        if (headerReader is null)
+            throw new InvalidOperationException("CSV header row containing 'Date' was not found.");
+
+        using var headerTextReader = headerReader;
+        using var csv = new CsvReader(headerTextReader, config);
 
         var rows = new List<ParsedTransactionRow>();
 
@@ -29,9 +34,13 @@ public class CsvStatementParser : ICsvStatementParser
 
         while (await csv.ReadAsync())
         {
+            var rawDate = csv.GetField("Date");
+            if (string.IsNullOrWhiteSpace(rawDate))
+                continue;
+
             var row = new ParsedTransactionRow
             {
-                TransactionDate = ParseDate(csv.GetField("Date") ?? string.Empty),
+                TransactionDate = ParseDate(rawDate),
                 Description = ParseDescription(csv),
                 Amount = ParseAmountFromRow(csv)
             };
@@ -69,6 +78,46 @@ public class CsvStatementParser : ICsvStatementParser
         }
 
         throw new FormatException($"Unable to parse date '{rawDate}'. Supported formats: MM/dd/yyyy, yyyy-MM-dd, dd/MM/yyyy, dd-MMM-yyyy.");
+    }
+
+    private static async Task<TextReader?> CreateReaderStartingAtHeaderAsync(Stream csvStream)
+    {
+        using var reader = new StreamReader(csvStream);
+        var csvContent = new StringBuilder();
+
+        while (await reader.ReadLineAsync() is { } line)
+        {
+            if (!IsHeaderLine(line))
+                continue;
+
+            csvContent.AppendLine(line);
+            while (await reader.ReadLineAsync() is { } remainingLine)
+                csvContent.AppendLine(remainingLine);
+
+            return new StringReader(csvContent.ToString());
+        }
+
+        return null;
+    }
+
+    private static bool IsHeaderLine(string line)
+    {
+        var lineConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+        {
+            HasHeaderRecord = false,
+            TrimOptions = TrimOptions.Trim,
+            MissingFieldFound = null,
+            BadDataFound = null
+        };
+
+        using var lineReader = new StringReader(line);
+        using var csv = new CsvReader(lineReader, lineConfig);
+
+        if (!csv.Read())
+            return false;
+
+        return csv.Parser.Record?.Any(field =>
+            field?.Trim().Equals("Date", StringComparison.OrdinalIgnoreCase) == true) == true;
     }
 
     private static string ParseDescription(CsvReader csv)
@@ -121,6 +170,10 @@ public class CsvStatementParser : ICsvStatementParser
         foreach (var header in headers)
         {
             if (header.Equals("Amount", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            if (header.Equals("Running Bal.", StringComparison.OrdinalIgnoreCase)
+                || header.Equals("Running Bal", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var fieldValue = csv.GetField(header);
