@@ -236,6 +236,16 @@ export default function ChatPage() {
       setStatementFileName(savedStatementFileName);
     }
 
+    const savedChartUpdate = sessionStorage.getItem('nosyormi-chat-chart-update');
+    if (savedChartUpdate) {
+      try {
+        const parsed = JSON.parse(savedChartUpdate) as ChartUpdate | null;
+        setChartUpdate(parsed);
+      } catch {
+        // ignore invalid persisted chart update
+      }
+    }
+
     (async () => {
       try {
         const listRes = await fetch(`${API_BASE}/api/statements`);
@@ -296,6 +306,14 @@ export default function ChatPage() {
   useEffect(() => {
     sessionStorage.setItem('nosyormi-chat-statement-filename', statementFileName);
   }, [statementFileName]);
+
+  useEffect(() => {
+    if (chartUpdate === null) {
+      sessionStorage.removeItem('nosyormi-chat-chart-update');
+    } else {
+      sessionStorage.setItem('nosyormi-chat-chart-update', JSON.stringify(chartUpdate));
+    }
+  }, [chartUpdate]);
 
   const sendMessage = async () => {
     const trimmed = input.trim();
