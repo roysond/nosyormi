@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Cell,
   Pie,
@@ -296,6 +296,31 @@ const GlassTooltip = ({ active, payload }: any) => {
   return null;
 };
 
+function useCountUp(target: number, duration: number = 800): number {
+  const [current, setCurrent] = useState(0);
+  const previousTarget = useRef<number>(0);
+
+  useEffect(() => {
+    if (target === 0 || target === previousTarget.current) return;
+    previousTarget.current = target;
+
+    const startTime = performance.now();
+    const startValue = 0;
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+      setCurrent(Math.round(startValue + (target - startValue) * eased));
+      if (progress < 1) requestAnimationFrame(animate);
+    };
+
+    requestAnimationFrame(animate);
+  }, [target, duration]);
+
+  return current;
+}
+
 export default function DashboardPage() {
   const [statement, setStatement] = useState<Statement | null>(null);
   const [hasNoStatements, setHasNoStatements] = useState(false);
@@ -414,6 +439,11 @@ export default function DashboardPage() {
       incomeAverage,
     };
   }, [statement, activeCategoryIndex]);
+
+  const animatedIncome = useCountUp(statement ? derived.totalIncome : 0);
+  const animatedExpenses = useCountUp(statement ? derived.totalSpend : 0);
+  const animatedNet = useCountUp(statement ? Math.abs(derived.net) : 0);
+  const animatedAnomalies = useCountUp(statement ? derived.anomalyCount : 0);
 
   const activeCategory =
     activeCategoryIndex !== null
@@ -664,13 +694,13 @@ export default function DashboardPage() {
             <div style={styles.statCard}>
               <p style={styles.statLabel}>Total Income</p>
               <p style={styles.statValue('#10B981')}>
-                {formatCurrency(derived.totalIncome)}
+                {formatCurrency(animatedIncome)}
               </p>
             </div>
             <div style={styles.statCard}>
               <p style={styles.statLabel}>Total Expenses</p>
               <p style={styles.statValue('#EF4444')}>
-                {formatCurrency(derived.totalSpend)}
+                {formatCurrency(animatedExpenses)}
               </p>
             </div>
             <div style={styles.statCard}>
@@ -681,7 +711,7 @@ export default function DashboardPage() {
                 )}
               >
                 {derived.net >= 0 ? '' : '-'}
-                {formatCurrency(Math.abs(derived.net))}
+                {formatCurrency(animatedNet)}
               </p>
             </div>
             <div style={styles.statCard}>
@@ -691,7 +721,7 @@ export default function DashboardPage() {
                   derived.anomalyCount > 0 ? '#F59E0B' : '#64748B',
                 )}
               >
-                {derived.anomalyCount}
+                {animatedAnomalies}
               </p>
             </div>
           </div>
