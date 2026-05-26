@@ -1,0 +1,473 @@
+# PROJECT-DOCUMENTATION.md
+> NOSYOR.M.I — Project Submission Documentation  
+> Student: Royson D'Souza · Capstone Project 11 (FinSight)  
+> Program: AI Integration Capstone · .NET 10 + React  
+> Deadline: Before 4 June 2026
+
+---
+
+## 1. Project Brief
+
+### The Brief (Project 11 — FinSight)
+
+Upload bank statements or CSVs. The app categorizes spending, detects
+anomalies, forecasts next month, and has a chat interface for questions
+like "Where did I overspend in March?" — AI narrative connected to live
+data visualizations.
+
+Required features: CSV Parsing · Time-Series · Anomaly Detection · 
+Data Visualization
+
+### My Interpretation
+
+I took the FinSight brief and built it as a personal finance intelligence
+application with a distinct identity — NOSYOR.M.I (Money Intelligence).
+Read backwards: I.M.ROYSON — "I'm Royson." Tagline: *Your money,
+reflected.*
+
+The brief asked for AI narrative connected to data visualizations. I
+interpreted this as a bidirectional connection — the AI doesn't just
+describe charts, it *updates* them in real time based on what the user
+asks. Ask about anomalies, an anomaly panel appears. Ask about forecasts,
+a forecast chart renders. The chat drives the visualization, not just
+narrates it.
+
+I also went beyond the brief in the AI architecture. Instead of a single
+LLM handling everything, I built a four-layer system where deterministic
+code, statistical models, semantic embeddings, and reasoning LLMs each
+handle the kind of work they are best suited for.
+
+---
+
+## 2. Sprint Log
+
+### Week 1 (May 7–17) — Plan & Core AI Feature
+
+**Planned:**
+- Lock project identity and brand
+- Set up .NET 10 Clean Architecture (4 projects)
+- Configure PostgreSQL 16 + pgvector
+- Build CSV upload pipeline end-to-end
+- Wire up OpenRouter with multi-model routing
+- Implement AI categorization per transaction
+- Implement vector embeddings for RAG
+- Implement Z-score anomaly detection
+- Set up GitHub project board with all 56 stories
+
+**Completed:**
+- ✅ NOSYOR.M.I brand identity locked (name, tagline, mirror metaphor)
+- ✅ .NET 10 solution with 4 Clean Architecture projects
+- ✅ PostgreSQL 16 + pgvector configured (Postgres.app local)
+- ✅ EF Core DbContext with all entities and migrations
+- ✅ CsvHelper-based CSV parser (standard format)
+- ✅ OpenRouter integration with 3-tier model routing
+- ✅ AI categorization via gpt-4o-mini (MODEL_LIGHT)
+- ✅ Vector embeddings via text-embedding-3-small stored in pgvector
+- ✅ Z-score anomaly detection at upload time
+- ✅ Moving average forecasting service
+- ✅ All API endpoints: statements, chat, forecast, timeseries
+- ✅ GitHub project board: 11 epics, 56 stories
+
+**Deferred:**
+- PDF support (PdfPig) — deferred to post-MVP
+
+---
+
+### Week 2 (May 18–22) — Full Feature Build
+
+**Planned:**
+- Build React frontend (all 5 pages)
+- Connect frontend to all API endpoints
+- Build chat-to-visualization bridge
+- Handle edge cases: rate limits, duplicates, empty states
+- Multi-statement support
+- Real bank statement testing
+
+**Completed:**
+- ✅ React 18 + TypeScript + Vite frontend scaffolded
+- ✅ Dashboard page: stat cards, donut chart, spending/income tabs,
+  transaction list with summary panel
+- ✅ Transactions page: search, filter by category, sort, expandable
+  rows, anomaly badge
+- ✅ Statements page: list, upload modal, delete with confirmation,
+  View Details navigation
+- ✅ Chat page: AI chat interface + dynamic chart panel
+  (pie/bar/line/anomaly/forecast)
+- ✅ StatementDetailPage: per-statement transactions + charts tabs
+- ✅ Chat-to-visualization bridge: `chartUpdate` JSON contract drives
+  live chart rendering
+- ✅ SHA-256 deduplication: duplicate uploads return 409 Conflict
+- ✅ Hard delete with cascade (Statement → Transactions → Embeddings)
+- ✅ Multi-statement refactor: removed hardcoded statement IDs
+- ✅ Multi-bank CSV support: Huntington + Bank of America formats
+- ✅ Chat fixes: sessionStorage persistence, conversation history,
+  anomaly panel data source, clear button, auto-clear on delete
+- ✅ Real bank statement testing (Huntington + BOA)
+
+**Deferred:**
+- Multi-bank filtering UI (per-bank grouping in sidebar)
+- Chat history database persistence
+
+---
+
+### Week 3 (May 21–25) — Polish, DevOps & Deploy
+
+**Planned:**
+- Complete test suite (all 4 levels)
+- Dockerize all 3 services
+- Minikube deployment
+- UI polish
+- Submission documentation
+
+**Completed:**
+- ✅ Unit tests: 16 passing (anomaly, forecasting, CSV parser)
+- ✅ Integration tests: 6 passing (Statements API)
+- ✅ QA manual test cases: 18 passing (TC-01 to TC-18)
+- ✅ E2E tests: 6 passing (Playwright critical path)
+- ✅ Docker Compose: 3 containers (postgres, api, frontend)
+- ✅ Minikube K8s deployment with nginx API proxy
+- ✅ UI redesign: deep forest sidebar, CCE8EC background, honey amber
+  accent, emerald icon glow, Inter font, collapsible sidebar
+- ✅ ARCHITECTURE.md, DECISIONS.md, LEARNING-LOG.md
+- ✅ 6 architectural diagrams (draw.io)
+- ✅ PROJECT-DOCUMENTATION.md (this file)
+
+---
+
+## 3. All User Stories
+
+Stories are listed by epic. Status reflects the state at submission.
+
+### Epic 1 — Project Setup & Architecture (6 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 1 | Initialize monorepo structure with backend and frontend folders | Major | ✅ Done |
+| 2 | Set up .NET 10 solution with Clean Architecture layers | Major | ✅ Done |
+| 3 | Scaffold React + Vite + TypeScript frontend | Major | ✅ Done |
+| 4 | Configure environment variables for API keys and DB connection | Major | ✅ Done |
+| 5 | Set up Git repository with README, LICENSE, and .gitignore | Minor | ✅ Done |
+| 6 | Write ARCHITECTURE.md with system design and principles | Minor | ✅ Done |
+
+### Epic 2 — Data Persistence Layer (5 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 7 | Configure PostgreSQL 16 with pgvector extension | Major | ✅ Done |
+| 8 | Design entity models in Domain layer | Major | ✅ Done |
+| 9 | Set up EF Core DbContext with migrations | Major | ✅ Done |
+| 10 | Implement pgvector value converter for 1536D embedding storage | Major | ✅ Done |
+| 11 | Configure cascade delete from Statement to Transactions | Minor | ✅ Done |
+
+### Epic 3 — CSV Upload & Parsing (5 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 12 | Build CSV upload endpoint (multipart/form-data) | Major | ✅ Done |
+| 13 | Implement CsvHelper-based parser for standard CSV format | Major | ✅ Done |
+| 14 | Add SHA-256 duplicate detection with 409 Conflict response | Minor | ✅ Done |
+| 15 | Add PDF statement support via PdfPig + AI-assisted extraction | Additive | ❌ Not Started |
+| 16 | Support multi-bank CSV formats (Huntington, BOA) | Minor | ✅ Done |
+
+### Epic 4 — AI Categorization (4 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 17 | Integrate OpenRouter with 3-tier model routing | Major | ✅ Done |
+| 18 | Implement per-transaction AI categorization via MODEL_LIGHT | Major | ✅ Done |
+| 19 | Build structured JSON output schema for categories | Minor | ✅ Done |
+| 20 | Add AI failure handling and graceful fallbacks | Minor | ✅ Done |
+
+### Epic 5 — Anomaly Detection (3 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 21 | Implement Z-score anomaly detector | Major | ✅ Done |
+| 22 | Flag anomalous transactions at upload time | Major | ✅ Done |
+| 23 | Surface anomaly badge and visual highlight in UI | Minor | ✅ Done |
+
+### Epic 6 — Semantic Embeddings & RAG (3 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 24 | Generate vector embeddings per transaction via OpenRouter | Major | ✅ Done |
+| 25 | Store embeddings in pgvector with cosine similarity index | Major | ✅ Done |
+| 26 | Implement RAG retrieval: embed query → similarity search → context | Major | ✅ Done |
+
+### Epic 7 — Forecasting & Time-Series (4 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 27 | Implement weighted moving average forecasting service | Major | ✅ Done |
+| 28 | Build forecast API endpoint per statement | Major | ✅ Done |
+| 29 | Build time-series spending API endpoint | Minor | ✅ Done |
+| 30 | Render forecast chart in chat visualization panel | Minor | ✅ Done |
+
+### Epic 8 — Conversational AI Chat (5 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 31 | Build chat API endpoint with RAG pipeline | Major | ✅ Done |
+| 32 | Implement streaming token delivery to frontend | Major | ✅ Done |
+| 33 | Design guardrailed system prompt for financial scope | Major | ✅ Done |
+| 34 | Build chartUpdate JSON contract for AI-driven visualizations | Major | ✅ Done |
+| 35 | Implement witty on-brand deflections for off-topic queries | Additive | ✅ Done |
+
+### Epic 9 — Frontend Application (14 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 36 | Build Dashboard page with stat cards and donut chart | Major | ✅ Done |
+| 37 | Build Transactions page with search, filter, sort | Major | ✅ Done |
+| 38 | Build Statements page with upload modal and list | Major | ✅ Done |
+| 39 | Build Chat page with message interface and chart panel | Major | ✅ Done |
+| 40 | Build StatementDetailPage with transactions + charts tabs | Minor | ✅ Done |
+| 41 | Connect all pages to live API endpoints | Major | ✅ Done |
+| 42 | Implement dynamic chart rendering from chartUpdate JSON | Major | ✅ Done |
+| 43 | Add spending/income tab switching on Dashboard | Minor | ✅ Done |
+| 44 | Add expandable transaction rows with full details | Minor | ✅ Done |
+| 45 | Implement sessionStorage chat persistence across navigation | Minor | ✅ Done |
+| 46 | Add clear chat button and auto-clear on statement delete | Minor | ✅ Done |
+| 47 | Restyle StatementDetailPage to match light theme | Minor | ⏳ In Progress |
+| 48 | Dashboard cards — surface change vs last month and sparklines | Additive | ❌ Not Started |
+| 49 | Persistent last uploaded statement pill across navigation | Additive | ✅ Done |
+
+### Epic 10 — Testing & QA (5 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 50 | Write unit tests for Domain and Application layers | Major | ✅ Done |
+| 51 | Write integration tests for API and AI layer endpoints | Major | ✅ Done |
+| 52 | Document QA manual test cases with pass/fail outcomes | Major | ✅ Done |
+| 53 | Implement end-to-end tests for full user flow | Major | ✅ Done |
+| 54 | Generate test coverage reports for submission | Minor | ✅ Done |
+
+### Epic 11 — Deployment & Submission (10 stories)
+
+| # | Story | Tier | Status |
+|---|---|---|---|
+| 55 | Dockerize .NET API with multi-stage build | Major | ✅ Done |
+| 56 | Dockerize React frontend with nginx | Major | ✅ Done |
+| 57 | Configure Docker Compose for all 3 services | Major | ✅ Done |
+| 58 | Deploy to Minikube with K8s manifests | Major | ✅ Done |
+| 59 | Configure nginx API proxy for Kubernetes internal routing | Minor | ✅ Done |
+| 60 | Prepare PowerPoint deck with real screenshots | Major | ⏳ In Progress |
+| 61 | Create 6 architectural diagrams | Major | ✅ Done |
+| 62 | Complete project documentation for submission | Major | ✅ Done |
+| 63 | Request Animaker access for demo video production | Additive | ⏳ In Progress |
+| 64 | Document creativity expansions beyond the original brief | Additive | ✅ Done |
+
+---
+
+## 4. AI Integration Details
+
+### Model Strategy
+
+NOSYOR.M.I uses three AI model tiers, all routed through OpenRouter:
+
+| Tier | Model | Used For |
+|---|---|---|
+| MODEL_LIGHT | openai/gpt-4o-mini | Per-transaction categorization at upload |
+| MODEL_CHAT | anthropic/claude-sonnet-4-5 | Conversational chat + RAG responses |
+| EMBEDDING_MODEL | openai/text-embedding-3-small | 1536D vector embeddings for RAG |
+
+### System Prompt Strategy
+
+The chat endpoint uses a guardrailed system prompt that:
+- Scopes the AI strictly to the user's uploaded financial data
+- Instructs the AI to return structured `chartUpdate` JSON when relevant
+- Defines the brand voice: calm, precise, gently witty — a financial
+  mirror, not a search engine
+- Deflects off-topic queries gracefully without preaching
+
+### Prompt Engineering
+
+**Categorization prompt (MODEL_LIGHT):**
+Each transaction description is sent with a structured prompt requesting
+a JSON response with a single `category` field from a predefined list.
+Structured output enforces valid category names and prevents hallucinated
+categories.
+
+**Chat prompt (MODEL_CHAT):**
+The prompt includes:
+1. System context (scope, brand voice, chartUpdate contract)
+2. Relevant transactions retrieved via RAG (top-k by cosine similarity)
+3. Full conversation history (multi-turn coherence)
+4. User message
+
+The `chartUpdate` contract is defined in the system prompt:
+```json
+{
+  "type": "pie|bar|line|anomalies|forecast",
+  "data": { ... }
+}
+```
+When the AI determines a chart would help the response, it appends this
+JSON to its answer. The frontend detects and renders it.
+
+### Agentic Patterns
+
+**Upload pipeline (multi-step agentic):**
+The upload endpoint orchestrates a sequential multi-step pipeline:
+categorization → embedding → anomaly detection → persistence. Each step
+is a discrete AI or statistical operation. The .NET API is the
+orchestrator — the browser never calls AI services directly.
+
+**RAG loop (retrieval-augmented generation):**
+Before every chat response, the system embeds the user's question,
+searches pgvector for the most semantically similar transactions, and
+injects them as context. This grounds AI responses in real data.
+
+### Failure Handling
+
+- **Rate limits:** OpenRouter errors are caught and return a structured
+  error response with a user-friendly message
+- **Hallucination guardrails:** The system prompt explicitly instructs
+  the AI not to invent transaction data. RAG retrieval provides the
+  factual grounding
+- **Empty states:** All pages handle the no-statement state with clear
+  messaging directing users to upload via the Statements page
+- **Duplicate uploads:** SHA-256 hash check prevents re-processing
+
+---
+
+## 5. Technical Decisions
+
+See `DECISIONS.md` for the full decision log. Key decisions:
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Architecture | Clean Architecture (4 projects) | Enforced separation, testability |
+| Database | PostgreSQL 16 + pgvector | One DB for relational + vector data |
+| AI routing | OpenRouter (3 tiers) | Cost control + right model for each task |
+| Anomaly detection | Z-score (statistical) | Deterministic, auditable, no AI hallucination risk |
+| Forecasting | Weighted moving average | Deterministic, predictable |
+| Deduplication | SHA-256 hash | Prevents double-counting before AI runs |
+| Deployment | Minikube (K8s) | Submission requirement |
+| Frontend state | sessionStorage | Right tradeoff for MVP |
+
+---
+
+## 6. Testing Documentation
+
+### Test Results Summary
+
+| Level | Count | Status |
+|---|---|---|
+| Unit — Anomaly Detection | 5 | ✅ All passing |
+| Unit — Forecasting | 5 | ✅ All passing |
+| Unit — CSV Parser | 6 | ✅ All passing |
+| Integration — Statements API | 6 | ✅ All passing |
+| QA Manual Test Cases | 18 | ✅ All passing (TC-01 to TC-18) |
+| E2E — Playwright Critical Path | 6 | ✅ All passing |
+| **TOTAL** | **46** | **✅ All passing** |
+
+### Test Locations
+
+- Unit + Integration: `backend/Nosyormi.Tests/`
+- QA Manual Cases: `QA-TEST-CASES.md` in repo root
+- E2E spec: `frontend/e2e/critical-path.spec.ts`
+- Playwright config: `frontend/playwright.config.ts`
+
+### Running Tests
+
+```bash
+# Unit + Integration
+cd backend
+dotnet test
+
+# E2E (requires app running on localhost:5173)
+cd frontend
+npx playwright test
+```
+
+---
+
+## 7. Deployment Record
+
+### Docker Compose (Local Development)
+
+Three containers: `nosyormi-postgres` (port 5433), `nosyormi-api`
+(port 5034), `nosyormi-frontend` nginx (port 5173).
+
+```bash
+cd "/Users/roysondsouza/AI Projects/NOSYORMI/nosyormi"
+docker compose --env-file .env.docker up -d
+# Access: http://localhost:5173
+```
+
+### Minikube (Submission Deployment)
+
+API + frontend pods in Minikube. Postgres in Docker Compose outside
+the cluster.
+
+```bash
+minikube start
+docker compose --env-file .env.docker up -d postgres
+minikube service nosyormi-frontend --url
+# Use the URL provided — keep terminal open
+```
+
+### Environment Configuration
+
+All sensitive values (API keys, DB credentials) are stored in gitignored
+env files. The Docker image reads from environment variables injected at
+runtime, never from hardcoded values.
+
+- `.env` — local development (gitignored)
+- `.env.docker` — Docker Compose (gitignored)
+- `k8s/secrets.yaml` — Kubernetes secrets (gitignored)
+- `.env.example` — template committed to repo
+
+---
+
+## 8. Known Issues & Limitations
+
+| # | Issue | Type | Notes |
+|---|---|---|---|
+| 1 | Chat returns "I had trouble reflecting on that" for action requests | By design | Chat is Q&A only, not write operations |
+| 2 | AI and database anomaly counts may differ | By design | DB shows Z-score truth; AI shows conversational context |
+| 3 | No "mark as not anomaly" user feedback | Deferred | Would require new endpoint + UI |
+| 4 | PDF upload not supported | Deferred | CSV covers real bank exports; PdfPig integration deferred |
+| 5 | No per-bank statement filtering | Deferred | Architecture supports it; not needed for MVP |
+| 6 | StatementDetailPage not in primary nav | Known | Accessible via "View Details →" in Statements page |
+| 7 | Chat history lost on browser close | By design | sessionStorage only; DB persistence deferred |
+| 8 | Sparklines + change vs last month not implemented | Deferred | Additive tier story; deferred for submission timeline |
+
+---
+
+## 9. Creativity & Expansion Points
+
+Beyond the base FinSight brief, NOSYOR.M.I includes:
+
+**Novel AI Pattern (+High)**
+- Four-layer AI architecture (deterministic → statistical → semantic
+  → reasoning) rather than a single LLM handling everything
+- Chat-to-visualization bridge: AI returns structured `chartUpdate`
+  JSON that drives live chart rendering — the chat IS the dashboard
+
+**UX That Surprises (+Medium)**
+- Deep forest sidebar with emerald glow on active icons, honey amber
+  accents, collapsible with animated tooltips
+- NOSYOR.M.I brand identity with hidden name reversal (I.M.ROYSON)
+
+**Feature Expansion (+Medium)**
+- Multi-bank CSV support (Standard, Huntington, Bank of America)
+  with automatic format detection — no user configuration required
+- StatementDetailPage: per-statement deep-dive with transactions and
+  charts tabs
+
+**Production-Grade Engineering (+Medium)**
+- SHA-256 deduplication enforced at DB level with unique index
+- nginx reverse proxy for zero hardcoded API URLs in K8s deployment
+- Four-level test suite: unit, integration, QA manual, E2E Playwright
+
+**Completely Original Idea (+High)**
+- NOSYOR.M.I is not FinSight. It is a personal finance mirror with a
+  distinct brand identity, a four-layer AI architecture that goes well
+  beyond the brief, and a product vision grounded in the metaphor of
+  reflection — your money, reflected back to you with clarity.
+
+---
+
+*Last updated: 25 May 2026*
