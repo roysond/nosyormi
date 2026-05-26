@@ -909,15 +909,14 @@ export default function ChatPage() {
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          background: 'white',
+          background: '#CCE8EC',
           borderRight: '1px solid #E2E8F0',
         }}
       >
         <div
           style={{
             padding: '24px 28px',
-            background: 'white',
-            borderBottom: '1px solid #E2E8F0',
+            background: '#CCE8EC',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
@@ -963,7 +962,7 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
-            background: 'white',
+            background: '#CCE8EC',
           }}
         >
           {messages.length === 0 && !loading && (

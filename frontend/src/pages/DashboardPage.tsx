@@ -62,8 +62,7 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '20px 32px',
-    borderBottom: '1px solid #E2E8F0',
-    background: 'white',
+    background: '#CCE8EC',
   },
   headerTitle: {
     fontSize: '20px',
