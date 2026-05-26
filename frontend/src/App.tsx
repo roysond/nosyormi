@@ -1,6 +1,12 @@
 import { useState } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { NavLink, Route, Routes } from 'react-router-dom';
+import {
+  IconLayoutDashboard,
+  IconArrowsExchange,
+  IconFileText,
+  IconMessageCircle,
+} from '@tabler/icons-react';
 import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
 import StatementsPage from './pages/StatementsPage';
@@ -113,7 +119,7 @@ function NavItem({
   to,
   collapsed,
 }: {
-  icon: string;
+  icon: ReactNode;
   label: string;
   to: string;
   collapsed: boolean;
@@ -137,13 +143,14 @@ function NavItem({
         <>
           <span
             style={{
-              fontSize: '16px',
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
+              color: isActive ? '#34D399' : 'rgba(255,255,255,0.38)',
               filter: isActive
                 ? 'drop-shadow(0 0 5px rgba(52,211,153,0.9)) drop-shadow(0 0 12px rgba(52,211,153,0.4))'
                 : 'none',
+              transition: 'color 0.15s ease, filter 0.15s ease',
             }}
             aria-hidden
           >
@@ -226,10 +233,10 @@ export default function App() {
         )}
 
         <nav style={styles.nav}>
-          <NavItem to="/" icon="⌂" label="Dashboard" collapsed={collapsed} />
-          <NavItem to="/transactions" icon="▤" label="Transactions" collapsed={collapsed} />
-          <NavItem to="/statements" icon="📁" label="Statements" collapsed={collapsed} />
-          <NavItem to="/chat" icon="◉" label="NOSYOR.M.I Chat" collapsed={collapsed} />
+          <NavItem to="/" icon={<IconLayoutDashboard size={18} />} label="Dashboard" collapsed={collapsed} />
+          <NavItem to="/transactions" icon={<IconArrowsExchange size={18} />} label="Transactions" collapsed={collapsed} />
+          <NavItem to="/statements" icon={<IconFileText size={18} />} label="Statements" collapsed={collapsed} />
+          <NavItem to="/chat" icon={<IconMessageCircle size={18} />} label="NOSYOR.M.I Chat" collapsed={collapsed} />
         </nav>
 
         {!collapsed && <StatementPill />}
