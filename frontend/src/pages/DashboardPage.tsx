@@ -111,8 +111,8 @@ const styles = {
     cursor: 'pointer',
     border: 'none',
     background: 'transparent',
-    borderBottom: `2px solid ${active ? '#00637C' : 'transparent'}`,
-    color: active ? '#00637C' : '#64748B',
+    borderBottom: `2px solid ${active ? '#C9911A' : 'transparent'}`,
+    color: active ? '#C9911A' : '#64748B',
     marginBottom: -1,
   }),
   tabContent: {
@@ -159,7 +159,7 @@ const styles = {
     fontSize: 15,
   },
   loading: {
-    color: '#00637C',
+    color: '#C9911A',
     animation: 'dashboard-pulse 1.6s ease-in-out infinite',
   },
   error: {
@@ -550,8 +550,8 @@ export default function DashboardPage() {
         <span
           style={{
             fontSize: 11,
-            background: 'rgba(0,99,124,0.08)',
-            color: '#00637C',
+            background: 'rgba(201,145,26,0.08)',
+            color: '#C9911A',
             borderRadius: 999,
             padding: '3px 10px',
             whiteSpace: 'nowrap',
@@ -732,7 +732,7 @@ export default function DashboardPage() {
                 ...styles.tab(activeTab === 'spending'),
                 color:
                   activeTab === 'spending'
-                    ? '#00637C'
+                    ? '#C9911A'
                     : tabHover === 'spending'
                       ? '#1E293B'
                       : '#64748B',
@@ -752,7 +752,7 @@ export default function DashboardPage() {
                 ...styles.tab(activeTab === 'income'),
                 color:
                   activeTab === 'income'
-                    ? '#00637C'
+                    ? '#C9911A'
                     : tabHover === 'income'
                       ? '#1E293B'
                       : '#64748B',
@@ -919,7 +919,7 @@ export default function DashboardPage() {
                               : '10px 14px',
                             borderRadius: 8,
                             border: isHighlighted
-                              ? '1px solid rgba(0,99,124,0.2)'
+                              ? '1px solid rgba(201,145,26,0.2)'
                               : '1px solid transparent',
                             borderLeft: isHighlighted
                               ? `3px solid ${color}`
@@ -927,7 +927,7 @@ export default function DashboardPage() {
                             cursor: 'pointer',
                             transition: 'all 0.15s',
                             background: isHighlighted
-                              ? 'rgba(0,99,124,0.06)'
+                              ? 'rgba(201,145,26,0.06)'
                               : '#CCE8EC',
                           }}
                           onMouseEnter={(e) => {
@@ -1007,7 +1007,7 @@ export default function DashboardPage() {
                       >
                         Transactions
                         {activeCategory && (
-                          <span style={{ color: '#00637C', fontWeight: 500 }}>
+                          <span style={{ color: '#C9911A', fontWeight: 500 }}>
                             {' '}
                             — {activeCategory.name}
                           </span>

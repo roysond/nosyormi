@@ -47,7 +47,7 @@ const colors = {
   text: '#1E293B',
   muted: '#64748B',
   hint: '#94A3B8',
-  teal: '#00637C',
+  teal: '#C9911A',
   amber: '#F59E0B',
   white: '#FFFFFF',
   income: '#10B981',
@@ -377,7 +377,7 @@ export default function StatementDetailPage() {
             style={{
               fontSize: '12px',
               fontWeight: 600,
-              color: '#00637C',
+              color: '#C9911A',
               marginBottom: '4px',
               letterSpacing: '0.02em',
             }}
@@ -516,7 +516,7 @@ export default function StatementDetailPage() {
                         setActiveCategoryIndex(null);
                       }}
                       style={{
-                        background: isActive ? '#00637C' : '#FFFFFF',
+                        background: isActive ? '#C9911A' : '#FFFFFF',
                         color: isActive ? '#ffffff' : '#64748B',
                         border: isActive ? 'none' : '1px solid #E2E8F0',
                         borderRadius: 999,
@@ -585,10 +585,10 @@ export default function StatementDetailPage() {
                             gap: 12,
                             transition: 'background 0.15s',
                             background: isActive
-                              ? 'rgba(0,99,124,0.08)'
+                              ? 'rgba(201,145,26,0.08)'
                               : 'transparent',
                             borderLeft: isActive
-                              ? '3px solid #00637C'
+                              ? '3px solid #C9911A'
                               : '3px solid transparent',
                           }}
                           onMouseEnter={(e) => {

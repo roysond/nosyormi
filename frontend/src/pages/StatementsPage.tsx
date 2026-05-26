@@ -40,7 +40,7 @@ const styles = {
     textAlign: 'center' as const,
   },
   loading: {
-    color: '#00637C',
+    color: '#C9911A',
     animation: 'dashboard-pulse 1.6s ease-in-out infinite',
   },
   error: {
@@ -89,8 +89,8 @@ const styles = {
     color: '#64748B',
   },
   countPill: {
-    background: 'rgba(0,99,124,0.08)',
-    color: '#00637C',
+    background: 'rgba(201,145,26,0.08)',
+    color: '#C9911A',
     fontSize: 12,
     padding: '4px 12px',
     borderRadius: 999,
@@ -330,7 +330,7 @@ export default function StatementsPage() {
         <button
           type="button"
           style={{
-            background: '#00637C',
+            background: '#C9911A',
             color: 'white',
             border: 'none',
             borderRadius: 8,
@@ -385,11 +385,11 @@ export default function StatementsPage() {
                 to={`/dashboard/${statement.id}`}
                 style={{
                   fontSize: 13,
-                  color: '#00637C',
+                  color: '#C9911A',
                   fontWeight: 600,
                   textDecoration: 'none',
                   padding: '7px 16px',
-                  border: '1px solid rgba(0,99,124,0.3)',
+                  border: '1px solid rgba(201,145,26,0.3)',
                   borderRadius: 8,
                   whiteSpace: 'nowrap',
                 }}
@@ -546,7 +546,7 @@ export default function StatementsPage() {
                     margin: 0,
                     fontSize: 15,
                     fontWeight: 600,
-                    color: '#00637C',
+                    color: '#C9911A',
                   }}
                 >
                   Statement reflected successfully
@@ -558,10 +558,10 @@ export default function StatementsPage() {
                   role="button"
                   tabIndex={0}
                   style={{
-                    border: `2px dashed ${dragOver ? '#00637C' : 'rgba(0,99,124,0.3)'}`,
+                    border: `2px dashed ${dragOver ? '#C9911A' : 'rgba(201,145,26,0.3)'}`,
                     background: dragOver
-                      ? 'rgba(0,99,124,0.08)'
-                      : 'rgba(0,99,124,0.03)',
+                      ? 'rgba(201,145,26,0.08)'
+                      : 'rgba(201,145,26,0.03)',
                     borderRadius: 12,
                     padding: 40,
                     textAlign: 'center',
@@ -602,7 +602,7 @@ export default function StatementsPage() {
                       }}
                     >
                       <div style={{ fontSize: 48, marginBottom: 12 }}>🪞</div>
-                      <div style={{ color: '#00637C', fontSize: 14, fontWeight: 500 }}>
+                      <div style={{ color: '#C9911A', fontSize: 14, fontWeight: 500 }}>
                         Reflecting on your data...
                       </div>
                     </div>
@@ -624,7 +624,7 @@ export default function StatementsPage() {
                             margin: 0,
                             fontSize: 14,
                             fontWeight: 600,
-                            color: '#00637C',
+                            color: '#C9911A',
                             wordBreak: 'break-word',
                           }}
                         >
@@ -690,7 +690,7 @@ export default function StatementsPage() {
                       padding: '12px 24px',
                       border: 'none',
                       borderRadius: 8,
-                      background: '#00637C',
+                      background: '#C9911A',
                       color: 'white',
                       fontSize: 14,
                       fontWeight: 600,

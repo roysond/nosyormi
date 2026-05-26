@@ -80,7 +80,7 @@ const colors = {
   text: '#1E293B',
   muted: '#64748B',
   hint: '#94A3B8',
-  teal: '#00637C',
+  teal: '#C9911A',
   amber: '#f4a623',
   white: '#ffffff',
 };
@@ -530,10 +530,10 @@ export default function ChatPage() {
                   onMouseLeave={() => setHoveredPieIndex(null)}
                   style={{
                     background: isActive
-                      ? 'rgba(0,99,124,0.08)'
+                      ? 'rgba(201,145,26,0.08)'
                       : 'white',
                     border: isActive
-                      ? '1px solid rgba(0,99,124,0.25)'
+                      ? '1px solid rgba(201,145,26,0.25)'
                       : '1px solid #E2E8F0',
                     borderRadius: 999,
                     padding: '4px 10px',
@@ -541,7 +541,7 @@ export default function ChatPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    color: isActive ? '#00637C' : '#475569',
+                    color: isActive ? '#C9911A' : '#475569',
                     fontWeight: isActive ? 600 : 400,
                   }}
                 >
@@ -603,7 +603,7 @@ export default function ChatPage() {
               y={y}
               width={width}
               height={height}
-              fill={isAnomaly ? '#F59E0B' : '#00637C'}
+              fill={isAnomaly ? '#F59E0B' : '#C9911A'}
               rx={4}
               ry={4}
             />
@@ -674,7 +674,7 @@ export default function ChatPage() {
                     shape={(props: any) => <AnomalyBarShape {...props} />}
                   />
                 ) : (
-                  <Bar dataKey="value" fill="#00637C" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" fill="#C9911A" radius={[4, 4, 0, 0]} />
                 )}
               </BarChart>
             </ResponsiveContainer>
@@ -732,7 +732,7 @@ export default function ChatPage() {
                 <Line
                   type="monotone"
                   dataKey="amount"
-                  stroke="#00637C"
+                  stroke="#C9911A"
                   strokeWidth={2.5}
                   dot={false}
                 />
@@ -851,7 +851,7 @@ export default function ChatPage() {
                 <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 <Legend />
-                <Bar dataKey="actual" name="Actual Avg" fill="#00637C" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" name="Actual Avg" fill="#C9911A" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="forecast" name="Forecast" fill="#F59E0B" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -991,7 +991,7 @@ export default function ChatPage() {
               style={{
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
                 background:
-                  msg.role === 'user' ? '#00637C' : '#F8FAFC',
+                  msg.role === 'user' ? '#C9911A' : '#F8FAFC',
                 border:
                   msg.role === 'user' ? 'none' : '1px solid #E2E8F0',
                 borderRadius:
@@ -1049,7 +1049,7 @@ export default function ChatPage() {
             style={{
               flex: 1,
               background: '#CCE8EC',
-              border: `1px solid ${inputFocused ? '#00637C' : '#E2E8F0'}`,
+              border: `1px solid ${inputFocused ? '#C9911A' : '#E2E8F0'}`,
               borderRadius: 12,
               padding: '14px 18px',
               color: '#1E293B',

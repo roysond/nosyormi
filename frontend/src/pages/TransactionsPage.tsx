@@ -274,8 +274,8 @@ export default function TransactionsPage() {
         <span
           style={{
             fontSize: 11,
-            background: 'rgba(0,99,124,0.08)',
-            color: '#00637C',
+            background: 'rgba(201,145,26,0.08)',
+            color: '#C9911A',
             borderRadius: 999,
             padding: '3px 10px',
             whiteSpace: 'nowrap',
@@ -368,7 +368,7 @@ export default function TransactionsPage() {
         >
           CATEGORY
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#00637C' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#C9911A' }}>
           {getCategoryName(tx)}
         </div>
       </div>
@@ -645,7 +645,7 @@ export default function TransactionsPage() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#00637C',
+            color: '#C9911A',
             fontSize: 15,
             animation: 'tx-loading-pulse 1.6s ease-in-out infinite',
           }}

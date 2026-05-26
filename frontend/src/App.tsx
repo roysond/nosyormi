@@ -210,16 +210,16 @@ export default function App() {
             width: '24px',
             height: '24px',
             borderRadius: '50%',
-            background: '#0F2D33',
-            border: '1px solid rgba(255,255,255,0.12)',
-            color: 'rgba(255,255,255,0.5)',
+            background: '#1A3A42',
+            border: '1px solid rgba(255,255,255,0.2)',
+            color: 'rgba(255,255,255,0.75)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
             fontSize: '11px',
             zIndex: 10,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(52,211,153,0.15)',
           }}
         >
           {collapsed ? '›' : '‹'}
