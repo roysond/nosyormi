@@ -408,6 +408,62 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
   add optional `?bank=` query parameter to aggregate endpoints, add a 
   selector in the sidebar header.
 
+### 2026-05-21 — Full Test Suite (46 Tests)
+
+- **Decision:** Complete test coverage across four levels before deployment.
+- **Unit tests (16):** ZScoreAnomalyDetector (5), MovingAverageForecastingService (5), CsvStatementParser (6)
+- **Integration tests (6):** StatementsController API layer
+- **QA manual test cases (18):** TC-01 to TC-18 documented in `QA-TEST-CASES.md`
+- **E2E tests (6):** Playwright critical path spec (`frontend/e2e/critical-path.spec.ts`)
+- **Result:** 46 tests, all passing. Test reports committed to repo.
+
+### 2026-05-21 — Docker Containerization + Minikube Deployment
+
+- **Decision:** Three Docker containers (postgres, api, frontend) orchestrated via Docker Compose for local dev. Minikube used as the Kubernetes deployment target for submission.
+- **nginx proxy:** Frontend nginx container proxies `/api` → `http://nosyormi-api:5034` using Kubernetes internal DNS. This means zero hardcoded API URLs in the frontend bundle — the proxy handles routing transparently.
+- **Postgres outside the cluster:** PostgreSQL runs in Docker Compose, not as a Kubernetes pod. Consistent with the May 12 decision — database persistence must not depend on disposable pod lifecycles.
+- **Startup sequence for Minikube demo:**
+  1. `minikube start`
+  2. `docker compose --env-file .env.docker up -d postgres`
+  3. `minikube service nosyormi-frontend --url`
+- **Critical fix:** `EMBEDDING_MODEL` was missing from `.env.docker`, causing 500 errors on first upload. Fixed by adding the variable to `.env.docker`.
+- **K8s manifests:** `k8s/api-deployment.yaml`, `k8s/frontend-deployment.yaml`, `k8s/configmap.yaml`. `k8s/secrets.yaml` is gitignored — contains real API keys, applied to cluster manually via `kubectl apply`.
+
+### 2026-05-21 — Multi-Bank CSV Support
+
+- **Decision:** Extended `CsvStatementParser` to detect and handle three distinct CSV formats without user intervention.
+- **Formats supported:**
+  - Standard: `Date, Description, Amount` — direct mapping
+  - Huntington: `Payee Name` + `Memo` columns combined into description
+  - Bank of America: 6-row preamble before real header — parser scans for header row, skips empty date rows, ignores `Running Bal.` column
+- **Rationale:** Real bank statement testing revealed that Huntington categorized everything as "Other" (description parsing bug) and BOA failed entirely (preamble rows). Multi-bank support is essential for real-world usefulness.
+
+### 2026-05-22 — Chat Robustness Fixes
+
+- **sessionStorage persistence:** Chat message history, chart state, statementId, and statementFileName all stored in sessionStorage. Survives page navigation within the session but not browser/tab close (intentional — no DB persistence for chat history).
+- **Conversation context fix:** Full history array now correctly sent to the API on every message, enabling multi-turn coherent responses.
+- **Anomaly panel data source:** Fixed to read from the database ground truth (Z-score results), not from AI conversational context.
+- **Custom event pattern:** `nosyormi-statement-deleted` custom DOM event triggers automatic chat clear when a statement is deleted from the Statements page. Decouples the Statements page from the Chat page without prop drilling or global state.
+- **Clear chat button:** Shown in chat header when `messages.length > 0`. Resets sessionStorage and chat state.
+
+### 2026-05-25 — UI Redesign (Deep Forest + Honey Amber Palette)
+
+- **Decision:** Complete UI palette overhaul from the original light theme to a premium dark-sidebar / tinted-background design.
+- **Palette:**
+  - Sidebar background: `#071A1E` (deep forest, solid)
+  - Main content background: `#CCE8EC` (darkened forest tint)
+  - Card surfaces: `#FBF8F2` (champagne)
+  - Active nav text: `#E8C96A` (gold glow)
+  - Active nav icon: `#34D399` (emerald light glow)
+  - Active nav border: `transparent` (glow does the work)
+  - UI accent: `#C9911A` (honey amber — buttons, tabs, pills, focus borders)
+  - Data/chart color: `#00637C` (crystal teal — unchanged, functional)
+- **Typography:** Inter (Google Fonts) applied globally via `index.css`
+- **Collapsible sidebar:** Animates between 220px (expanded) and 64px (collapsed). Brand name, StatementPill, and version text hide when collapsed. Toggle button (`‹`/`›`) on sidebar edge.
+- **Hover tooltips:** Label pill fades in from the right with slide animation when sidebar is collapsed.
+- **Icons:** Replaced emoji nav icons with `@tabler/icons-react` — enables CSS `filter: drop-shadow` for the emerald glow effect on active icons.
+- **Rationale:** The original Crystal Teal accent (`#00637C`) became invisible against the new `#CCE8EC` background (same hue family). Honey Amber creates genuine warm-cool tension against the forest tint. The collapsible sidebar matches industry-standard dashboard UX patterns.
+
 ---
 
 ## Sections Still To Be Added
