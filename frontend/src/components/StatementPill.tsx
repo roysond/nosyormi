@@ -58,8 +58,8 @@ export default function StatementPill() {
       <div
         title={fileName}
         style={{
-          background: 'rgba(0,99,124,0.08)',
-          color: '#00637C',
+          background: 'rgba(52,211,153,0.08)',
+          color: '#34D399',
           fontSize: 11,
           padding: '6px 12px',
           borderRadius: 999,
