@@ -15,7 +15,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     minHeight: '100%',
-    background: '#F8FAFC',
+    background: '#CCE8EC',
   },
   header: {
     display: 'flex',

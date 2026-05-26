@@ -423,7 +423,7 @@ export default function TransactionsPage() {
             padding: tx.isAnomaly ? '12px 16px 12px 13px' : '12px 16px',
             borderRadius: 8,
             borderBottom: '1px solid #F1F5F9',
-            background: isExpanded ? '#F8FAFC' : 'white',
+            background: isExpanded ? '#CCE8EC' : 'white',
             cursor: 'pointer',
             transition: 'background 0.15s',
             ...(tx.isAnomaly
@@ -435,7 +435,7 @@ export default function TransactionsPage() {
           }}
           onMouseEnter={(e) => {
             if (!isExpanded) {
-              e.currentTarget.style.background = '#F8FAFC';
+              e.currentTarget.style.background = '#CCE8EC';
             }
           }}
           onMouseLeave={(e) => {
@@ -526,7 +526,7 @@ export default function TransactionsPage() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100%',
-        background: '#F8FAFC',
+        background: '#CCE8EC',
       }}
     >
       <style>{`
@@ -757,7 +757,7 @@ export default function TransactionsPage() {
                       padding: '10px 0',
                       borderBottom: row.noBorder
                         ? 'none'
-                        : '1px solid #F8FAFC',
+                        : '1px solid #CCE8EC',
                     }}
                   >
                     <span style={{ fontSize: 12, color: '#64748B' }}>

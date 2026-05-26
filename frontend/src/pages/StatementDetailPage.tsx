@@ -54,7 +54,7 @@ const colors = {
   expense: '#EF4444',
   border: '#E2E8F0',
   surfaceMuted: '#F1F5F9',
-  pageBg: '#F8FAFC',
+  pageBg: '#CCE8EC',
 };
 
 const styles = {

@@ -864,7 +864,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#F8FAFC' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#CCE8EC' }}>
       <style>{`
         @keyframes tooltipFadeIn {
           from { opacity: 0; transform: translateY(4px) scale(0.97); }
@@ -1049,7 +1049,7 @@ export default function ChatPage() {
             disabled={loading}
             style={{
               flex: 1,
-              background: '#F8FAFC',
+              background: '#CCE8EC',
               border: `1px solid ${inputFocused ? '#00637C' : '#E2E8F0'}`,
               borderRadius: 12,
               padding: '14px 18px',
@@ -1087,7 +1087,7 @@ export default function ChatPage() {
           flexDirection: 'column',
           padding: '24px',
           overflow: 'hidden',
-          background: '#F8FAFC',
+          background: '#CCE8EC',
           borderLeft: '1px solid #E2E8F0',
         }}
       >

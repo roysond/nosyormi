@@ -55,7 +55,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     minHeight: '100%',
-    background: '#F8FAFC',
+    background: '#CCE8EC',
   },
   header: {
     display: 'flex',
@@ -929,7 +929,7 @@ export default function DashboardPage() {
                             transition: 'all 0.15s',
                             background: isHighlighted
                               ? 'rgba(0,99,124,0.06)'
-                              : '#F8FAFC',
+                              : '#CCE8EC',
                           }}
                           onMouseEnter={(e) => {
                             if (!isHighlighted) {
@@ -939,7 +939,7 @@ export default function DashboardPage() {
                           }}
                           onMouseLeave={(e) => {
                             if (!isHighlighted) {
-                              e.currentTarget.style.background = '#F8FAFC';
+                              e.currentTarget.style.background = '#CCE8EC';
                               e.currentTarget.style.borderColor = 'transparent';
                             }
                           }}
@@ -1124,7 +1124,7 @@ export default function DashboardPage() {
                             display: 'flex',
                             justifyContent: 'space-between',
                             padding: '8px 0',
-                            borderBottom: '1px solid #F8FAFC',
+                            borderBottom: '1px solid #CCE8EC',
                           }}
                         >
                           <span style={{ fontSize: 12, color: '#64748B' }}>
