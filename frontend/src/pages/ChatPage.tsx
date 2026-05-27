@@ -1025,7 +1025,7 @@ export default function ChatPage() {
             padding: '24px 28px',
             display: 'flex',
             flexDirection: 'column',
-            gap: 12,
+            gap: '30px',
             background: '#F4F7F9',
           }}
         >
