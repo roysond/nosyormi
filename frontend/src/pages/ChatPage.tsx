@@ -192,6 +192,30 @@ function buildCategoryTotals(expenses: Transaction[]): CategoryTotal[] {
   ).sort((a, b) => b.value - a.value);
 }
 
+const PillGreenBar = (props: any) => {
+  const { x, y, width, height } = props;
+  if (!height || height <= 0) return null;
+  const id = `pillGlass${Math.round(x)}`;
+  return (
+    <g>
+      <defs>
+        <linearGradient id={`${id}base`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(52,211,153,0.12)" />
+          <stop offset="100%" stopColor="rgba(0,99,124,0.05)" />
+        </linearGradient>
+        <linearGradient id={`${id}shine`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.32)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.03)" />
+        </linearGradient>
+      </defs>
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="rgba(0,99,124,0.45)" />
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={`url(#${id}base)`} />
+      <rect x={x} y={y} width={width} height={height * 0.45} rx={4} ry={4} fill={`url(#${id}shine)`} />
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="none" stroke="rgba(93,202,165,0.3)" strokeWidth={1} />
+    </g>
+  );
+};
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -662,15 +686,19 @@ export default function ChatPage() {
                 : {}
             }
           >
-            <rect
-              x={x}
-              y={y}
-              width={width}
-              height={height}
-              fill={isAnomaly ? '#F59E0B' : '#C9911A'}
-              rx={4}
-              ry={4}
-            />
+            {isAnomaly ? (
+              <rect
+                x={x}
+                y={y}
+                width={width}
+                height={height}
+                fill="#F59E0B"
+                rx={4}
+                ry={4}
+              />
+            ) : (
+              <PillGreenBar {...props} />
+            )}
           </g>
         );
       };
@@ -738,7 +766,7 @@ export default function ChatPage() {
                     shape={(props: any) => <AnomalyBarShape {...props} />}
                   />
                 ) : (
-                  <Bar dataKey="value" fill="#C9911A" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="value" shape={<PillGreenBar />} />
                 )}
               </BarChart>
             </ResponsiveContainer>
@@ -915,8 +943,8 @@ export default function ChatPage() {
                 <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 <Legend />
-                <Bar dataKey="actual" name="Actual Avg" fill="#C9911A" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="forecast" name="Forecast" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="actual" name="Actual Avg" shape={<PillGreenBar />} />
+                <Bar dataKey="forecast" name="Forecast" shape={<PillGreenBar />} />
               </BarChart>
             </ResponsiveContainer>
           </div>
