@@ -216,6 +216,28 @@ const PillGreenBar = (props: any) => {
   );
 };
 
+const JewelBar = (props: any) => {
+  const { x, y, width, height, fill } = props;
+  if (!height || height <= 0) return null;
+  const jewel = fill
+    ? fill.replace(')', ', 0.92)').replace('rgb(', 'rgba(')
+    : 'rgba(0,70,90,0.92)';
+  const id = `jewel${Math.round(x)}`;
+  return (
+    <g>
+      <defs>
+        <radialGradient id={`${id}j`} cx="40%" cy="30%" r="70%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.01)" />
+        </radialGradient>
+      </defs>
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={jewel} />
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={`url(#${id}j)`} />
+      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
+    </g>
+  );
+};
+
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -766,7 +788,14 @@ export default function ChatPage() {
                     shape={(props: any) => <AnomalyBarShape {...props} />}
                   />
                 ) : (
-                  <Bar dataKey="value" shape={<PillGreenBar />} />
+                  <Bar dataKey="value" shape={<JewelBar />}>
+                    {barData.map((_, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={COLORS[index % COLORS.length]}
+                      />
+                    ))}
+                  </Bar>
                 )}
               </BarChart>
             </ResponsiveContainer>

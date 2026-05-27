@@ -5,10 +5,8 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
-  Sector,
   Tooltip,
 } from 'recharts';
-import type { PieSectorShapeProps } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
@@ -21,6 +19,35 @@ const COLORS = [
   '#5ad97a',
   '#e8607a',
 ];
+
+const JEWEL_MAP: Record<string, string> = {
+  '#00637C': 'rgba(0,70,90,0.92)',
+  '#5BC4F5': 'rgba(30,140,200,0.92)',
+  '#60A5FA': 'rgba(30,120,200,0.92)',
+  '#818CF8': 'rgba(60,55,180,0.92)',
+  '#6B4FA0': 'rgba(75,45,130,0.92)',
+  '#A78BFA': 'rgba(90,60,190,0.92)',
+  '#F59E0B': 'rgba(190,120,0,0.92)',
+  '#10B981': 'rgba(5,130,85,0.92)',
+  '#34D399': 'rgba(5,160,100,0.92)',
+  '#EF4444': 'rgba(180,30,30,0.92)',
+  '#F87171': 'rgba(200,50,50,0.92)',
+  '#EC4899': 'rgba(180,30,120,0.92)',
+  '#8B5CF6': 'rgba(100,50,200,0.92)',
+  '#06B6D4': 'rgba(5,130,170,0.92)',
+  '#84CC16': 'rgba(80,150,10,0.92)',
+  '#F97316': 'rgba(200,90,10,0.92)',
+  '#38c9b0': 'rgba(5,160,100,0.92)',
+  '#5ab4e8': 'rgba(30,140,200,0.92)',
+  '#9b7fe8': 'rgba(90,60,190,0.92)',
+  '#f4a623': 'rgba(190,120,0,0.92)',
+  '#5ad97a': 'rgba(5,130,85,0.92)',
+  '#e8607a': 'rgba(200,50,50,0.92)',
+};
+
+function jewelize(hex: string): string {
+  return JEWEL_MAP[hex] ?? hex;
+}
 
 interface Transaction {
   id: string;
@@ -194,39 +221,6 @@ function formatPeriodLabel(period: string): string {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
-function hexToRgba(hex: string, alpha: number): string {
-  const r = parseInt(hex.slice(1, 3), 16);
-  const g = parseInt(hex.slice(3, 5), 16);
-  const b = parseInt(hex.slice(5, 7), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
-
-function renderActiveShape(props: PieSectorShapeProps) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <Sector
-      cx={cx}
-      cy={cy}
-      innerRadius={innerRadius}
-      outerRadius={(outerRadius ?? 0) + 8}
-      startAngle={startAngle}
-      endAngle={endAngle}
-      fill={fill}
-    />
-  );
-}
-
-function renderPieSector(
-  props: PieSectorShapeProps,
-  index: number,
-  activeCategoryIndex: number | null,
-) {
-  if (activeCategoryIndex === index) {
-    return renderActiveShape(props);
-  }
-  return <Sector {...props} />;
-}
-
 export default function StatementDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -237,7 +231,6 @@ export default function StatementDetailPage() {
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [backHover, setBackHover] = useState(false);
-
   useEffect(() => {
     if (!id) {
       setError('Statement ID is missing.');
@@ -356,6 +349,19 @@ export default function StatementDetailPage() {
     };
   }, [statement, selectedPeriod, activeCategoryIndex]);
 
+  const jewelizedFilteredCategoryTotals = useMemo(
+    () =>
+      chartsDerived.filteredCategoryTotals.map((entry, index) => {
+        const color = COLORS[index % COLORS.length];
+        return {
+          ...entry,
+          color,
+          jewelColor: jewelize((entry as { color?: string }).color ?? color),
+          baseColor: color,
+        };
+      }),
+    [chartsDerived.filteredCategoryTotals],
+  );
 
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -672,9 +678,20 @@ export default function StatementDetailPage() {
                 <div style={{ width: '60%', minWidth: 0 }}>
                   <div style={{ position: 'relative' }}>
                     <ResponsiveContainer width="100%" height={280}>
-                      <PieChart>
+                      <div
+                        style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
+                      >
+                      <PieChart
+                        margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+                      >
+                        <defs>
+                          <radialGradient id="jewelShimmer" cx="38%" cy="28%" r="60%">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" stopOpacity={0.22} />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={0} />
+                          </radialGradient>
+                        </defs>
                         <Pie
-                          data={chartsDerived.filteredCategoryTotals}
+                          data={jewelizedFilteredCategoryTotals}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -682,31 +699,23 @@ export default function StatementDetailPage() {
                           outerRadius={100}
                           innerRadius={60}
                           paddingAngle={2}
-                          shape={(props, index) =>
-                            renderPieSector(props, index, activeCategoryIndex)
-                          }
+                          isAnimationActive={true}
                           onClick={(_, index) =>
                             setActiveCategoryIndex(
                               activeCategoryIndex === index ? null : index,
                             )
                           }
                         >
-                          {chartsDerived.filteredCategoryTotals.map((_, index) => {
-                            const color = COLORS[index % COLORS.length];
-                            let fill = color;
-                            if (
-                              activeCategoryIndex !== null &&
-                              activeCategoryIndex !== index
-                            ) {
-                              fill = hexToRgba(color, 0.3);
-                            }
-                            return (
-                              <Cell key={`cell-${index}`} fill={fill} />
-                            );
-                          })}
+                          {jewelizedFilteredCategoryTotals.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={jewelize(entry.color ?? COLORS[index % COLORS.length])}
+                            />
+                          ))}
                         </Pie>
                         <Tooltip content={<CustomPieTooltip />} />
                       </PieChart>
+                      </div>
                     </ResponsiveContainer>
                     <div
                       style={{

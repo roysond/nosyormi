@@ -4,10 +4,8 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
-  Sector,
   Tooltip,
 } from 'recharts';
-import type { PieSectorShapeProps } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = [
@@ -20,6 +18,32 @@ const COLORS = [
   '#EF4444',
   '#8B5CF6',
 ];
+
+const JEWEL_MAP: Record<string, string> = {
+  '#00637C': 'rgba(0,70,90,0.92)',
+  '#0891B2': 'rgba(5,120,160,0.95)',
+  '#0EA5E9': 'rgba(5,140,200,0.95)',
+  '#6366F1': 'rgba(70,60,200,0.95)',
+  '#F59E0B': 'rgba(210,130,0,0.95)',
+  '#10B981': 'rgba(5,150,95,0.95)',
+  '#EF4444': 'rgba(200,35,35,0.95)',
+  '#8B5CF6': 'rgba(110,55,220,0.95)',
+  '#5BC4F5': 'rgba(30,140,200,0.92)',
+  '#60A5FA': 'rgba(30,120,200,0.92)',
+  '#818CF8': 'rgba(60,55,180,0.92)',
+  '#6B4FA0': 'rgba(75,45,130,0.92)',
+  '#A78BFA': 'rgba(90,60,190,0.92)',
+  '#34D399': 'rgba(5,160,100,0.92)',
+  '#F87171': 'rgba(200,50,50,0.92)',
+  '#EC4899': 'rgba(180,30,120,0.92)',
+  '#06B6D4': 'rgba(5,130,170,0.92)',
+  '#84CC16': 'rgba(80,150,10,0.92)',
+  '#F97316': 'rgba(200,90,10,0.92)',
+};
+
+function jewelize(hex: string): string {
+  return JEWEL_MAP[hex] ?? hex;
+}
 
 interface Transaction {
   id: string;
@@ -192,10 +216,6 @@ function formatMonthDay(dateStr: string): string {
   });
 }
 
-function hexWithOpacity(hex: string, alphaHex = '66'): string {
-  return `${hex}${alphaHex}`;
-}
-
 function groupByDate(transactions: Transaction[]): [string, Transaction[]][] {
   const sorted = [...transactions].sort((a, b) =>
     b.transactionDate.localeCompare(a.transactionDate),
@@ -210,35 +230,6 @@ function groupByDate(transactions: Transaction[]): [string, Transaction[]][] {
     }
   }
   return Array.from(map.entries());
-}
-
-function renderActivePieShape(props: PieSectorShapeProps) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <Sector
-      cx={cx}
-      cy={cy}
-      innerRadius={innerRadius}
-      outerRadius={(outerRadius ?? 0) + 6}
-      startAngle={startAngle}
-      endAngle={endAngle}
-      fill={fill}
-    />
-  );
-}
-
-function renderPieSector(
-  props: PieSectorShapeProps,
-  index: number,
-  hoveredCategoryIndex: number | null,
-  activeCategoryIndex: number | null,
-) {
-  const isHighlighted =
-    index === hoveredCategoryIndex || index === activeCategoryIndex;
-  if (isHighlighted) {
-    return renderActivePieShape(props);
-  }
-  return <Sector {...props} />;
 }
 
 const GlassTooltip = ({ active, payload }: any) => {
@@ -332,7 +323,6 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<'date' | 'highest' | 'lowest' | 'az' | 'za'>(
     'date',
   );
-
   const loadStatement = useCallback(async (showLoading = true) => {
     if (showLoading) {
       setLoading(true);
@@ -438,6 +428,20 @@ export default function DashboardPage() {
       incomeAverage,
     };
   }, [statement, activeCategoryIndex]);
+
+  const jewelizedCategoryTotals = useMemo(
+    () =>
+      derived.categoryTotals.map((entry, index) => {
+        const color = COLORS[index % COLORS.length];
+        return {
+          ...entry,
+          color,
+          jewelColor: jewelize((entry as { color?: string }).color ?? color),
+          baseColor: color,
+        };
+      }),
+    [derived.categoryTotals],
+  );
 
   const animatedIncome = useCountUp(statement ? derived.totalIncome : 0);
   const animatedExpenses = useCountUp(statement ? derived.totalSpend : 0);
@@ -772,9 +776,20 @@ export default function DashboardPage() {
                   <h2 style={styles.sectionTitle}>Spending by Category</h2>
                   <div style={{ position: 'relative', zIndex: 1 }}>
                     <ResponsiveContainer width="100%" height={340}>
-                      <PieChart>
+                      <div
+                        style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
+                      >
+                      <PieChart
+                        margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
+                      >
+                        <defs>
+                          <radialGradient id="jewelShimmer" cx="38%" cy="28%" r="60%">
+                            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" stopOpacity={0.22} />
+                            <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={0} />
+                          </radialGradient>
+                        </defs>
                         <Pie
-                          data={derived.categoryTotals}
+                          data={jewelizedCategoryTotals}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -782,14 +797,7 @@ export default function DashboardPage() {
                           outerRadius={130}
                           innerRadius={78}
                           paddingAngle={2}
-                          shape={(props, index) =>
-                            renderPieSector(
-                              props,
-                              index,
-                              hoveredCategoryIndex,
-                              activeCategoryIndex,
-                            )
-                          }
+                          isAnimationActive={true}
                           onClick={(_, index) =>
                             setActiveCategoryIndex(
                               activeCategoryIndex === index ? null : index,
@@ -800,28 +808,19 @@ export default function DashboardPage() {
                           }
                           onMouseLeave={() => setHoveredCategoryIndex(null)}
                         >
-                          {derived.categoryTotals.map((_, index) => {
-                            const color = COLORS[index % COLORS.length];
-                            const isHighlighted =
-                              index === hoveredCategoryIndex ||
-                              index === activeCategoryIndex;
-                            const hasHighlight =
-                              hoveredCategoryIndex !== null ||
-                              activeCategoryIndex !== null;
-                            const fill =
-                              hasHighlight && !isHighlighted
-                                ? hexWithOpacity(color)
-                                : color;
-                            return (
-                              <Cell key={`cell-${index}`} fill={fill} />
-                            );
-                          })}
+                          {jewelizedCategoryTotals.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={jewelize(entry.color ?? COLORS[index % COLORS.length])}
+                            />
+                          ))}
                         </Pie>
                         <Tooltip
                           content={<GlassTooltip />}
                           wrapperStyle={{ zIndex: 9999 }}
                         />
                       </PieChart>
+                      </div>
                     </ResponsiveContainer>
                     <div
                       style={{
