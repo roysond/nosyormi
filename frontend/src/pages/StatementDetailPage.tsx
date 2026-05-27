@@ -54,7 +54,7 @@ const colors = {
   expense: '#EF4444',
   border: '#E2E8F0',
   surfaceMuted: '#F1F5F9',
-  pageBg: '#CCE8EC',
+  pageBg: '#F4F7F9',
 };
 
 const styles = {
@@ -92,7 +92,7 @@ const styles = {
   statCard: {
     flex: '1 1 180px',
     background: colors.white,
-    border: `1px solid ${colors.border}`,
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
     borderRadius: 12,
     padding: '16px 20px',
   },
@@ -473,7 +473,13 @@ export default function StatementDetailPage() {
           </div>
 
           {activeTab === 'transactions' && (
-            <div style={{ background: colors.white, borderRadius: 12, border: `1px solid ${colors.border}` }}>
+            <div
+              style={{
+                background: colors.white,
+                borderRadius: 12,
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+              }}
+            >
               {statement.transactions.map((tx) => (
                 <div key={tx.id} style={styles.transactionRow(tx.isAnomaly)}>
                   <span style={styles.txDate}>

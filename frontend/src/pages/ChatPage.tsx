@@ -204,8 +204,66 @@ export default function ChatPage() {
   const [statementFileName, setStatementFileName] = useState<string>('your statement');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const angleRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
+  const bubblesRef = useRef<Array<{ canvas: HTMLCanvasElement; bubble: HTMLDivElement }>>([]);
   const [inputFocused, setInputFocused] = useState(false);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
+
+  function drawBorder(canvas: HTMLCanvasElement, bubble: HTMLDivElement, angle: number) {
+    canvas.width = bubble.offsetWidth;
+    canvas.height = bubble.offsetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const r = Math.max(w, h);
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < 360; i++) {
+      const a1 = ((i + angle) * Math.PI) / 180;
+      const a2 = ((i + 1 + angle) * Math.PI) / 180;
+      const t = i / 360;
+      let r2: number;
+      let g: number;
+      let b: number;
+      if (t < 0.5) {
+        const p = t * 2;
+        r2 = Math.round(52 + (232 - 52) * p);
+        g = Math.round(211 + (201 - 211) * p);
+        b = Math.round(153 + (106 - 153) * p);
+      } else {
+        const p = (t - 0.5) * 2;
+        r2 = Math.round(232 + (52 - 232) * p);
+        g = Math.round(201 + (211 - 201) * p);
+        b = Math.round(106 + (153 - 106) * p);
+      }
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.arc(cx, cy, r, a1, a2);
+      ctx.closePath();
+      ctx.fillStyle = `rgb(${r2},${g},${b})`;
+      ctx.fill();
+    }
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.roundRect(3, 3, w - 6, h - 6, 14);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  function startLoop() {
+    if (rafRef.current) return;
+    function loop() {
+      angleRef.current = (angleRef.current + 1.0) % 360;
+      bubblesRef.current.forEach(({ canvas, bubble }) => {
+        drawBorder(canvas, bubble, angleRef.current);
+      });
+      rafRef.current = requestAnimationFrame(loop);
+    }
+    rafRef.current = requestAnimationFrame(loop);
+  }
 
   const expenses = useMemo(
     () => transactions.filter((t) => t.amount < 0),
@@ -292,6 +350,12 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     sessionStorage.setItem('nosyormi-chat-messages', JSON.stringify(messages));
@@ -530,10 +594,10 @@ export default function ChatPage() {
                   onMouseLeave={() => setHoveredPieIndex(null)}
                   style={{
                     background: isActive
-                      ? 'rgba(201,145,26,0.08)'
+                      ? 'rgba(7,26,30,0.07)'
                       : 'white',
                     border: isActive
-                      ? '1px solid rgba(201,145,26,0.25)'
+                      ? '1px solid rgba(7,26,30,0.25)'
                       : '1px solid #E2E8F0',
                     borderRadius: 999,
                     padding: '4px 10px',
@@ -541,7 +605,7 @@ export default function ChatPage() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 6,
-                    color: isActive ? '#C9911A' : '#475569',
+                    color: isActive ? '#071A1E' : '#475569',
                     fontWeight: isActive ? 600 : 400,
                   }}
                 >
@@ -864,7 +928,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#CCE8EC' }}>
+    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#F4F7F9' }}>
       <style>{`
         @keyframes tooltipFadeIn {
           from { opacity: 0; transform: translateY(4px) scale(0.97); }
@@ -909,14 +973,14 @@ export default function ChatPage() {
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          background: '#CCE8EC',
+          background: '#F4F7F9',
           borderRight: '1px solid #E2E8F0',
         }}
       >
         <div
           style={{
             padding: '24px 28px',
-            background: '#CCE8EC',
+            background: '#F4F7F9',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
@@ -962,7 +1026,7 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'column',
             gap: 12,
-            background: '#CCE8EC',
+            background: '#F4F7F9',
           }}
         >
           {messages.length === 0 && !loading && (
@@ -976,36 +1040,100 @@ export default function ChatPage() {
                 textAlign: 'center',
               }}
             >
-              <span style={{ fontSize: 48, marginBottom: 16 }} aria-hidden>
-                🪞
-              </span>
               <p style={{ margin: 0, color: colors.hint, fontSize: 15 }}>
                 Ask me about your spending, anomalies, or forecasts.
               </p>
             </div>
           )}
 
-          {messages.map((msg, index) => (
-            <div
-              key={index}
-              style={{
-                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                background:
-                  msg.role === 'user' ? '#C9911A' : '#F8FAFC',
-                border:
-                  msg.role === 'user' ? 'none' : '1px solid #E2E8F0',
-                borderRadius:
-                  msg.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                padding: '12px 16px',
-                maxWidth: msg.role === 'user' ? '75%' : '80%',
-                color: msg.role === 'user' ? 'white' : '#1E293B',
-                fontSize: 14,
-                lineHeight: 1.5,
-              }}
-            >
-              {msg.content}
-            </div>
-          ))}
+          {messages.map((msg, index) =>
+            msg.role === 'user' ? (
+              <div
+                key={index}
+                style={{
+                  alignSelf: 'flex-end',
+                  background: 'rgba(7,26,30,0.88)',
+                  backdropFilter: 'blur(12px)',
+                  WebkitBackdropFilter: 'blur(12px)',
+                  color: '#E8EDEE',
+                  padding: '11px 17px',
+                  borderRadius: '18px 18px 4px 18px',
+                  fontSize: '13px',
+                  lineHeight: '1.6',
+                  maxWidth: '72%',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                  whiteSpace: 'pre-wrap',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  boxShadow:
+                    '0 8px 24px rgba(7,26,30,0.35), 0 4px 10px rgba(7,26,30,0.2), 0 1px 3px rgba(7,26,30,0.15)',
+                }}
+              >
+                {msg.content}
+              </div>
+            ) : (
+              <div
+                key={index}
+                ref={(el) => {
+                  if (el) {
+                    const canvas = el.querySelector('canvas') as HTMLCanvasElement;
+                    const bubble = el as HTMLDivElement;
+                    const existing = bubblesRef.current.find((b) => b.bubble === bubble);
+                    if (!existing && canvas) {
+                      bubblesRef.current.push({ canvas, bubble });
+                      startLoop();
+                    }
+                  }
+                }}
+                style={{
+                  alignSelf: 'flex-start',
+                  position: 'relative',
+                  borderRadius: '18px 18px 18px 4px',
+                  padding: '3px',
+                  maxWidth: '78%',
+                  boxShadow:
+                    '0 8px 24px rgba(52,211,153,0.15), 0 4px 10px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+                }}
+              >
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    borderRadius: '18px 18px 18px 4px',
+                    overflow: 'hidden',
+                    zIndex: 0,
+                  }}
+                >
+                  <canvas
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                    }}
+                  />
+                </div>
+                <div
+                  style={{
+                    position: 'relative',
+                    zIndex: 1,
+                    background: 'rgba(255,255,255,0.97)',
+                    borderRadius: '16px 16px 16px 3px',
+                    padding: '11px 17px',
+                    fontSize: '13px',
+                    lineHeight: '1.6',
+                    color: '#1E293B',
+                    margin: '0',
+                    wordBreak: 'break-word',
+                    overflowWrap: 'break-word',
+                    whiteSpace: 'pre-wrap',
+                  }}
+                >
+                  {msg.content}
+                </div>
+              </div>
+            ),
+          )}
 
           {loading && (
             <div
@@ -1048,7 +1176,7 @@ export default function ChatPage() {
             disabled={loading}
             style={{
               flex: 1,
-              background: '#CCE8EC',
+              background: '#F4F7F9',
               border: `1px solid ${inputFocused ? '#C9911A' : '#E2E8F0'}`,
               borderRadius: 12,
               padding: '14px 18px',
@@ -1062,7 +1190,7 @@ export default function ChatPage() {
             onClick={() => void sendMessage()}
             disabled={loading || !input.trim()}
             style={{
-              background: colors.teal,
+              background: '#071A1E',
               color: colors.white,
               border: 'none',
               borderRadius: 12,
@@ -1086,7 +1214,7 @@ export default function ChatPage() {
           flexDirection: 'column',
           padding: '24px',
           overflow: 'hidden',
-          background: '#CCE8EC',
+          background: '#F4F7F9',
           borderLeft: '1px solid #E2E8F0',
         }}
       >

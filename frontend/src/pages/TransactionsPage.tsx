@@ -274,8 +274,8 @@ export default function TransactionsPage() {
         <span
           style={{
             fontSize: 11,
-            background: 'rgba(201,145,26,0.08)',
-            color: '#C9911A',
+            background: 'rgba(7,26,30,0.07)',
+            color: '#071A1E',
             borderRadius: 999,
             padding: '3px 10px',
             whiteSpace: 'nowrap',
@@ -329,7 +329,7 @@ export default function TransactionsPage() {
     <div
       style={{
         background: '#F8FAFC',
-        border: '1px solid #E2E8F0',
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
         borderRadius: 8,
         padding: '16px 20px',
         margin: '0 0 4px 0',
@@ -368,7 +368,7 @@ export default function TransactionsPage() {
         >
           CATEGORY
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#C9911A' }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: '#071A1E' }}>
           {getCategoryName(tx)}
         </div>
       </div>
@@ -423,7 +423,7 @@ export default function TransactionsPage() {
             padding: tx.isAnomaly ? '12px 16px 12px 13px' : '12px 16px',
             borderRadius: 8,
             borderBottom: '1px solid #F1F5F9',
-            background: isExpanded ? '#CCE8EC' : 'white',
+            background: isExpanded ? '#F4F7F9' : 'white',
             cursor: 'pointer',
             transition: 'background 0.15s',
             ...(tx.isAnomaly
@@ -435,7 +435,7 @@ export default function TransactionsPage() {
           }}
           onMouseEnter={(e) => {
             if (!isExpanded) {
-              e.currentTarget.style.background = '#CCE8EC';
+              e.currentTarget.style.background = '#F4F7F9';
             }
           }}
           onMouseLeave={(e) => {
@@ -526,7 +526,7 @@ export default function TransactionsPage() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100%',
-        background: '#CCE8EC',
+        background: '#F4F7F9',
       }}
     >
       <style>{`
@@ -549,7 +549,7 @@ export default function TransactionsPage() {
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          background: '#CCE8EC',
+          background: '#F4F7F9',
           padding: scrolled ? '10px 32px' : '16px 32px',
           display: 'flex',
           alignItems: 'center',
@@ -728,7 +728,7 @@ export default function TransactionsPage() {
             <div
               style={{
                 background: 'white',
-                border: '1px solid #E2E8F0',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                 borderRadius: 12,
                 padding: '20px 24px',
                 position: 'sticky',
@@ -756,7 +756,7 @@ export default function TransactionsPage() {
                       padding: '10px 0',
                       borderBottom: row.noBorder
                         ? 'none'
-                        : '1px solid #CCE8EC',
+                        : '1px solid #F4F7F9',
                     }}
                   >
                     <span style={{ fontSize: 12, color: '#64748B' }}>

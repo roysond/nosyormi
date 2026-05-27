@@ -55,14 +55,14 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     minHeight: '100%',
-    background: '#CCE8EC',
+    background: '#F4F7F9',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '20px 32px',
-    background: '#CCE8EC',
+    background: '#F4F7F9',
   },
   headerTitle: {
     fontSize: '20px',
@@ -78,7 +78,7 @@ const styles = {
   },
   statCard: {
     background: 'white',
-    border: '1px solid #E2E8F0',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
     borderRadius: 12,
     padding: '16px 20px',
   },
@@ -111,8 +111,8 @@ const styles = {
     cursor: 'pointer',
     border: 'none',
     background: 'transparent',
-    borderBottom: `2px solid ${active ? '#C9911A' : 'transparent'}`,
-    color: active ? '#C9911A' : '#64748B',
+    borderBottom: `2px solid ${active ? '#071A1E' : 'transparent'}`,
+    color: active ? '#071A1E' : '#64748B',
     marginBottom: -1,
   }),
   tabContent: {
@@ -732,7 +732,7 @@ export default function DashboardPage() {
                 ...styles.tab(activeTab === 'spending'),
                 color:
                   activeTab === 'spending'
-                    ? '#C9911A'
+                    ? '#071A1E'
                     : tabHover === 'spending'
                       ? '#1E293B'
                       : '#64748B',
@@ -752,7 +752,7 @@ export default function DashboardPage() {
                 ...styles.tab(activeTab === 'income'),
                 color:
                   activeTab === 'income'
-                    ? '#C9911A'
+                    ? '#071A1E'
                     : tabHover === 'income'
                       ? '#1E293B'
                       : '#64748B',
@@ -928,7 +928,7 @@ export default function DashboardPage() {
                             transition: 'all 0.15s',
                             background: isHighlighted
                               ? 'rgba(201,145,26,0.06)'
-                              : '#CCE8EC',
+                              : '#F4F7F9',
                           }}
                           onMouseEnter={(e) => {
                             if (!isHighlighted) {
@@ -938,7 +938,7 @@ export default function DashboardPage() {
                           }}
                           onMouseLeave={(e) => {
                             if (!isHighlighted) {
-                              e.currentTarget.style.background = '#CCE8EC';
+                              e.currentTarget.style.background = '#F4F7F9';
                               e.currentTarget.style.borderColor = 'transparent';
                             }
                           }}
@@ -1078,7 +1078,7 @@ export default function DashboardPage() {
                     <div
                       style={{
                         background: 'white',
-                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                         borderRadius: 12,
                         padding: 20,
                         position: 'sticky',
@@ -1123,7 +1123,7 @@ export default function DashboardPage() {
                             display: 'flex',
                             justifyContent: 'space-between',
                             padding: '8px 0',
-                            borderBottom: '1px solid #CCE8EC',
+                            borderBottom: '1px solid #F4F7F9',
                           }}
                         >
                           <span style={{ fontSize: 12, color: '#64748B' }}>
@@ -1181,7 +1181,7 @@ export default function DashboardPage() {
               <div
                 style={{
                   background: 'white',
-                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
                   borderRadius: 12,
                   padding: '16px 20px',
                   display: 'grid',

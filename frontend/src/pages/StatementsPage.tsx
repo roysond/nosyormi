@@ -15,14 +15,14 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     minHeight: '100%',
-    background: '#CCE8EC',
+    background: '#F4F7F9',
   },
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '20px 32px',
-    background: '#CCE8EC',
+    background: '#F4F7F9',
   },
   headerTitle: {
     fontSize: '20px',
@@ -65,7 +65,7 @@ const styles = {
   },
   card: {
     background: '#FFFFFF',
-    border: '1px solid #E2E8F0',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
     borderRadius: 12,
     padding: '20px 24px',
     display: 'flex',
@@ -89,8 +89,8 @@ const styles = {
     color: '#64748B',
   },
   countPill: {
-    background: 'rgba(201,145,26,0.08)',
-    color: '#C9911A',
+    background: 'rgba(7,26,30,0.08)',
+    color: '#071A1E',
     fontSize: 12,
     padding: '4px 12px',
     borderRadius: 999,
@@ -330,7 +330,7 @@ export default function StatementsPage() {
         <button
           type="button"
           style={{
-            background: '#C9911A',
+            background: '#071A1E',
             color: 'white',
             border: 'none',
             borderRadius: 8,
@@ -385,11 +385,11 @@ export default function StatementsPage() {
                 to={`/dashboard/${statement.id}`}
                 style={{
                   fontSize: 13,
-                  color: '#C9911A',
+                  color: '#071A1E',
                   fontWeight: 600,
                   textDecoration: 'none',
                   padding: '7px 16px',
-                  border: '1px solid rgba(201,145,26,0.3)',
+                  border: '1px solid rgba(7,26,30,0.3)',
                   borderRadius: 8,
                   whiteSpace: 'nowrap',
                 }}
@@ -601,7 +601,6 @@ export default function StatementsPage() {
                         padding: '20px 0',
                       }}
                     >
-                      <div style={{ fontSize: 48, marginBottom: 12 }}>🪞</div>
                       <div style={{ color: '#C9911A', fontSize: 14, fontWeight: 500 }}>
                         Reflecting on your data...
                       </div>

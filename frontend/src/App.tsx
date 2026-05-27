@@ -20,7 +20,7 @@ const styles = {
     height: '100vh',
     width: '100vw',
     overflow: 'hidden',
-    background: '#CCE8EC',
+    background: '#F4F7F9',
   },
   sidebar: {
     height: '100vh',
@@ -32,7 +32,7 @@ const styles = {
     boxSizing: 'border-box' as const,
     flexShrink: 0,
     transition: 'width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease',
-    overflow: 'hidden',
+    overflow: 'visible',
     position: 'relative' as const,
   },
   brand: {
@@ -64,7 +64,7 @@ const styles = {
     flex: 1,
     height: '100vh',
     overflow: 'auto',
-    background: '#CCE8EC',
+    background: '#F4F7F9',
     minWidth: 0,
   },
   version: {
@@ -135,7 +135,8 @@ function NavItem({
       style={({ isActive }) => ({
         ...navItemStyle(isActive, isHovered),
         justifyContent: collapsed ? 'center' : 'flex-start',
-        padding: collapsed ? '10px' : '10px 14px',
+        padding: collapsed ? '10px 0' : '10px 14px',
+        width: collapsed ? '100%' : undefined,
         position: 'relative',
       })}
     >
@@ -146,9 +147,9 @@ function NavItem({
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
-              color: isActive ? '#34D399' : 'rgba(255,255,255,0.38)',
+              color: isActive ? '#E8C96A' : 'rgba(255,255,255,0.38)',
               filter: isActive
-                ? 'drop-shadow(0 0 5px rgba(52,211,153,0.9)) drop-shadow(0 0 12px rgba(52,211,153,0.4))'
+                ? 'drop-shadow(0 0 5px rgba(232,201,106,0.8)) drop-shadow(0 0 12px rgba(232,201,106,0.35))'
                 : 'none',
               transition: 'color 0.15s ease, filter 0.15s ease',
             }}
@@ -205,27 +206,33 @@ export default function App() {
           onClick={() => setCollapsed((c) => !c)}
           style={{
             position: 'absolute',
-            top: '24px',
-            right: '-12px',
-            width: '24px',
-            height: '24px',
+            top: '28px',
+            right: '-16px',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            background: '#1A3A42',
-            border: '1px solid rgba(255,255,255,0.2)',
-            color: 'rgba(255,255,255,0.75)',
+            background: '#0F2D33',
+            border: '2px solid #F4F7F9',
+            color: 'rgba(255,255,255,0.85)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: '11px',
-            zIndex: 10,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(52,211,153,0.15)',
+            fontSize: '13px',
+            zIndex: 50,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+            fontWeight: 700,
           }}
         >
           {collapsed ? '›' : '‹'}
         </button>
 
-        {!collapsed && (
+        {collapsed ? (
+          <div style={{ ...styles.brand, visibility: 'hidden' }} aria-hidden>
+            <div style={styles.brandName}>NOSYOR.M.I</div>
+            <div style={styles.brandTagline}>Your money, reflected.</div>
+          </div>
+        ) : (
           <div style={styles.brand}>
             <div style={styles.brandName}>NOSYOR.M.I</div>
             <div style={styles.brandTagline}>Your money, reflected.</div>
