@@ -171,10 +171,14 @@ public class OpenRouterChatService : IChatService
 
         foreach (var message in history)
         {
+            var content = message.Role == "assistant"
+                ? $"{{\"answer\": {JsonSerializer.Serialize(message.Content)}, \"chartUpdate\": null}}"
+                : message.Content;
+
             messages.Add(new ChatRequestMessage
             {
                 Role = message.Role,
-                Content = message.Content
+                Content = content
             });
         }
 
@@ -191,7 +195,7 @@ public class OpenRouterChatService : IChatService
         {
             Model = model,
             Messages = messages,
-            MaxTokens = 500,
+            MaxTokens = 1500,
             Temperature = 0.7f
         };
 
@@ -222,8 +226,9 @@ public class OpenRouterChatService : IChatService
             var chartUpdate = MapChartUpdate(parsed.ChartUpdate, validCategories);
             return new ChatResponse(parsed.Answer, chartUpdate);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            Console.Error.WriteLine($"[ChatService] JSON parse failed. Exception: {ex.Message}. Raw content: {content}");
             return FallbackResponse;
         }
     }

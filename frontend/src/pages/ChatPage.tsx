@@ -11,12 +11,10 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
-  Sector,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
-import type { PieSectorShapeProps } from 'recharts';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = [
@@ -153,32 +151,6 @@ function formatPieCenterAmount(amount: number): string {
     maximumFractionDigits: 0,
     minimumFractionDigits: 0,
   })}`;
-}
-
-function renderActivePieShape(props: PieSectorShapeProps) {
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
-  return (
-    <Sector
-      cx={cx}
-      cy={cy}
-      innerRadius={innerRadius}
-      outerRadius={(outerRadius ?? 0) + 8}
-      startAngle={startAngle}
-      endAngle={endAngle}
-      fill={fill}
-    />
-  );
-}
-
-function renderPieSector(
-  props: PieSectorShapeProps,
-  index: number,
-  hoveredPieIndex: number | null,
-) {
-  if (index === hoveredPieIndex) {
-    return renderActivePieShape(props);
-  }
-  return <Sector {...props} />;
 }
 
 function buildCategoryTotals(expenses: Transaction[]): CategoryTotal[] {
@@ -449,7 +421,7 @@ export default function ChatPage() {
     if (!trimmed || loading || statementId === null) return;
 
     const userMessage: ChatMessage = { role: 'user', content: trimmed };
-    const history = [...messages, userMessage];
+    const history = [...messages];
 
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
@@ -539,9 +511,7 @@ export default function ChatPage() {
                 outerRadius={130}
                 innerRadius={78}
                 paddingAngle={2}
-                shape={(props, index) =>
-                  renderPieSector(props, index, hoveredPieIndex)
-                }
+                shape={<PillGreenBar />}
                 onMouseEnter={(_: unknown, index: number) =>
                   setHoveredPieIndex(index)
                 }
