@@ -13,7 +13,7 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
     private const string ModelEnvVar = "MODEL_LIGHT";
 
     private const string SystemPrompt =
-        "You are a financial transaction categorizer. Given a transaction description and amount, return ONLY a JSON object with two fields: 'category' (string) and 'confidence' (float between 0 and 1). Choose category from this exact list only: Food & Groceries, Transport & Fuel, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Other. Never invent new categories. Never add explanation. Return raw JSON only.";
+        "You are a financial transaction categorizer. Given a transaction description and amount, return ONLY a JSON object with two fields: 'category' (string) and 'confidence' (float between 0 and 1). Choose category from this exact list only: Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Other. Never invent new categories. Never add explanation. Return raw JSON only.";
 
     private static readonly CategoryResult FallbackResult = new("Other", 0.0f);
 

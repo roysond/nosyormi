@@ -16,6 +16,7 @@ public static class CategoryTaxonomy
     [
         "Food & Groceries",
         "Transport & Fuel",
+        "Parking & Tolls",
         "Subscriptions",
         "Shopping",
         "Utilities & Bills",

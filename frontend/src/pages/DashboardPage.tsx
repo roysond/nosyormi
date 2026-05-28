@@ -6,44 +6,10 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
+import { CRYSTAL_COLORS } from '../components/CrystalPieCell';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
-const COLORS = [
-  '#00637C',
-  '#0891B2',
-  '#0EA5E9',
-  '#6366F1',
-  '#F59E0B',
-  '#10B981',
-  '#EF4444',
-  '#8B5CF6',
-];
-
-const JEWEL_MAP: Record<string, string> = {
-  '#00637C': 'rgba(0,70,90,0.92)',
-  '#0891B2': 'rgba(5,120,160,0.95)',
-  '#0EA5E9': 'rgba(5,140,200,0.95)',
-  '#6366F1': 'rgba(70,60,200,0.95)',
-  '#F59E0B': 'rgba(210,130,0,0.95)',
-  '#10B981': 'rgba(5,150,95,0.95)',
-  '#EF4444': 'rgba(200,35,35,0.95)',
-  '#8B5CF6': 'rgba(110,55,220,0.95)',
-  '#5BC4F5': 'rgba(30,140,200,0.92)',
-  '#60A5FA': 'rgba(30,120,200,0.92)',
-  '#818CF8': 'rgba(60,55,180,0.92)',
-  '#6B4FA0': 'rgba(75,45,130,0.92)',
-  '#A78BFA': 'rgba(90,60,190,0.92)',
-  '#34D399': 'rgba(5,160,100,0.92)',
-  '#F87171': 'rgba(200,50,50,0.92)',
-  '#EC4899': 'rgba(180,30,120,0.92)',
-  '#06B6D4': 'rgba(5,130,170,0.92)',
-  '#84CC16': 'rgba(80,150,10,0.92)',
-  '#F97316': 'rgba(200,90,10,0.92)',
-};
-
-function jewelize(hex: string): string {
-  return JEWEL_MAP[hex] ?? hex;
-}
+const COLORS = CRYSTAL_COLORS;
 
 interface Transaction {
   id: string;
@@ -429,19 +395,7 @@ export default function DashboardPage() {
     };
   }, [statement, activeCategoryIndex]);
 
-  const jewelizedCategoryTotals = useMemo(
-    () =>
-      derived.categoryTotals.map((entry, index) => {
-        const color = COLORS[index % COLORS.length];
-        return {
-          ...entry,
-          color,
-          jewelColor: jewelize((entry as { color?: string }).color ?? color),
-          baseColor: color,
-        };
-      }),
-    [derived.categoryTotals],
-  );
+  const categoryTotals = derived.categoryTotals;
 
   const animatedIncome = useCountUp(statement ? derived.totalIncome : 0);
   const animatedExpenses = useCountUp(statement ? derived.totalSpend : 0);
@@ -782,14 +736,8 @@ export default function DashboardPage() {
                       <PieChart
                         margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
                       >
-                        <defs>
-                          <radialGradient id="jewelShimmer" cx="38%" cy="28%" r="60%">
-                            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" stopOpacity={0.22} />
-                            <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={0} />
-                          </radialGradient>
-                        </defs>
                         <Pie
-                          data={jewelizedCategoryTotals}
+                          data={categoryTotals}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -808,10 +756,10 @@ export default function DashboardPage() {
                           }
                           onMouseLeave={() => setHoveredCategoryIndex(null)}
                         >
-                          {jewelizedCategoryTotals.map((entry, index) => (
+                          {categoryTotals.map((_, index) => (
                             <Cell
                               key={`cell-${index}`}
-                              fill={jewelize(entry.color ?? COLORS[index % COLORS.length])}
+                              fill={CRYSTAL_COLORS[index % CRYSTAL_COLORS.length]}
                             />
                           ))}
                         </Pie>

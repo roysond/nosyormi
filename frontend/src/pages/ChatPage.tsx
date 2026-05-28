@@ -15,17 +15,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
+import { CRYSTAL_COLORS } from '../components/CrystalPieCell';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
-const COLORS = [
-  '#00637C',
-  '#38c9b0',
-  '#5ab4e8',
-  '#9b7fe8',
-  '#f4a623',
-  '#5ad97a',
-  '#e8607a',
-];
+const COLORS = CRYSTAL_COLORS;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -140,10 +133,6 @@ function formatShortDate(dateStr: string): string {
     month: 'short',
     day: 'numeric',
   });
-}
-
-function hexWithOpacity(hex: string, alphaHex = '66'): string {
-  return `${hex}${alphaHex}`;
 }
 
 function formatPieCenterAmount(amount: number): string {
@@ -511,22 +500,17 @@ export default function ChatPage() {
                 outerRadius={130}
                 innerRadius={78}
                 paddingAngle={2}
-                shape={<PillGreenBar />}
                 onMouseEnter={(_: unknown, index: number) =>
                   setHoveredPieIndex(index)
                 }
                 onMouseLeave={() => setHoveredPieIndex(null)}
               >
-                {pieData.map((_, index) => {
-                  const color = COLORS[index % COLORS.length];
-                  const isHighlighted = index === hoveredPieIndex;
-                  const hasHighlight = hoveredPieIndex !== null;
-                  const fill =
-                    hasHighlight && !isHighlighted
-                      ? hexWithOpacity(color)
-                      : color;
-                  return <Cell key={`cell-${index}`} fill={fill} />;
-                })}
+                  {pieData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={CRYSTAL_COLORS[index % CRYSTAL_COLORS.length]}
+                    />
+                  ))}
               </Pie>
               <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
               </PieChart>

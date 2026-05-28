@@ -7,47 +7,11 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
+import { CRYSTAL_COLORS } from '../components/CrystalPieCell';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
-const COLORS = [
-  '#00637C',
-  '#38c9b0',
-  '#5ab4e8',
-  '#9b7fe8',
-  '#f4a623',
-  '#5ad97a',
-  '#e8607a',
-];
-
-const JEWEL_MAP: Record<string, string> = {
-  '#00637C': 'rgba(0,70,90,0.92)',
-  '#5BC4F5': 'rgba(30,140,200,0.92)',
-  '#60A5FA': 'rgba(30,120,200,0.92)',
-  '#818CF8': 'rgba(60,55,180,0.92)',
-  '#6B4FA0': 'rgba(75,45,130,0.92)',
-  '#A78BFA': 'rgba(90,60,190,0.92)',
-  '#F59E0B': 'rgba(190,120,0,0.92)',
-  '#10B981': 'rgba(5,130,85,0.92)',
-  '#34D399': 'rgba(5,160,100,0.92)',
-  '#EF4444': 'rgba(180,30,30,0.92)',
-  '#F87171': 'rgba(200,50,50,0.92)',
-  '#EC4899': 'rgba(180,30,120,0.92)',
-  '#8B5CF6': 'rgba(100,50,200,0.92)',
-  '#06B6D4': 'rgba(5,130,170,0.92)',
-  '#84CC16': 'rgba(80,150,10,0.92)',
-  '#F97316': 'rgba(200,90,10,0.92)',
-  '#38c9b0': 'rgba(5,160,100,0.92)',
-  '#5ab4e8': 'rgba(30,140,200,0.92)',
-  '#9b7fe8': 'rgba(90,60,190,0.92)',
-  '#f4a623': 'rgba(190,120,0,0.92)',
-  '#5ad97a': 'rgba(5,130,85,0.92)',
-  '#e8607a': 'rgba(200,50,50,0.92)',
-};
-
-function jewelize(hex: string): string {
-  return JEWEL_MAP[hex] ?? hex;
-}
+const COLORS = CRYSTAL_COLORS;
 
 interface Transaction {
   id: string;
@@ -349,19 +313,6 @@ export default function StatementDetailPage() {
     };
   }, [statement, selectedPeriod, activeCategoryIndex]);
 
-  const jewelizedFilteredCategoryTotals = useMemo(
-    () =>
-      chartsDerived.filteredCategoryTotals.map((entry, index) => {
-        const color = COLORS[index % COLORS.length];
-        return {
-          ...entry,
-          color,
-          jewelColor: jewelize((entry as { color?: string }).color ?? color),
-          baseColor: color,
-        };
-      }),
-    [chartsDerived.filteredCategoryTotals],
-  );
 
   const CustomPieTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -684,14 +635,8 @@ export default function StatementDetailPage() {
                       <PieChart
                         margin={{ top: 0, right: 0, bottom: 0, left: 0 }}
                       >
-                        <defs>
-                          <radialGradient id="jewelShimmer" cx="38%" cy="28%" r="60%">
-                            <stop offset="0%" stopColor="rgba(255,255,255,0.22)" stopOpacity={0.22} />
-                            <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={0} />
-                          </radialGradient>
-                        </defs>
                         <Pie
-                          data={jewelizedFilteredCategoryTotals}
+                          data={chartsDerived.filteredCategoryTotals}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -706,12 +651,12 @@ export default function StatementDetailPage() {
                             )
                           }
                         >
-                          {jewelizedFilteredCategoryTotals.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={jewelize(entry.color ?? COLORS[index % COLORS.length])}
-                            />
-                          ))}
+                          {chartsDerived.filteredCategoryTotals.map((_, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={CRYSTAL_COLORS[index % CRYSTAL_COLORS.length]}
+                          />
+                        ))}
                         </Pie>
                         <Tooltip content={<CustomPieTooltip />} />
                       </PieChart>
