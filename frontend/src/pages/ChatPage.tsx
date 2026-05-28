@@ -11,6 +11,7 @@ import {
   Pie,
   PieChart,
   ResponsiveContainer,
+  Treemap,
   Tooltip,
   XAxis,
   YAxis,
@@ -33,7 +34,7 @@ interface ChatMessage {
 }
 
 interface ChartUpdate {
-  type: 'pie' | 'bar' | 'line' | 'anomalies' | 'forecast';
+  type: 'pie' | 'bar' | 'line' | 'anomalies' | 'forecast' | 'stacked' | 'horizontal' | 'treemap';
   category: string | null;
   highlightTransactionIds: string[] | null;
 }
@@ -415,7 +416,11 @@ export default function ChatPage() {
     }
     if (type === 'line') return 'Spending Over Time';
     if (type === 'anomalies') return 'Anomalies Detected';
-    return 'Next Month Forecast';
+    if (type === 'forecast') return 'Next Month Forecast';
+    if (type === 'stacked') return 'Monthly Spending by Category';
+    if (type === 'horizontal') return 'Category Comparison';
+    if (type === 'treemap') return 'Spending Map';
+    return 'Spending Overview';
   };
 
   const getChartHint = (): string => {
@@ -424,7 +429,11 @@ export default function ChatPage() {
     if (type === 'bar') return 'Spending grouped by category';
     if (type === 'line') return 'Your expenses plotted over time';
     if (type === 'anomalies') return 'Transactions flagged by our anomaly detector';
-    return 'Predicted vs actual spending next month';
+    if (type === 'forecast') return 'Predicted vs actual spending next month';
+    if (type === 'stacked') return 'Spending per category stacked by month';
+    if (type === 'horizontal') return 'Categories ranked by total spend';
+    if (type === 'treemap') return 'Size represents total spend per category';
+    return 'Your spending distribution across categories';
   };
 
   const renderChart = () => {
@@ -870,6 +879,178 @@ export default function ChatPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
+      );
+    }
+
+    if (type === 'stacked') {
+      const months = Array.from(
+        new Set(
+          expenses.map((t) => {
+            const d = new Date(t.transactionDate + 'T00:00:00');
+            return `${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
+          }),
+        ),
+      ).sort();
+      const categories = Array.from(new Set(expenses.map((t) => t.category || 'Other')));
+      const stackedData = months.map((month) => {
+        const row: Record<string, string | number> = { month };
+        categories.forEach((cat) => {
+          row[cat] = expenses
+            .filter((t) => {
+              const d = new Date(t.transactionDate + 'T00:00:00');
+              const m = `${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
+              return m === month && (t.category || 'Other') === cat;
+            })
+            .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+        });
+        return row;
+      });
+      return (
+        <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
+          <div style={{ width: '100%' }}>
+            <ResponsiveContainer width="100%" height={380}>
+              <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis
+                  dataKey="month"
+                  tick={{ fill: '#64748B', fontSize: 10 }}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                />
+                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
+                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Legend />
+                {categories.map((cat, index) => (
+                  <Bar
+                    key={cat}
+                    dataKey={cat}
+                    stackId="a"
+                    fill={APP_COLORS[index % APP_COLORS.length]}
+                    shape={<JewelBar />}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'horizontal') {
+      const hData = categoryTotals
+        .slice()
+        .sort((a, b) => b.value - a.value)
+        .map((c) => ({ name: c.name, value: c.value }));
+      return (
+        <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
+          <div style={{ width: '100%' }}>
+            <ResponsiveContainer width="100%" height={Math.max(280, hData.length * 56)}>
+              <BarChart data={hData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
+                <XAxis type="number" tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
+                <YAxis type="category" dataKey="name" tick={{ fill: '#64748B', fontSize: 11 }} width={75} />
+                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Bar dataKey="value" shape={<JewelBar />}>
+                  {hData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={APP_COLORS[index % APP_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'treemap') {
+      const tData = categoryTotals.map((c, index) => ({
+        name: c.name,
+        size: c.value,
+        fill: APP_COLORS[index % APP_COLORS.length],
+      }));
+      const CustomTreemapContent = ({ x, y, width, height, name, fill, value }: any) => {
+              const showText = width > 80 && height > 50;
+        if (!name || width < 30 || height < 20) return null;
+        return (
+          <g>
+            <rect
+              x={x + 1}
+              y={y + 1}
+              width={width - 2}
+              height={height - 2}
+              rx={6}
+              ry={6}
+              fill={fill}
+              fillOpacity={0.85}
+              stroke="white"
+              strokeWidth={2}
+            />
+            {showText && (
+              <>
+                <text
+                  x={x + width / 2}
+                  y={y + height / 2 - 6}
+                  textAnchor="middle"
+                  fill="white"
+                  fontSize={Math.min(13, width / 6)}
+                  fontWeight={600}
+                >
+                  {name}
+                </text>
+                <text
+                  x={x + width / 2}
+                  y={y + height / 2 + 10}
+                  textAnchor="middle"
+                  fill="rgba(255,255,255,0.85)"
+                  fontSize={Math.min(11, width / 7)}
+                >
+                  ${value?.toFixed(0)}
+                </text>
+              </>
+            )}
+          </g>
+        );
+      };
+      return (
+        <div
+          key="treemap"
+          style={{ animation: 'chartFadeIn 0.4s ease-out', width: '100%', background: 'transparent' }}
+        >
+          <ResponsiveContainer width="100%" height={420} style={{ background: 'transparent' }}>
+            <Treemap
+              data={tData}
+              dataKey="size"
+              aspectRatio={4 / 3}
+              isAnimationActive={false}
+              stroke="transparent"
+              content={<CustomTreemapContent />}>
+              <Tooltip
+                wrapperStyle={{ zIndex: 9999 }}
+                content={({ active, payload }: any) => {
+                  if (!active || !payload?.length) return null;
+                  const item = payload[0]?.payload;
+                  if (!item?.name) return null;
+                  return (
+                    <div style={{
+                      background: 'rgba(255,255,255,0.97)',
+                      border: '1px solid rgba(0,99,124,0.3)',
+                      borderRadius: 10,
+                      padding: '8px 14px',
+                      fontSize: 13,
+                      color: '#1E293B',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                    }}>
+                      <div style={{ fontWeight: 600, color: '#00637C', marginBottom: 2 }}>{item.name}</div>
+                      <div>${Number(item.size).toFixed(2)}</div>
+                    </div>
+                  );
+                }}
+              />
+            </Treemap>
+          </ResponsiveContainer>
         </div>
       );
     }

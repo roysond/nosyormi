@@ -54,6 +54,9 @@ public class OpenRouterChatService : IChatService
         - "line" → when the user asks about spending over time or trends
         - "anomalies" → when the user asks about unusual, unexpected, or high transactions
         - "forecast" → when the user asks about next month or future spending predictions
+        - "stacked" → when the user asks how spending changed month by month across categories, or wants to see monthly trends broken down by category. Example: "show me my spending by category each month" or "how has my spending changed over months"
+        - "horizontal" → when the user asks to rank or compare categories from highest to lowest, or wants a clear side-by-side category comparison. Example: "rank my spending categories" or "which category costs me the most"
+        - "treemap" → when the user wants a visual map or picture of their spending, or asks to see spending proportions visually. Example: "show me a spending map" or "visualise my budget" or "show me where my money goes as a picture"
         - When highlighting specific transactions, always use the UUID from [ID:uuid] at the start of each transaction line. Never use dates as transaction IDs.
         - If no chart is relevant, set chartUpdate to null.
 
