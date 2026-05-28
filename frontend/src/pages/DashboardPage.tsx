@@ -204,8 +204,8 @@ const GlassTooltip = ({ active, payload }: any) => {
     return (
       <div
         style={{
-          background: 'rgba(255, 255, 255, 0.75)',
-          backdropFilter: 'blur(20px)',
+          background: 'rgba(255, 255, 255, 0.97)',
+          backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(20px)',
           border: '1px solid rgba(0, 99, 124, 0.3)',
           borderRadius: '12px',
@@ -284,6 +284,20 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'spending' | 'income'>('spending');
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as SVGElement | HTMLElement;
+      const isPieSlice =
+        (target as SVGElement).classList?.contains('recharts-sector') ||
+        target.closest?.('[class*="recharts-pie"]') !== null;
+      if (!isPieSlice) {
+        setActiveCategoryIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState<number | null>(null);
   const [tabHover, setTabHover] = useState<'spending' | 'income' | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'highest' | 'lowest' | 'az' | 'za'>(
@@ -728,7 +742,7 @@ export default function DashboardPage() {
               <div style={styles.chartRow}>
                 <div style={styles.chartColLeft}>
                   <h2 style={styles.sectionTitle}>Spending by Category</h2>
-                  <div style={{ position: 'relative', zIndex: 1 }}>
+                  <div style={{ position: 'relative', zIndex: 1, isolation: 'isolate' }}>
                     <ResponsiveContainer width="100%" height={340}>
                       <div
                         style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
@@ -756,12 +770,20 @@ export default function DashboardPage() {
                           }
                           onMouseLeave={() => setHoveredCategoryIndex(null)}
                         >
-                          {categoryTotals.map((_, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={CRYSTAL_COLORS[index % CRYSTAL_COLORS.length]}
-                            />
-                          ))}
+                          {categoryTotals.map((_, index) => {
+                            const color = CRYSTAL_COLORS[index % CRYSTAL_COLORS.length];
+                            const isActive = activeCategoryIndex === index;
+                            const hasActive = activeCategoryIndex !== null;
+                            const dimmed = hasActive && !isActive;
+                            return (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={dimmed ? color + '55' : color}
+                                stroke={isActive ? color : 'none'}
+                                strokeWidth={isActive ? 2 : 0}
+                              />
+                            );
+                          })}
                         </Pie>
                         <Tooltip
                           content={<GlassTooltip />}
@@ -776,7 +798,7 @@ export default function DashboardPage() {
                         top: '50%',
                         left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        zIndex: 0,
+                        zIndex: -1,
                         pointerEvents: 'none',
                         textAlign: 'center',
                       }}
