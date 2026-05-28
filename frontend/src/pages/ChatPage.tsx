@@ -15,10 +15,17 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { CRYSTAL_COLORS } from '../components/CrystalPieCell';
+import {
+  APP_COLORS,
+  FORECAST_ACTUAL_COLOR,
+  FORECAST_PREDICTED_COLOR,
+  LINE_STROKE_COLOR,
+  LINE_FILL_COLOR,
+} from '../constants/palette';
+import { JewelBar, AnomalyBar } from '../components/chartEffects';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
-const COLORS = CRYSTAL_COLORS;
+const COLORS = APP_COLORS;
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -152,52 +159,6 @@ function buildCategoryTotals(expenses: Transaction[]): CategoryTotal[] {
     }, {} as Record<string, CategoryTotal>),
   ).sort((a, b) => b.value - a.value);
 }
-
-const PillGreenBar = (props: any) => {
-  const { x, y, width, height } = props;
-  if (!height || height <= 0) return null;
-  const id = `pillGlass${Math.round(x)}`;
-  return (
-    <g>
-      <defs>
-        <linearGradient id={`${id}base`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(52,211,153,0.12)" />
-          <stop offset="100%" stopColor="rgba(0,99,124,0.05)" />
-        </linearGradient>
-        <linearGradient id={`${id}shine`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.32)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.03)" />
-        </linearGradient>
-      </defs>
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="rgba(0,99,124,0.45)" />
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={`url(#${id}base)`} />
-      <rect x={x} y={y} width={width} height={height * 0.45} rx={4} ry={4} fill={`url(#${id}shine)`} />
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="none" stroke="rgba(93,202,165,0.3)" strokeWidth={1} />
-    </g>
-  );
-};
-
-const JewelBar = (props: any) => {
-  const { x, y, width, height, fill } = props;
-  if (!height || height <= 0) return null;
-  const jewel = fill
-    ? fill.replace(')', ', 0.92)').replace('rgb(', 'rgba(')
-    : 'rgba(0,70,90,0.92)';
-  const id = `jewel${Math.round(x)}`;
-  return (
-    <g>
-      <defs>
-        <radialGradient id={`${id}j`} cx="40%" cy="30%" r="70%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.28)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.01)" />
-        </radialGradient>
-      </defs>
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={jewel} />
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={`url(#${id}j)`} />
-      <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth={1} />
-    </g>
-  );
-};
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -505,12 +466,19 @@ export default function ChatPage() {
                 }
                 onMouseLeave={() => setHoveredPieIndex(null)}
               >
-                  {pieData.map((_, index) => (
+                {pieData.map((_, index) => {
+                  const color = COLORS[index % COLORS.length];
+                  const isHovered = hoveredPieIndex === index;
+                  const hasHover = hoveredPieIndex !== null;
+                  const dimmed = hasHover && !isHovered;
+                  return (
                     <Cell
                       key={`cell-${index}`}
-                      fill={CRYSTAL_COLORS[index % CRYSTAL_COLORS.length]}
+                      fill={color}
+                      fillOpacity={dimmed ? 0.35 : 1}
                     />
-                  ))}
+                  );
+                })}
               </Pie>
               <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
               </PieChart>
@@ -649,36 +617,6 @@ export default function ChatPage() {
 
       const barData = isDrillDown ? drillDownData : buildCategoryTotals(expenses);
 
-      const AnomalyBarShape = (props: any) => {
-        const { x, y, width, height, index } = props;
-        if (!height || height <= 0) return null;
-        const entry = drillDownData[index];
-        const isAnomaly = entry?.isAnomaly;
-        return (
-          <g
-            style={
-              isAnomaly
-                ? { animation: 'barAnomalyGlow 2s ease-in-out infinite' }
-                : {}
-            }
-          >
-            {isAnomaly ? (
-              <rect
-                x={x}
-                y={y}
-                width={width}
-                height={height}
-                fill="#F59E0B"
-                rx={4}
-                ry={4}
-              />
-            ) : (
-              <PillGreenBar {...props} />
-            )}
-          </g>
-        );
-      };
-
       const DrillDownTick = ({ x, y, payload }: any) => {
         const entry = drillDownData.find((d: { id: string }) => d.id === payload.value);
         const label = entry?.name || payload.value;
@@ -708,7 +646,7 @@ export default function ChatPage() {
             <ResponsiveContainer width="100%" height={280}>
               <BarChart
                 data={barData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
+                margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
               >
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -718,16 +656,16 @@ export default function ChatPage() {
                   <XAxis
                     dataKey="id"
                     tick={<DrillDownTick />}
-                    height={65}
+                    height={90}
                     interval={0}
                   />
                 ) : (
                   <XAxis
                     dataKey="name"
                     tick={{ fill: '#64748B', fontSize: 10 }}
-                    angle={-35}
+                    angle={-45}
                     textAnchor="end"
-                    height={60}
+                    height={80}
                     interval={0}
                   />
                 )}
@@ -739,7 +677,8 @@ export default function ChatPage() {
                 {isDrillDown ? (
                   <Bar
                     dataKey="value"
-                    shape={(props: any) => <AnomalyBarShape {...props} />}
+                    shape={(props: any) => <AnomalyBar {...props} isAnomaly={(barData as any[])[props.index]?.isAnomaly} />}
+                    fill={COLORS[0]}
                   />
                 ) : (
                   <Bar dataKey="value" shape={<JewelBar />}>
@@ -780,8 +719,8 @@ export default function ChatPage() {
               <LineChart data={lineData}>
                 <defs>
                   <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="rgba(0,99,124,0.3)" />
-                    <stop offset="100%" stopColor="rgba(0,99,124,0)" />
+                    <stop offset="0%" stopColor={LINE_FILL_COLOR} />
+                    <stop offset="100%" stopColor={LINE_FILL_COLOR} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -807,7 +746,7 @@ export default function ChatPage() {
                 <Line
                   type="monotone"
                   dataKey="amount"
-                  stroke="#C9911A"
+                  stroke={LINE_STROKE_COLOR}
                   strokeWidth={2.5}
                   dot={false}
                 />
@@ -912,22 +851,22 @@ export default function ChatPage() {
             <ResponsiveContainer width="100%" height={280}>
               <BarChart
                 data={chartData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 30 }}
+                margin={{ top: 10, right: 20, left: 0, bottom: 60 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                 <XAxis
                   dataKey="name"
-                  tick={{ fill: '#64748B', fontSize: 11 }}
-                  angle={-25}
+                  tick={{ fill: '#64748B', fontSize: 10 }}
+                  angle={-45}
                   textAnchor="end"
-                  height={50}
+                  height={80}
                   stroke="#E2E8F0"
                 />
                 <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 <Legend />
-                <Bar dataKey="actual" name="Actual Avg" shape={<PillGreenBar />} />
-                <Bar dataKey="forecast" name="Forecast" shape={<PillGreenBar />} />
+                <Bar dataKey="actual" name="Actual Avg" shape={<JewelBar />} fill={FORECAST_ACTUAL_COLOR} />
+                <Bar dataKey="forecast" name="Forecast" shape={<JewelBar />} fill={FORECAST_PREDICTED_COLOR} />
               </BarChart>
             </ResponsiveContainer>
           </div>

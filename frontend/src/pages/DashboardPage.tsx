@@ -6,10 +6,10 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { CRYSTAL_COLORS } from '../components/CrystalPieCell';
+import { APP_COLORS } from '../constants/palette';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
-const COLORS = CRYSTAL_COLORS;
+const COLORS = APP_COLORS;
 
 interface Transaction {
   id: string;
@@ -771,16 +771,17 @@ export default function DashboardPage() {
                           onMouseLeave={() => setHoveredCategoryIndex(null)}
                         >
                           {categoryTotals.map((_, index) => {
-                            const color = CRYSTAL_COLORS[index % CRYSTAL_COLORS.length];
+                            const color = COLORS[index % COLORS.length];
                             const isActive = activeCategoryIndex === index;
                             const hasActive = activeCategoryIndex !== null;
                             const dimmed = hasActive && !isActive;
                             return (
                               <Cell
                                 key={`cell-${index}`}
-                                fill={dimmed ? color + '55' : color}
+                                fill={color}
+                                fillOpacity={dimmed ? 0.35 : 1}
                                 stroke={isActive ? color : 'none'}
-                                strokeWidth={isActive ? 2 : 0}
+                                strokeWidth={isActive ? 2.5 : 0}
                               />
                             );
                           })}

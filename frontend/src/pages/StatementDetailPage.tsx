@@ -7,11 +7,11 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { CRYSTAL_COLORS } from '../components/CrystalPieCell';
+import { APP_COLORS } from '../constants/palette';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
-const COLORS = CRYSTAL_COLORS;
+const COLORS = APP_COLORS;
 
 interface Transaction {
   id: string;
@@ -654,7 +654,7 @@ export default function StatementDetailPage() {
                           {chartsDerived.filteredCategoryTotals.map((_, index) => (
                           <Cell
                             key={`cell-${index}`}
-                            fill={CRYSTAL_COLORS[index % CRYSTAL_COLORS.length]}
+                            fill={COLORS[index % COLORS.length]}
                           />
                         ))}
                         </Pie>
