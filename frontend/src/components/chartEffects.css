@@ -1,0 +1,4 @@
+@keyframes barAnomalyGlow {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.5)); }
+  50% { filter: drop-shadow(0 0 14px rgba(220, 38, 38, 0.9)); }
+}

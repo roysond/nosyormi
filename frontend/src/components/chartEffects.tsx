@@ -1,3 +1,4 @@
+import './chartEffects.css';
 import { Cell, Sector } from 'recharts';
 import { APP_COLORS, ANOMALY_COLOR } from '../constants/palette';
 
@@ -54,7 +55,18 @@ export const AnomalyBar = (props: any) => {
   if (!height || height <= 0) return null;
   if (isAnomaly) {
     const { x, y, width } = props;
-    return <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={ANOMALY_COLOR} />;
+    return (
+      <rect
+        x={x}
+        y={y}
+        width={width}
+        height={height}
+        rx={4}
+        ry={4}
+        fill={ANOMALY_COLOR}
+        style={{ animation: 'barAnomalyGlow 1.2s ease-in-out infinite' }}
+      />
+    );
   }
   return <JewelBar {...props} />;
 };

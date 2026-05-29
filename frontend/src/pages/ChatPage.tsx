@@ -898,7 +898,7 @@ export default function ChatPage() {
       return (
         <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={380}>
+            <ResponsiveContainer width="100%" height={480}>
               <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
@@ -942,10 +942,19 @@ export default function ChatPage() {
       return (
         <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={Math.max(340, hData.length * 64)}>
+            <ResponsiveContainer width="100%" height={Math.max(420, hData.length * 72)}>
               <BarChart data={hData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
-                <XAxis type="number" tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
+                <XAxis
+                  type="number"
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                  tickCount={5}
+                  domain={[
+                    (dataMin: number) => Math.floor(dataMin * 0.7 / 10) * 10,
+                    (dataMax: number) => Math.ceil(dataMax * 1.1 / 50) * 50,
+                  ]}
+                />
                 <YAxis type="category" dataKey="name" tick={{ fill: '#64748B', fontSize: 11 }} width={75} />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 <Bar dataKey="value" shape={<JewelBar />}>
@@ -1064,7 +1073,7 @@ export default function ChatPage() {
 
       return (
         <div key="topN" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={360}>
             <BarChart data={topData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis dataKey="id" tick={<TopNTick />} height={90} interval={0} />
