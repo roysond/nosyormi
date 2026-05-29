@@ -7,6 +7,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { APP_COLORS } from '../constants/palette';
+import { JewelSlice, UniversalTooltip } from '../components/chartEffects';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = APP_COLORS;
@@ -198,60 +199,6 @@ function groupByDate(transactions: Transaction[]): [string, Transaction[]][] {
   return Array.from(map.entries());
 }
 
-const GlassTooltip = ({ active, payload }: any) => {
-  if (active && payload && payload.length) {
-    const item = payload[0].payload;
-    return (
-      <div
-        style={{
-          background: 'rgba(255, 255, 255, 0.97)',
-          backdropFilter: 'blur(8px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(0, 99, 124, 0.3)',
-          borderRadius: '12px',
-          padding: '10px 14px',
-          boxShadow:
-            '0 8px 32px rgba(0, 99, 124, 0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
-          minWidth: '140px',
-          zIndex: 9999,
-          position: 'relative',
-        }}
-      >
-        <div
-          style={{
-            fontSize: '12px',
-            fontWeight: 600,
-            color: '#00637C',
-            marginBottom: '4px',
-            letterSpacing: '0.02em',
-          }}
-        >
-          {item.name}
-        </div>
-        <div
-          style={{
-            fontSize: '16px',
-            fontWeight: 700,
-            color: '#1E293B',
-            marginBottom: '2px',
-          }}
-        >
-          ${item.value.toFixed(2)}
-        </div>
-        <div
-          style={{
-            fontSize: '11px',
-            color: '#64748B',
-          }}
-        >
-          {item.percentage}% of total
-        </div>
-      </div>
-    );
-  }
-  return null;
-};
-
 function useCountUp(target: number, duration: number = 800): number {
   const [current, setCurrent] = useState(0);
   const previousTarget = useRef<number>(0);
@@ -298,7 +245,6 @@ export default function DashboardPage() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const [hoveredCategoryIndex, setHoveredCategoryIndex] = useState<number | null>(null);
   const [tabHover, setTabHover] = useState<'spending' | 'income' | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'highest' | 'lowest' | 'az' | 'za'>(
     'date',
@@ -618,6 +564,10 @@ export default function DashboardPage() {
           0%, 100% { background: rgba(245, 158, 11, 0.12); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35); }
           50% { background: rgba(245, 158, 11, 0.25); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.15); }
         }
+        @keyframes chartFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
       <header style={styles.header}>
@@ -742,7 +692,7 @@ export default function DashboardPage() {
               <div style={styles.chartRow}>
                 <div style={styles.chartColLeft}>
                   <h2 style={styles.sectionTitle}>Spending by Category</h2>
-                  <div style={{ position: 'relative', zIndex: 1, isolation: 'isolate' }}>
+                  <div style={{ position: 'relative', zIndex: 1, animation: 'chartFadeIn 0.4s ease-out' }}>
                     <ResponsiveContainer width="100%" height={340}>
                       <div
                         style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
@@ -752,6 +702,14 @@ export default function DashboardPage() {
                       >
                         <Pie
                           data={categoryTotals}
+                          shape={(props: any) => (
+                            <JewelSlice
+                              {...props}
+                              isActive={
+                                props.index === activeCategoryIndex
+                              }
+                            />
+                          )}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -765,10 +723,6 @@ export default function DashboardPage() {
                               activeCategoryIndex === index ? null : index,
                             )
                           }
-                          onMouseEnter={(_, index) =>
-                            setHoveredCategoryIndex(index)
-                          }
-                          onMouseLeave={() => setHoveredCategoryIndex(null)}
                         >
                           {categoryTotals.map((_, index) => {
                             const color = COLORS[index % COLORS.length];
@@ -787,8 +741,8 @@ export default function DashboardPage() {
                           })}
                         </Pie>
                         <Tooltip
-                          content={<GlassTooltip />}
-                          wrapperStyle={{ zIndex: 9999 }}
+                          content={<UniversalTooltip />}
+                          wrapperStyle={{ zIndex: 9999, background: 'transparent' }}
                         />
                       </PieChart>
                       </div>
@@ -860,7 +814,6 @@ export default function DashboardPage() {
                   <div style={styles.categoryGrid}>
                     {derived.categoryTotals.map((cat, index) => {
                       const isHighlighted =
-                        index === hoveredCategoryIndex ||
                         index === activeCategoryIndex;
                       const color = COLORS[index % COLORS.length];
                       return (

@@ -8,6 +8,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { APP_COLORS } from '../constants/palette';
+import { JewelSlice, UniversalTooltip } from '../components/chartEffects';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
@@ -314,42 +315,6 @@ export default function StatementDetailPage() {
   }, [statement, selectedPeriod, activeCategoryIndex]);
 
 
-  const CustomPieTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div
-          style={{
-            background: 'rgba(255, 255, 255, 0.75)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '1px solid rgba(0, 99, 124, 0.3)',
-            borderRadius: '12px',
-            padding: '10px 14px',
-            boxShadow:
-              '0 8px 32px rgba(0, 99, 124, 0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
-            minWidth: '140px',
-          }}
-        >
-          <div
-            style={{
-              fontSize: '12px',
-              fontWeight: 600,
-              color: '#C9911A',
-              marginBottom: '4px',
-              letterSpacing: '0.02em',
-            }}
-          >
-            {payload[0].name}
-          </div>
-          <div style={{ fontSize: '16px', fontWeight: 700, color: '#1E293B' }}>
-            ${payload[0].value.toFixed(2)}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
     <div className="page-content" style={styles.page}>
       <style>{`
@@ -360,6 +325,10 @@ export default function StatementDetailPage() {
         @keyframes rowAnomalyGlow {
           0%, 100% { background: rgba(245,158,11,0.12); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.35); }
           50% { background: rgba(245,158,11,0.25); box-shadow: inset 0 0 0 1px rgba(245,158,11,0.6), 0 0 20px rgba(245,158,11,0.15); }
+        @keyframes chartFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         }
       `}</style>
 
@@ -627,7 +596,7 @@ export default function StatementDetailPage() {
                 </div>
 
                 <div style={{ width: '60%', minWidth: 0 }}>
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', animation: 'chartFadeIn 0.4s ease-out' }}>
                     <ResponsiveContainer width="100%" height={280}>
                       <div
                         style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
@@ -637,6 +606,12 @@ export default function StatementDetailPage() {
                       >
                         <Pie
                           data={chartsDerived.filteredCategoryTotals}
+                          shape={(props: any) => (
+                            <JewelSlice
+                              {...props}
+                              isActive={props.index === activeCategoryIndex}
+                            />
+                          )}
                           dataKey="value"
                           nameKey="name"
                           cx="50%"
@@ -658,7 +633,10 @@ export default function StatementDetailPage() {
                           />
                         ))}
                         </Pie>
-                        <Tooltip content={<CustomPieTooltip />} />
+                        <Tooltip
+                          content={<UniversalTooltip />}
+                          wrapperStyle={{ zIndex: 9999, background: 'transparent' }}
+                        />
                       </PieChart>
                       </div>
                     </ResponsiveContainer>
@@ -670,6 +648,7 @@ export default function StatementDetailPage() {
                         transform: 'translate(-50%, -50%)',
                         pointerEvents: 'none',
                         textAlign: 'center',
+                        animation: 'chartFadeIn 0.4s ease-out',
                       }}
                     >
                       {activeCategoryIndex === null ? (

@@ -23,7 +23,7 @@ import {
   LINE_STROKE_COLOR,
   LINE_FILL_COLOR,
 } from '../constants/palette';
-import { JewelBar, AnomalyBar } from '../components/chartEffects';
+import { JewelBar, AnomalyBar, JewelSlice, UniversalTooltip } from '../components/chartEffects';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = APP_COLORS;
@@ -82,58 +82,6 @@ const colors = {
   teal: '#C9911A',
   amber: '#f4a623',
   white: '#ffffff',
-};
-
-const UniversalTooltip = ({ active, payload }: any) => {
-  if (!active || !payload || !payload.length) return null;
-  const item = payload[0];
-  return (
-    <div
-      style={{
-        background: 'rgba(255, 255, 255, 0.75)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(0, 99, 124, 0.3)',
-        borderRadius: '12px',
-        padding: '10px 14px',
-        boxShadow:
-          '0 8px 32px rgba(0, 99, 124, 0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
-        minWidth: '140px',
-        animation: 'tooltipFadeIn 0.15s ease-out',
-        zIndex: 9999,
-        position: 'relative' as const,
-      }}
-    >
-      <div
-        style={{
-          fontSize: '11px',
-          fontWeight: 600,
-          color: '#00637C',
-          marginBottom: '4px',
-          letterSpacing: '0.04em',
-          textTransform: 'uppercase' as const,
-        }}
-      >
-        {item.payload?.fullName || item.payload?.name || ''}
-      </div>
-      {item.payload?.date && (
-        <div style={{ fontSize: '10px', color: '#94A3B8', marginBottom: '4px' }}>
-          {item.payload.date}
-        </div>
-      )}
-      <div style={{ fontSize: '16px', fontWeight: 700, color: '#1E293B', marginBottom: '2px' }}>
-        ${typeof item.value === 'number' ? item.value.toFixed(2) : item.value}
-      </div>
-      {item.payload?.isAnomaly && (
-        <div style={{ fontSize: '10px', color: '#F59E0B', marginTop: '4px' }}>⚠ ANOMALY</div>
-      )}
-      {item.payload?.percentage && (
-        <div style={{ fontSize: '11px', color: '#64748B' }}>
-          {item.payload.percentage.toFixed(1)}% of total
-        </div>
-      )}
-    </div>
-  );
 };
 
 function formatShortDate(dateStr: string): string {
@@ -463,6 +411,12 @@ export default function ChatPage() {
               <PieChart>
               <Pie
                 data={pieData}
+                shape={(props: any) => (
+                  <JewelSlice
+                    {...props}
+                    isActive={props.index === hoveredPieIndex}
+                  />
+                )}
                 dataKey="value"
                 nameKey="name"
                 cx="50%"
@@ -470,10 +424,7 @@ export default function ChatPage() {
                 outerRadius={130}
                 innerRadius={78}
                 paddingAngle={2}
-                onMouseEnter={(_: unknown, index: number) =>
-                  setHoveredPieIndex(index)
-                }
-                onMouseLeave={() => setHoveredPieIndex(null)}
+                isAnimationActive={true}
               >
                 {pieData.map((_, index) => {
                   const color = COLORS[index % COLORS.length];
@@ -1024,31 +975,10 @@ export default function ChatPage() {
               data={tData}
               dataKey="size"
               aspectRatio={4 / 3}
-              isAnimationActive={false}
+              isAnimationActive={true}
               stroke="transparent"
               content={<CustomTreemapContent />}>
-              <Tooltip
-                wrapperStyle={{ zIndex: 9999 }}
-                content={({ active, payload }: any) => {
-                  if (!active || !payload?.length) return null;
-                  const item = payload[0]?.payload;
-                  if (!item?.name) return null;
-                  return (
-                    <div style={{
-                      background: 'rgba(255,255,255,0.97)',
-                      border: '1px solid rgba(0,99,124,0.3)',
-                      borderRadius: 10,
-                      padding: '8px 14px',
-                      fontSize: 13,
-                      color: '#1E293B',
-                      boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-                    }}>
-                      <div style={{ fontWeight: 600, color: '#00637C', marginBottom: 2 }}>{item.name}</div>
-                      <div>${Number(item.size).toFixed(2)}</div>
-                    </div>
-                  );
-                }}
-              />
+              <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
             </Treemap>
           </ResponsiveContainer>
         </div>
