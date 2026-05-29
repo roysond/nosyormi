@@ -1,5 +1,5 @@
 import { Cell, Sector } from 'recharts';
-import { APP_COLORS } from '../constants/palette';
+import { APP_COLORS, ANOMALY_COLOR } from '../constants/palette';
 
 export const JewelBar = (props: any) => {
   const { x, y, width, height, fill } = props;
@@ -54,7 +54,7 @@ export const AnomalyBar = (props: any) => {
   if (!height || height <= 0) return null;
   if (isAnomaly) {
     const { x, y, width } = props;
-    return <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill="#F59E0B" />;
+    return <rect x={x} y={y} width={width} height={height} rx={4} ry={4} fill={ANOMALY_COLOR} />;
   }
   return <JewelBar {...props} />;
 };
@@ -130,7 +130,7 @@ export const UniversalTooltip = ({ active, payload }: any) => {
         ${typeof item.value === 'number' ? item.value.toFixed(2) : item.value}
       </div>
       {item.payload?.isAnomaly && (
-        <div style={{ fontSize: '10px', color: '#F59E0B', marginTop: '4px' }}>⚠ ANOMALY</div>
+        <div style={{ fontSize: '10px', color: ANOMALY_COLOR, marginTop: '4px' }}>⚠ ANOMALY</div>
       )}
       {item.payload?.percentage && (
         <div style={{ fontSize: '11px', color: '#64748B' }}>

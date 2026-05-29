@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { ANOMALY_COLOR } from '../constants/palette';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
@@ -297,9 +298,9 @@ export default function TransactionsPage() {
             style={{
               fontSize: 10,
               fontWeight: 600,
-              background: 'rgba(245,158,11,0.1)',
-              color: '#F59E0B',
-              border: '1px solid rgba(245,158,11,0.3)',
+              background: 'rgba(220,38,38,0.1)',
+              color: ANOMALY_COLOR,
+              border: '1px solid rgba(220,38,38,0.3)',
               borderRadius: 999,
               padding: '2px 8px',
               whiteSpace: 'nowrap',
@@ -389,7 +390,7 @@ export default function TransactionsPage() {
           style={{
             fontSize: 13,
             fontWeight: 600,
-            color: tx.isAnomaly ? '#F59E0B' : '#10B981',
+            color: tx.isAnomaly ? ANOMALY_COLOR : '#10B981',
           }}
         >
           {tx.isAnomaly ? '\u26a0 Anomaly Detected' : '\u2713 Normal'}
@@ -429,7 +430,7 @@ export default function TransactionsPage() {
             ...(tx.isAnomaly
               ? {
                   animation: 'rowAnomalyGlow 2.5s ease-in-out infinite',
-                  borderLeft: '3px solid rgba(245, 158, 11, 0.8)',
+                  borderLeft: '3px solid rgba(220, 38, 38, 0.8)',
                 }
               : {}),
           }}
@@ -531,8 +532,8 @@ export default function TransactionsPage() {
     >
       <style>{`
         @keyframes rowAnomalyGlow {
-          0%, 100% { background: rgba(245, 158, 11, 0.12); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35); }
-          50% { background: rgba(245, 158, 11, 0.25); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.15); }
+          0%, 100% { background: rgba(220, 38, 38, 0.12); box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.35); }
+          50% { background: rgba(220, 38, 38, 0.25); box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.6), 0 0 20px rgba(220, 38, 38, 0.15); }
         }
         @keyframes anomalyDotPulse {
           0%, 100% { opacity: 0.5; transform: scale(1); }
@@ -698,9 +699,9 @@ export default function TransactionsPage() {
                     gap: 8,
                     fontSize: 12,
                     fontWeight: 600,
-                    color: '#F59E0B',
-                    background: 'rgba(245,158,11,0.1)',
-                    border: '1px solid rgba(245,158,11,0.25)',
+                    color: ANOMALY_COLOR,
+                    background: 'rgba(220,38,38,0.1)',
+                    border: '1px solid rgba(220,38,38,0.25)',
                     borderRadius: 999,
                     padding: '4px 12px',
                   }}
@@ -710,7 +711,7 @@ export default function TransactionsPage() {
                       width: 8,
                       height: 8,
                       borderRadius: '50%',
-                      background: '#F59E0B',
+                      background: ANOMALY_COLOR,
                       animation: 'anomalyDotPulse 1.5s ease-in-out infinite',
                     }}
                     aria-hidden
@@ -786,8 +787,8 @@ export default function TransactionsPage() {
               {summaryStats.anomalyCount > 0 && (
                 <div
                   style={{
-                    background: 'rgba(245,158,11,0.06)',
-                    border: '1px solid rgba(245,158,11,0.2)',
+                    background: 'rgba(220,38,38,0.06)',
+                    border: '1px solid rgba(220,38,38,0.2)',
                     borderRadius: 8,
                     padding: '12px 14px',
                     marginTop: 16,

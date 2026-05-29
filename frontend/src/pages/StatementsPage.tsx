@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ANOMALY_COLOR } from '../constants/palette';
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
 interface StatementSummary {
@@ -139,7 +140,7 @@ const styles = {
   modalError: {
     margin: '0 0 16px',
     fontSize: 13,
-    color: '#F59E0B',
+    color: ANOMALY_COLOR,
   },
   modalActions: {
     display: 'flex',
@@ -655,7 +656,7 @@ export default function StatementsPage() {
                     style={{
                       margin: '0 0 12px',
                       fontSize: 13,
-                      color: '#F59E0B',
+                      color: ANOMALY_COLOR,
                     }}
                   >
                     {uploadError}

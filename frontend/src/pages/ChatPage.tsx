@@ -760,8 +760,8 @@ export default function ChatPage() {
                 alignItems: 'center',
                 padding: '12px 10px',
                 marginBottom: 8,
-                borderLeft: '3px solid rgba(245,158,11,0.6)',
-                background: 'rgba(245,158,11,0.04)',
+                borderLeft: '3px solid rgba(220,38,38,0.6)',
+                background: 'rgba(220,38,38,0.04)',
                 borderRadius: 4,
               }}
             >
@@ -1000,16 +1000,16 @@ export default function ChatPage() {
           to { opacity: 1; transform: translateY(0); }
         }
         @keyframes barAnomalyGlow {
-          0%, 100% { filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.5)); }
-          50% { filter: drop-shadow(0 0 14px rgba(245, 158, 11, 0.9)); }
+          0%, 100% { filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.5)); }
+          50% { filter: drop-shadow(0 0 14px rgba(220, 38, 38, 0.9)); }
         }
         @keyframes chat-dot-pulse {
           0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
           40% { opacity: 1; transform: scale(1); }
         }
         @keyframes chat-anomaly-pulse {
-          0%, 100% { box-shadow: inset 0 0 0 0 rgba(244,166,35,0); }
-          50% { box-shadow: inset 0 0 20px rgba(244,166,35,0.12); }
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(220,38,38,0); }
+          50% { box-shadow: inset 0 0 20px rgba(220,38,38,0.12); }
         }
         .chat-anomaly-row {
           animation: chat-anomaly-pulse 2s ease-in-out infinite;

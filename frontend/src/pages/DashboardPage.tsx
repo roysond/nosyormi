@@ -6,7 +6,7 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
-import { APP_COLORS } from '../constants/palette';
+import { APP_COLORS, ANOMALY_COLOR } from '../constants/palette';
 import { JewelSlice, UniversalTooltip } from '../components/chartEffects';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
@@ -474,7 +474,7 @@ export default function DashboardPage() {
         ...(tx.isAnomaly
           ? {
               animation: 'rowAnomalyGlow 2.5s ease-in-out infinite',
-              borderLeft: '3px solid rgba(245, 158, 11, 0.8)',
+              borderLeft: '3px solid rgba(220, 38, 38, 0.8)',
             }
           : {}),
       }}
@@ -540,9 +540,9 @@ export default function DashboardPage() {
             style={{
               fontSize: 10,
               fontWeight: 600,
-              background: 'rgba(245,158,11,0.1)',
-              color: '#F59E0B',
-              border: '1px solid rgba(245,158,11,0.3)',
+              background: 'rgba(220,38,38,0.1)',
+              color: ANOMALY_COLOR,
+              border: '1px solid rgba(220,38,38,0.3)',
               borderRadius: 999,
               padding: '2px 8px',
               whiteSpace: 'nowrap',
@@ -610,8 +610,8 @@ export default function DashboardPage() {
           50% { opacity: 1; }
         }
         @keyframes rowAnomalyGlow {
-          0%, 100% { background: rgba(245, 158, 11, 0.12); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.35); }
-          50% { background: rgba(245, 158, 11, 0.25); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.15); }
+          0%, 100% { background: rgba(220, 38, 38, 0.12); box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.35); }
+          50% { background: rgba(220, 38, 38, 0.25); box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.6), 0 0 20px rgba(220, 38, 38, 0.15); }
         }
         @keyframes chartFadeIn {
           from { opacity: 0; transform: translateY(8px); }
@@ -688,7 +688,7 @@ export default function DashboardPage() {
               <p style={styles.statLabel}>Anomalies</p>
               <p
                 style={styles.statValue(
-                  derived.anomalyCount > 0 ? '#F59E0B' : '#64748B',
+                  derived.anomalyCount > 0 ? ANOMALY_COLOR : '#64748B',
                 )}
               >
                 {animatedAnomalies}
