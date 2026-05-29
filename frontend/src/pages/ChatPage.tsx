@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Area,
   Bar,
@@ -126,6 +126,42 @@ export default function ChatPage() {
   const bubblesRef = useRef<Array<{ canvas: HTMLCanvasElement; bubble: HTMLDivElement }>>([]);
   const [inputFocused, setInputFocused] = useState(false);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
+  const [chatWidth, setChatWidth] = useState(55);
+  const isDragging = useRef(false);
+  const dragStartX = useRef(0);
+  const dragStartWidth = useRef(55);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    isDragging.current = true;
+    dragStartX.current = e.clientX;
+    dragStartWidth.current = chatWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  };
+
+  const handleDragMove = useCallback((e: MouseEvent) => {
+    if (!isDragging.current) return;
+    const containerWidth = window.innerWidth;
+    const delta = e.clientX - dragStartX.current;
+    const deltaPercent = (delta / containerWidth) * 100;
+    const newWidth = Math.min(75, Math.max(30, dragStartWidth.current + deltaPercent));
+    setChatWidth(newWidth);
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    isDragging.current = false;
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    return () => {
+      document.removeEventListener('mousemove', handleDragMove);
+      document.removeEventListener('mouseup', handleDragEnd);
+    };
+  }, [handleDragMove, handleDragEnd]);
 
   function drawBorder(canvas: HTMLCanvasElement, bubble: HTMLDivElement, angle: number) {
     canvas.width = bubble.offsetWidth;
@@ -675,7 +711,7 @@ export default function ChatPage() {
           style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={380}>
               <LineChart data={lineData}>
                 <defs>
                   <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
@@ -860,7 +896,7 @@ export default function ChatPage() {
       return (
         <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={380}>
+            <ResponsiveContainer width="100%" height={440}>
               <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
@@ -898,7 +934,7 @@ export default function ChatPage() {
       return (
         <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={Math.max(280, hData.length * 56)}>
+            <ResponsiveContainer width="100%" height={Math.max(340, hData.length * 64)}>
               <BarChart data={hData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
                 <XAxis type="number" tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
@@ -975,7 +1011,7 @@ export default function ChatPage() {
               data={tData}
               dataKey="size"
               aspectRatio={4 / 3}
-              isAnimationActive={true}
+              isAnimationActive={false}
               stroke="transparent"
               content={<CustomTreemapContent />}>
               <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
@@ -1011,6 +1047,11 @@ export default function ChatPage() {
           0%, 100% { box-shadow: inset 0 0 0 0 rgba(220,38,38,0); }
           50% { box-shadow: inset 0 0 20px rgba(220,38,38,0.12); }
         }
+        @keyframes loadingBorderSpin {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
         .chat-anomaly-row {
           animation: chat-anomaly-pulse 2s ease-in-out infinite;
         }
@@ -1030,7 +1071,7 @@ export default function ChatPage() {
       {/* Left panel */}
       <div
         style={{
-          flex: '0 0 55%',
+          flex: `0 0 ${chatWidth}%`,
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
@@ -1200,15 +1241,48 @@ export default function ChatPage() {
             <div
               style={{
                 alignSelf: 'flex-start',
-                background: '#F8FAFC',
-                border: '1px solid #E2E8F0',
-                borderRadius: '16px 16px 16px 4px',
-                padding: '14px 18px',
+                position: 'relative',
+                borderRadius: '18px 18px 18px 4px',
+                padding: '2px',
+                background: 'linear-gradient(135deg, #34D399, #E8C96A, #34D399)',
+                backgroundSize: '200% 200%',
+                animation: 'loadingBorderSpin 0.5s linear infinite',
+                boxShadow: '0 0 20px rgba(52,211,153,0.8), 0 0 40px rgba(232,201,106,0.6), 0 0 60px rgba(52,211,153,0.3)',
               }}
             >
-              <span className="chat-typing-dot" />
-              <span className="chat-typing-dot" />
-              <span className="chat-typing-dot" />
+              <div style={{
+                background: '#F8FAFC',
+                borderRadius: '16px 16px 16px 3px',
+                padding: '14px 18px',
+              }}>
+              <span style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#94A3B8',
+                animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
+                animationDelay: '0ms',
+              }} />
+              <span style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#94A3B8',
+                animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
+                animationDelay: '200ms',
+              }} />
+              <span style={{
+                display: 'inline-block',
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: '#94A3B8',
+                animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
+                animationDelay: '400ms',
+              }} />
+              </div>
             </div>
           )}
 
@@ -1266,10 +1340,36 @@ export default function ChatPage() {
         </div>
       </div>
 
+      <div
+        onMouseDown={handleDragStart}
+        style={{
+          width: 6,
+          cursor: 'col-resize',
+          background: 'transparent',
+          flexShrink: 0,
+          position: 'relative',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            width: 2,
+            height: 48,
+            borderRadius: 999,
+            background: '#CBD5E1',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = '#00637C')}
+          onMouseLeave={(e) => (e.currentTarget.style.background = '#CBD5E1')}
+        />
+      </div>
+
       {/* Right panel */}
       <div
         style={{
-          flex: '0 0 45%',
+          flex: `0 0 ${100 - chatWidth}%`,
           height: '100vh',
           display: 'flex',
           flexDirection: 'column',
