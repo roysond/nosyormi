@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Friday, 22 May 2026
+> Last updated: Thursday, 28 May 2026
 
 ---
 
@@ -81,7 +81,17 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 1. User message → semantic search against pgvector embeddings
 2. Relevant transactions retrieved
 3. Full conversation history + transaction context → `MODEL_CHAT` (claude-sonnet-4-5)
-4. Response includes `answer` + optional `chartUpdate` (pie/bar/line/anomalies/forecast)
+4. Response includes `answer` + optional `chartUpdate` (pie/bar/line/anomalies/forecast/stacked/horizontal/treemap)
+
+**Chart types the AI can trigger:**
+- `pie` — spending distribution across categories
+- `bar` — category comparison or drilldown within a category
+- `line` — spending over time
+- `anomalies` — unusual transactions
+- `forecast` — next month prediction vs actual average
+- `stacked` — monthly spending by category (new May 28)
+- `horizontal` — categories ranked by total spend (new May 28)
+- `treemap` — spending map by proportion (new May 28)
 
 **4 conceptual layers:**
 - Layer 1: Deterministic — CSV parsing, HTTP, persistence
@@ -102,6 +112,9 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 2. `AddCategoryAndTransaction`
 3. `AddEmbeddingToTransaction`
 4. `20260521031445_AddFileHashToStatement`
+
+**Category taxonomy (11 categories as of May 28):**
+Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Other
 
 ---
 
@@ -127,7 +140,7 @@ GET    /health                       — health check
 | Dashboard | `/` | ✅ Done — stat cards, donut chart, spending/income tabs, transaction list |
 | Transactions | `/transactions` | ✅ Done — search, filter, sort, expand rows, anomaly badge |
 | Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation, View Details |
-| Chat | `/chat` | ✅ Done — chat interface + dynamic chart panel (pie/bar/line/anomaly/forecast) |
+| Chat | `/chat` | ✅ Done — chat + 8 chart types: pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap |
 | StatementDetailPage | `/dashboard/:id` | ✅ Done — light theme, Transactions tab + Charts tab |
 
 **Light theme tokens:**
@@ -136,12 +149,12 @@ GET    /health                       — health check
 - Accent teal: `#00637C` · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#F59E0B`
 
 **Key frontend decisions:**
-- Upload modal: Statements page only (moved from Dashboard — Dashboard is pure analysis view)
+- Upload modal: Statements page only
 - All pages: dynamic statement lookup via `GET /api/statements` → take `summaries[0]`
 - Chat: sessionStorage persistence for `messages`, `chartUpdate`, `statementId`, `statementFileName`
 - Chat: custom event `nosyormi-statement-deleted` triggers auto-clear when statement deleted
 - Clear chat button in chat header (shown when messages.length > 0)
-- Empty state text: "No statements uploaded yet. Upload a CSV from the Statements page."
+- Click anywhere on page resets selected donut slice (document mousedown handler)
 
 ---
 
@@ -162,7 +175,7 @@ docker compose --env-file .env.docker up -d
 docker compose --env-file .env.docker down
 ```
 
-### Minikube (submission deployment)
+### Minikube (submission deployment) ✅ COMPLETE
 API + frontend pods inside Minikube. Postgres runs in Docker Compose outside cluster (shared on port 5433).
 
 **Startup sequence:**
@@ -176,8 +189,6 @@ minikube service nosyormi-frontend --url
 
 **K8s manifests:** `k8s/api-deployment.yaml`, `k8s/frontend-deployment.yaml`, `k8s/configmap.yaml`  
 **`k8s/secrets.yaml` is gitignored** — contains real OpenRouter API key. Applied to cluster via `kubectl apply`.
-
-**nginx proxy:** Frontend nginx proxies `/api` → `http://nosyormi-api:5034` (internal Kubernetes DNS). This is why no hardcoded API URL in frontend bundle.
 
 ---
 
@@ -215,129 +226,148 @@ dotnet ef database update --project Nosyormi.Infrastructure --startup-project No
 | E2E — Playwright Critical Path | 6 | ✅ All passing |
 | **TOTAL** | **46** | **✅ All passing** |
 
-**QA file:** `QA-TEST-CASES.md` in repo root  
-**Test project:** `backend/Nosyormi.Tests/`  
-**E2E spec:** `frontend/e2e/critical-path.spec.ts`  
-**Playwright config:** `frontend/playwright.config.ts` (single Chromium worker, baseURL `http://localhost:5173`)
-
 ---
 
 ## 12. MULTI-BANK CSV SUPPORT
 
 **Supported formats:**
-- **Standard** — columns: `Date`, `Description`, `Amount` (sample_statement.csv format)
-- **Huntington** — columns: `Date`, `Reference Number`, `Payee Name`, `Memo`, `Amount`, `Category Name`, `Transaction Number` — parser combines Payee Name + Memo into description
-- **Bank of America** — has 6-row summary block before real header; real header at row 7 with `Date`, `Description`, `Amount`, `Running Bal.`; parser scans for header row, skips empty date rows, ignores Running Bal.
-
-**Parser:** `backend/Nosyormi.Infrastructure/Parsing/CsvStatementParser.cs`
+- **Standard** — columns: `Date`, `Description`, `Amount`
+- **Huntington** — combines Payee Name + Memo into description
+- **Bank of America** — scans for header row, skips empty date rows, ignores Running Bal.
 
 ---
 
-## 13. KEY ARCHITECTURAL DECISIONS (chronological)
+## 13. UI ARCHITECTURE — CHART EFFECTS (added May 28)
 
-**May 7-11:** Project named NOSYOR.M.I — "I'm Royson" hidden backwards. Tagline "Your money, reflected." Stack locked: .NET 10 + React + PostgreSQL + Docker + Minikube + OpenRouter.
+**Two files control all visual styling. Change one, never both.**
 
-**May 11-17:** 11 epics, 56 stories created on GitHub Project board. All backend layers built. Clean Architecture established with known EF Core placement pragmatism.
+### `frontend/src/constants/palette.ts`
+Single source of truth for all colours. Change colours here ONLY.
+```
+APP_COLORS[]              — 11-colour palette for pie/bar charts
+FORECAST_ACTUAL_COLOR     — #00637C (teal)
+FORECAST_PREDICTED_COLOR  — #f4a623 (amber)
+LINE_STROKE_COLOR         — #C9911A
+LINE_FILL_COLOR           — rgba(0,99,124,0.28)
+ANOMALY_COLOR             — #F59E0B
+```
 
-**May 18-19:** Frontend built in light theme (reversed from original dark theme exploration after discussing tradeoffs — expense/income colors need red/green distinction).
+### `frontend/src/components/chartEffects.tsx`
+Single source of truth for all visual effects. Change effects here ONLY.
+```
+JewelBar          — bar chart shape. Radial gradient shimmer from top-left. Used on ALL bar charts.
+JewelSlice        — pie/donut slice shape. White shimmer overlay. Used on ALL donut charts.
+AnomalyBar        — bar shape that switches to amber for anomalous transactions.
+UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages.
+```
 
-**May 20:** Multi-statement refactor — removed hardcoded `STATEMENT_ID` constants from all 3 pages. Added `StatementsPage`. `StatementQueryService` moved Application→Infrastructure (Clean Architecture fix). SHA-256 file hash deduplication. Hard delete with cascade. Multi-bank deferred to post-MVP.
-
-**May 21:** Epic 10 testing complete (46 tests). Epic 11 deployment: Dockerized all 3 services. Minikube deployment. `EMBEDDING_MODEL` was missing from `.env.docker` — caused 500 on first upload attempt. Fixed. nginx API proxy added for Kubernetes internal routing.
-
-**May 22:** Real bank statement testing. Huntington CSV — all "Other" category initially (description parsing bug). Fixed by combining `Payee Name` + `Memo` columns. BOA CSV — failed on empty date rows and summary preamble. Fixed with header scanning + row skipping. Chat fixes: history persistence (sessionStorage), conversation context fix (history sent correctly), anomaly panel data source fix, chart state persistence, clear chat button, auto-clear on statement delete (custom event `nosyormi-statement-deleted`). Empty state copy corrected.
+**Effect applied per chart type:**
+| Chart | Effect |
+|---|---|
+| Donut (Dashboard, Chat, StatementDetail) | JewelSlice |
+| Category Bar | JewelBar + CRYSTAL_COLORS per cell |
+| Drilldown Bar | AnomalyBar (JewelBar + amber for anomalies) |
+| Forecast Bar | JewelBar (teal actual, amber forecast) |
+| Horizontal Bar | JewelBar + APP_COLORS per cell |
+| Stacked Bar | JewelBar per stack segment |
+| Line Chart | Gradient fill + gold stroke |
+| Treemap | Flat solid fills with tooltip on hover |
 
 ---
 
-## 14. KNOWN LIMITATIONS (documented for submission)
+## 14. KEY ARCHITECTURAL DECISIONS (chronological)
 
-1. **"I had trouble reflecting on that"** — Chat returns this on action requests (e.g., "remove this anomaly"). The chat endpoint handles question-answering only, not write operations. By design.
-2. **AI/database anomaly mismatch** — Z-score detection at upload time may differ from what AI identifies conversationally. The visual panel shows database ground truth; AI shows conversational context. Intentional behavior.
-3. **User anomaly feedback loop** — No "mark as not anomaly" feature. Would require a new API endpoint and UI. Deferred as future enhancement.
-4. **PDF support** — Deferred. App accepts CSV only. PDF parsing was discussed (PdfPig + LIGHT model AI parsing) but not implemented. Documented as known limitation.
-5. **Multi-bank filtering** — No per-bank statement grouping in sidebar. Deferred. Architecture supports it: add `BankName` to Statement entity, add `?bank=` query param to API.
-6. **StatementDetailPage navigation** — Page exists at `/dashboard/:id` but is not linked from primary navigation. Access via "View Details →" in Statements page only.
-7. **Chat sessionStorage only** — Chat history survives navigation but not browser/tab close. Not persisted to database.
+**May 7-11:** Project named NOSYOR.M.I. Stack locked.
+
+**May 11-17:** 56 stories on GitHub Project board. Backend layers built.
+
+**May 18-19:** Frontend built in light theme.
+
+**May 20:** Multi-statement refactor. SHA-256 deduplication. Hard delete with cascade.
+
+**May 21:** Testing complete (46 tests). Docker + Minikube deployment.
+
+**May 22:** Multi-bank CSV support (Huntington + BOA). Chat fixes.
+
+**May 28:** Major UI architecture day.
+- Added `Parking & Tolls` category to taxonomy and classifier prompt
+- Created `palette.ts` + `chartEffects.tsx` — clean separation of colour vs effect (SOLID principle)
+- Removed `CrystalPieCell.tsx` — dead file cleaned up
+- Applied JewelBar to all bar charts (category, drilldown, forecast, horizontal, stacked)
+- Applied JewelSlice to all donut charts with active lift on click
+- Unified `UniversalTooltip` across all pages (was 3 different tooltip components)
+- Added 3 new chart types: Treemap, Stacked Bar by Month, Horizontal Bar
+- Updated AI system prompt to trigger new chart types
+- Fixed chat multi-turn history bug (assistant turns wrapped as JSON)
+- Fixed donut animation interruption on Dashboard and Chat
+- Fixed click-outside reset on pie slices
+- Fixed Treemap ghost root label (depth === 0 guard)
+- Removed `isolation: 'isolate'` from Dashboard that was blocking backdrop-filter
 
 ---
 
-## 15. PENDING WORK (as of 22 May 2026)
+## 15. KNOWN LIMITATIONS (documented for submission)
 
-**CRITICAL for submission (9 days left):**
-- [ ] `PROJECT-MEMORY.md` — this file — **DONE TODAY**
-- [ ] `LEARNING-LOG.md` — errors, fixes, concepts in plain English
-- [ ] `DECISIONS.md` — update with all decisions (May 20-22)
-- [ ] `ARCHITECTURE.md` — add orchestration note, update with May 21-22 decisions
-- [ ] 6 architectural diagrams (Excalidraw):
-  1. System Architecture — React → .NET API (orchestrator) → Postgres/OpenRouter/Embeddings/Forecasting
-  2. AI Integration Flow — user request → embeddings → RAG → AI → chartUpdate response
-  3. Database Schema — Statements, Transactions, Categories with fields
-  4. API Endpoint Map — all routes, methods, request/response shapes
-  5. Deployment Diagram — Docker Compose + Minikube topology
-  6. User Flow Diagram — primary journey: upload → dashboard → chat
+1. **"I had trouble reflecting on that"** — Chat handles Q&A only, not write operations. By design.
+2. **AI/database anomaly mismatch** — Z-score at upload vs AI conversational context. Intentional.
+3. **User anomaly feedback loop** — No "mark as not anomaly". Deferred.
+4. **PDF support** — CSV only. Deferred.
+5. **Multi-bank filtering** — No per-bank grouping. Architecture supports it.
+6. **StatementDetailPage navigation** — Access via "View Details →" in Statements page only.
+7. **Chat sessionStorage only** — Not persisted to database.
+8. **ChatPage god component** — SRP violation acknowledged. Chart renderers should be extracted into separate components. Accepted tradeoff under deadline.
+9. **Tooltip backdrop-filter** — Frosted glass effect visible when tooltip overlaps coloured slices. Appears more opaque over white backgrounds. Browser compositing limitation.
+
+---
+
+## 16. PENDING WORK (as of 28 May 2026)
+
+**SUBMISSION CRITICAL (3 days left):**
 - [ ] PowerPoint deck (8+ slides, real screenshots)
-- [ ] Project documentation (all 56 user stories, sprint log, AI integration details, known issues)
-- [ ] Demo video (3-5 minutes, story-driven, not a screen recording)
+- [ ] Project documentation (all 56 user stories, sprint log, AI integration details)
+- [ ] Demo video (3-5 minutes, story-driven)
 
-**POLISH (optional, post-docs):**
-- [ ] Upload pulse animation (breathing during processing)
-- [ ] Stat card count-up (~800ms roll on first load)
-- [ ] Transactions header compression on scroll
-- [ ] Dashboard "4th stat card" clipped off-screen issue (Anomalies card)
+**UI POLISH (remaining):**
+- [ ] Draggable divider between chat and chart panels
+- [ ] Typing animation — emerald/gold gradient dots on AI thinking bubble
+- [ ] Vibrancy Glass on Treemap tiles
+- [ ] StatementDetailPage center label fade-in animation
+- [ ] Upload pulse animation during CSV processing
 
 ---
 
-## 16. GIT COMMIT LOG (recent — most recent first)
+## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
-b1a5426 — fix(docker): remove test project from backend Dockerfile build stage
-78e9609 — chore(security): remove secrets.yaml from tracking, add to gitignore
-f3f4c7f — feat(deploy): add Minikube k8s manifests and nginx API proxy
-8eed111 — fix(deploy): add missing EMBEDDING_MODEL env var to docker-compose
-[current session commits]
-  — fix(ui): correct empty state message to point to Statements page
-  — feat(chat): add clear chat button, auto-clear on statement delete via custom event
-  — fix(chat): persist chartUpdate state via sessionStorage across navigation
-  — fix(chat): persist history, fix conversation context, fix anomaly panel data source
-  — fix(parser): add BOA CSV format support
-  — fix(parser): add multi-bank CSV format support for Huntington
-32ae82e — test(e2e): add Playwright critical path E2E tests — 6 passing
-74fd0b8 — docs(qa): add manual QA test cases — 18 cases all passing
-a15432f — test(integration): add StatementsController integration tests
-260fa8c — test(unit): add CsvStatementParser unit tests
-a6be831 — test(unit): add MovingAverageForecastingService unit tests
-b400ee0 — test(unit): add ZScoreAnomalyDetector unit tests
-1fa0d21 — feat(statements): move upload to StatementsPage, add View Details, remove from Dashboard
-dc2073f — feat(statements): add StatementsPage with delete confirmation and sidebar nav
-7c81479 — feat(dashboard): replace hardcoded statement ID with dynamic lookup
-b6b8032 — feat(api): add DELETE /api/statements/{id} with cascade delete
-5a7a9b8 — feat(upload): add SHA-256 duplicate detection with 409 Conflict
-ced90df — feat(domain): add FileHash to Statement entity with unique index migration
-b29e1d1 — refactor: move StatementQueryService to Infrastructure, add interface
-7814139 — chore(cleanup): remove dead UploadPage and App.css
+feat(ui): JewelSlice on all donuts, UniversalTooltip unified, new chart types, animation fixes
+feat(charts): add treemap, stacked bar, horizontal bar — palette.ts and chartEffects.tsx architecture
+refactor(ui): clean architecture for charts — palette.ts, chartEffects.tsx, JewelBar on all charts
+feat(ui): crystal colors on all pie charts, parking & tolls category, click-outside reset, tooltip fix
+fix(chat): fix duplicate message in history and wrap assistant turns as JSON for context
+feat(ui): Glass Slice donuts, Pill Green bars, Jewel bars, chart effects complete
+[earlier commits unchanged from previous session]
 ```
 
 ---
 
-## 17. WORKING PATTERN (how Royson and Claude work together)
+## 18. WORKING PATTERN
 
 - Claude writes precise Cursor prompts → Royson runs in Cursor Agent mode (Cmd+I) → pastes results back → Claude verifies → commit
 - Royson responds well to honest pushback — does NOT want sycophancy
 - "Sync" = silently load context, continue. "Sync+" = load context + brief summary to verify
 - All commits are atomic and individually reversible
-- Explanations in plain English before technical steps
 - "Why before what" — always explain the reason before the action
-- When Royson gives context corrections (like MINT Mobile being phone carrier not wifi), note them but don't overfit
+- All code changes must follow SOLID principles and clean coding structure
+- Python commands for terminal fixes, Cursor prompts for file edits
+- Cursor prompts delivered as copyable code blocks
 
 ---
 
-## 18. ORCHESTRATION NOTE (for ARCHITECTURE.md and diagrams)
+## 19. ORCHESTRATION NOTE
 
 > **"The .NET API is the orchestrator."**
 > 
-> Hannan specifically mentioned: "When working with multiple APIs, make sure orchestration happens well. One person sitting in the middle, responsible for moving everyone in the right direction."
-> 
-> In NOSYOR.M.I, the .NET Web API is that person. The browser never talks directly to OpenRouter, pgvector, or the forecasting service. Everything flows through the API, which coordinates:
+> In NOSYOR.M.I, the .NET Web API coordinates:
 > - OpenRouter (categorization, chat, narration)
 > - pgvector (embedding storage + similarity search)  
 > - ZScoreAnomalyDetector (statistical analysis)
