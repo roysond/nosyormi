@@ -13,13 +13,13 @@ It doesn't shame you. It doesn't moralize. It reflects.
 
 ## What it does
 
-- **CSV & bank statement ingestion** — drop in a file, the app parses it.
-- **Automatic categorization** — every transaction sorted into meaningful buckets without you lifting a finger.
-- **Anomaly detection** — spots the unusual spends that quietly drained the account. The holes you couldn't see.
-- **Next-month forecasting** — projects where your spending is heading based on the patterns it sees.
-- **Conversational chat interface** — ask questions in plain English; the AI answers *and* updates the visualizations to match.
-- **Live data visualizations** — eight chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap) that respond to the conversation, not static dashboards.
-- **Date-range analysis** — scope the dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
+- **CSV & bank statement ingestion** — drop in a file; the app parses Standard, Huntington, and Bank of America export formats automatically.
+- **Automatic categorization** — every transaction sorted into 11 meaningful buckets without manual tagging.
+- **Anomaly detection** — Z-score analysis flags unusual spends at upload time.
+- **Next-month forecasting** — weighted moving average projects spending by category.
+- **Conversational chat interface** — ask questions in plain English; the AI answers and updates live visualizations to match.
+- **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
+- **Date-range analysis** — scope the Dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 
 ---
 
@@ -37,43 +37,103 @@ NOSYOR.M.I exists for the moment after the shock — when you want clarity, not 
 
 | Layer | Technology |
 |---|---|
-| Backend | .NET 10 Web API |
-| Frontend | React + TypeScript (Vite) |
-| Database | PostgreSQL |
-| AI Layer | OpenRouter (model selection per task) |
+| Backend | .NET 10 Web API (Clean Architecture — 4 projects) |
+| Frontend | React 19 + TypeScript (Vite) + Recharts |
+| Database | PostgreSQL 16 + pgvector |
+| AI Layer | OpenRouter (3-tier model routing) |
 | Containers | Docker + Docker Compose |
 | Deployment | Minikube (local Kubernetes) |
-| Architecture | Clean Architecture, SOLID principles |
+| Testing | xUnit (unit + integration) + Playwright (E2E) |
 
 ---
 
 ## Getting started
 
-> *Note: This project is in active development. Setup instructions will be expanded as the application is built out.*
+### Prerequisites
 
-**Prerequisites**
+- [.NET 10 SDK](https://dotnet.microsoft.com/download)
+- [Node.js](https://nodejs.org/) (LTS)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+- [OpenRouter API key](https://openrouter.ai/keys)
+- PostgreSQL 16 with `pgvector` (Postgres.app for local dev, or use Docker below)
 
-- .NET 10 SDK
-- Node.js (LTS)
-- Docker Desktop
-- PostgreSQL 16
-- A valid OpenRouter API key
-
-**Quick setup**
+### 1. Clone and configure environment
 
 ```bash
 git clone https://github.com/roysond/nosyormi.git
 cd nosyormi
-# Setup instructions coming as the project develops
+cp .env.example .env
 ```
 
-Environment variables go in a local `.env` file — never committed. A `.env.example` file is provided as a template.
+Edit `.env` with your database connection string, `OPENROUTER_API_KEY`, and model variables. See `.env.example` for all required keys.
+
+### 2. Run with Docker Compose (recommended)
+
+```bash
+docker compose --env-file .env.docker up -d
+```
+
+Wait ~30 seconds for Postgres health checks, then open **http://localhost:5173**.
+
+| Service | URL / port |
+|---|---|
+| Frontend | http://localhost:5173 |
+| API | http://localhost:5034 |
+| Postgres | localhost:5433 (user `nosyormi`, db `nosyormi`) |
+
+Copy your real values into `.env.docker` (same keys as `.env`). Never commit `.env` or `.env.docker`.
+
+### 3. Local development (without Docker for API/frontend)
+
+**Database** — Postgres on port 5432 (Postgres.app) or 5433 (Docker postgres only):
+
+```bash
+cd backend
+dotnet ef database update --project Nosyormi.Infrastructure --startup-project Nosyormi.Api
+dotnet run --project Nosyormi.Api
+```
+
+API listens on **http://localhost:5034**.
+
+**Frontend:**
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Vite dev server: **http://localhost:5173** (proxies or calls API per `VITE_API_BASE_URL`).
+
+### 4. Run tests
+
+```bash
+# Backend unit + integration (22 tests)
+cd backend && dotnet test
+
+# E2E (app must be running on localhost:5173)
+cd frontend && npx playwright test
+```
+
+Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
+
+---
+
+## Documentation
+
+| Document | Purpose |
+|---|---|
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, four-layer model, decision log |
+| [PROJECT-DOCUMENTATION.md](./PROJECT-DOCUMENTATION.md) | Capstone submission: sprint log, user stories, AI details |
+| [DECISIONS.md](./DECISIONS.md) | Key product and technical decisions |
+| [QA-TEST-CASES.md](./QA-TEST-CASES.md) | Manual test cases and results |
+| [PROJECT-MEMORY.md](./PROJECT-MEMORY.md) | Session context anchor for development |
 
 ---
 
 ## Project status
 
-🛠 **In active development** · Capstone project · Solo build · 3-week sprint
+**In active development** · AI Integration Capstone · Solo build  
 **Target completion:** before 4 June 2026
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.
@@ -90,7 +150,7 @@ It's a small piece of the same idea that runs through the product. Hold somethin
 
 ## Author
 
-**Royson D'Souza**
+**Royson D'Souza**  
 Built as part of the AI Integration Capstone Program · 2026
 
 ---

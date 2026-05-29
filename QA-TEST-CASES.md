@@ -4,13 +4,11 @@
 > expected result, and actual result observed during testing.
 > All tests performed against: http://localhost:5173 (frontend) 
 > and http://localhost:5034 (backend API).
-> Test date: 21 May 2026 · Revised 28 May 2026
+> Test date: 21 May 2026 · Revised 29 May 2026
 >
-> **Revision note (28 May 2026):** `StatementDetailPage` (route
-> `/dashboard/:id`) and its "View Details →" link were removed. The two
-> test cases that covered it (TC-13, TC-14) have been re-pointed at the
-> features that replaced it — the Dashboard date-range filter and the
-> new chat chart types — so coverage stays at 18 cases.
+> **Revision notes:**
+> - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
+> - **29 May 2026:** TC-14 extended for `topN`; TC-19 added for top-N fallback behaviour.
 
 ---
 
@@ -181,17 +179,30 @@
 
 ---
 
-## TC-14 — Chat renders new chart types (treemap / stacked / horizontal)
+## TC-14 — Chat renders extended chart types (treemap / stacked / horizontal)
 
-> *(Revised 28 May 2026 — replaces the removed "StatementDetailPage Charts
-> tab" case.)*
+> *(Revised 28 May 2026 — replaces the removed StatementDetailPage case.)*
 
 **Precondition:** Statement uploaded; on the NOSYOR.M.I Chat page.  
 **Steps:**
 1. Ask "show me a treemap" (and similarly "stacked by month", "rank my categories")
 
-**Expected:** The chart panel renders the requested type — treemap (proportional tiles), stacked bar (monthly by category), or horizontal bar (categories ranked) — each with the shared frosted-glass tooltip on hover.  
+**Expected:** The chart panel renders the requested type — treemap, stacked bar, or horizontal bar — with the shared `UniversalTooltip` on hover.  
 **Actual:** ✅ Pass — each requested chart type renders correctly with the unified tooltip.
+
+---
+
+## TC-19 — Chat topN chart (biggest expenses)
+
+> *(Added 29 May 2026.)*
+
+**Precondition:** Statement uploaded with multiple expense transactions; on Chat page.  
+**Steps:**
+1. Ask "show me my top 5 biggest expenses" (or "largest purchases")
+2. Observe chart panel title and bars
+
+**Expected:** Chart panel shows "Biggest Transactions" (`topN` type). Individual expense transactions appear as ranked bars (not category totals). Server fallback applies if the model omits `topN`.  
+**Actual:** ✅ Pass — topN chart renders with correct ranked transactions.
 
 ---
 
@@ -241,4 +252,4 @@
 
 ---
 
-*Total: 18 test cases | Passed: 18 | Failed: 0*
+*Total: 19 test cases | Passed: 19 | Failed: 0*

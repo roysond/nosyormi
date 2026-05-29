@@ -78,20 +78,21 @@ The fix was to remove all hardcoded IDs and instead call
 use that ID for all subsequent calls. This taught me why configuration
 should never live inside code — it should come from data.
 
-### What RAG actually means
+### What RAG actually means (and what NOSYOR.M.I does today)
 
-RAG stands for Retrieval-Augmented Generation. Before implementing it
-I thought AI chat was just: send message → get response.
+RAG stands for Retrieval-Augmented Generation. The full pattern is:
+1. Embed the user's question
+2. Search stored embeddings for similar transactions
+3. Send only the top matches as context to the LLM
 
-What actually happens in NOSYOR.M.I:
-1. Convert the user's question into a vector embedding
-2. Search the database for transactions whose embeddings are similar
-3. Send those transactions *as context* to the AI along with the question
-4. The AI answers based on real data, not guesswork
+**What ships today:** At upload, every transaction gets an embedding stored
+in pgvector. In chat, the API sends the **entire statement** as structured
+text (with `[ID:uuid]` on each line) — not similarity search. That still
+grounds answers in real data, but it is not query-time RAG yet.
 
-Without RAG, if I asked "how much did I spend at Starbucks in March?"
-the AI would have to guess or make something up. With RAG, it receives
-the actual Starbucks transactions and can give an exact answer.
+Why both? Embeddings are the foundation for semantic search later. For
+MVP-sized statements, full context is simpler and avoids retrieval bugs.
+When statements grow large, query-time RAG becomes necessary.
 
 ### The EMBEDDING_MODEL missing from .env.docker
 
@@ -312,6 +313,37 @@ future-me) — name it out loud.
 
 ---
 
+## Week 5 — Chat Intelligence (May 29)
+
+### When the model picks the wrong chart, fix it in code
+
+Users asking for "my top 10 expenses" need individual transactions ranked
+by amount — not a category bar chart. The LLM sometimes returned `bar`
+anyway. I added two layers of defence:
+
+1. **Prompt rules** — the system prompt lists mandatory phrases that must
+   trigger `type: "topN"` and `highlightTransactionIds`.
+2. **Server fallback** — if the user message still looks like a top-N query,
+   `OpenRouterChatService` sorts expense transactions by absolute amount,
+   takes the top N IDs, and overwrites the chart type before returning JSON.
+
+Lesson: prompts guide behaviour; deterministic code guarantees critical UX.
+
+### Transaction IDs in context
+
+Each transaction line in the chat context now starts with `[ID:uuid]`. The
+model uses those UUIDs in `highlightTransactionIds`. Without IDs, the model
+might use dates or descriptions — which do not match database keys. Making
+the contract explicit in the data format reduced highlight mismatches.
+
+### Full context vs RAG (honest scope)
+
+I originally documented "RAG chat" in submission materials. The code stores
+embeddings but chat loads all rows. Updating the docs to match reality was
+important — reviewers and future-me need to know what is implemented vs planned.
+
+---
+
 ## The Most Important Thing I Learned
 
 **Working software is built incrementally, not all at once.**
@@ -335,5 +367,5 @@ learning came first. The speed came after.
 
 ---
 
-*Last updated: 28 May 2026 — added Week 4 (visual system, shared tooltip, 
-StatementDetailPage removal, dead-config lesson).*
+*Last updated: 29 May 2026 — added Week 5 (topN chart, server fallback, 
+transaction IDs, full-context vs RAG clarification); corrected RAG section.*

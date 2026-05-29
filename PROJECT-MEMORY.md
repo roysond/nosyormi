@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Thursday, 28 May 2026 (evening — StatementDetailPage removed, Dashboard date-range filter added, docs synced to code)
+> Last updated: Friday, 29 May 2026 — topN chart, chat prompt/fallback, docs aligned to full-context chat (RAG deferred)
 
 ---
 
@@ -36,7 +36,7 @@ Upload bank statements or CSVs. The app categorizes spending, detects anomalies,
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18 + TypeScript + Vite + react-router-dom + Recharts |
+| Frontend | React 19 + TypeScript + Vite + react-router-dom + Recharts |
 | Backend | .NET 10 Web API — Clean Architecture (4 projects) |
 | Database | PostgreSQL 16 + pgvector (vector embeddings for RAG) |
 | AI | OpenRouter — 3-tier model routing |
@@ -77,11 +77,14 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 5. All transactions → `ZScoreAnomalyDetector` → `isAnomaly` flag set
 6. Everything saved to PostgreSQL
 
-**Chat pipeline (RAG):**
-1. User message → semantic search against pgvector embeddings
-2. Relevant transactions retrieved
-3. Full conversation history + transaction context → `MODEL_CHAT` (claude-sonnet-4-5)
-4. Response includes `answer` + optional `chartUpdate` (pie/bar/line/anomalies/forecast/stacked/horizontal/treemap)
+**Chat pipeline (full context — query-time RAG deferred):**
+1. Load all transactions for `statementId` from PostgreSQL
+2. Build structured context (`[ID:uuid]`, date, INCOME/EXPENSE, description, category, amount)
+3. Full conversation history + context + user message → `MODEL_CHAT` (claude-sonnet-4-5)
+4. Parse JSON response → `answer` + optional `chartUpdate`
+5. If user asked for top/biggest expenses but model omitted `topN`, server computes top-N expense IDs and forces `chartUpdate.type = "topN"`
+
+> Embeddings are written at upload into pgvector; similarity search at chat time is **not wired** yet.
 
 **Chart types the AI can trigger:**
 - `pie` — spending distribution across categories
@@ -92,6 +95,9 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 - `stacked` — monthly spending by category (new May 28)
 - `horizontal` — categories ranked by total spend (new May 28)
 - `treemap` — spending map by proportion (new May 28)
+- `topN` — biggest expense transactions ranked; uses `highlightTransactionIds` (new May 29)
+
+**ChartUpdate fields:** `type`, optional `category` (bar drilldown within category), optional `highlightTransactionIds` (topN / highlights)
 
 **4 conceptual layers:**
 - Layer 1: Deterministic — CSV parsing, HTTP, persistence
@@ -140,7 +146,7 @@ GET    /health                       — health check
 | Dashboard | `/` | ✅ Done — stat cards, donut chart, spending/income tabs, transaction list, **date-range filter (All Time / month pills / custom range)** |
 | Transactions | `/transactions` | ✅ Done — search, filter, sort, expand rows, anomaly badge |
 | Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation |
-| Chat | `/chat` | ✅ Done — chat + 8 chart types: pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap |
+| Chat | `/chat` | ✅ Done — chat + 9 chart types: pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN |
 
 > **REMOVED (28 May 2026):** `StatementDetailPage` and its `/dashboard/:id` route were deleted from the app entirely, along with the "View Details →" link on the Statements page. There are now **4 frontend pages**.
 
@@ -228,9 +234,9 @@ dotnet ef database update --project Nosyormi.Infrastructure --startup-project No
 | Unit — Forecasting | 5 | ✅ All passing |
 | Unit — CSV Parser | 6 | ✅ All passing |
 | Integration — Statements API | 6 | ✅ All passing |
-| QA Manual Test Cases | 18 | ✅ All passing (TC-01 to TC-18) |
+| QA Manual Test Cases | 19 | ✅ All passing (TC-01 to TC-19) |
 | E2E — Playwright Critical Path | 6 | ✅ All passing |
-| **TOTAL** | **46** | **✅ All passing** |
+| **TOTAL** | **47** | **✅ All passing** |
 
 ---
 
@@ -324,6 +330,14 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - **Removed `StatementDetailPage` entirely** — deleted the file, the `/dashboard/:id` route in `App.tsx`, and the "View Details →" link on the Statements page (and the now-unused `Link` import)
 - Confirmed `MODEL_NARRATION` is dead config (referenced only in env/k8s/docs, read by no code)
 
+**May 29 — chat intelligence:**
+- Added `topN` chart type + `highlightTransactionIds` in `chartUpdate` contract (frontend + backend)
+- Expanded `OpenRouterChatService` system prompt (chart rules, IDs, merchant→category bar, mandatory topN phrases)
+- Server-side fallback: keyword match on user message → force `topN` with DB-sorted expense IDs
+- Transaction context lines: `[ID:uuid]`, `[INCOME]` / `[EXPENSE]`
+- Documentation corrected: chat = full context, not query-time pgvector RAG
+- QA: TC-19 (topN chart) added → **47** total tests (22 + 19 + 6)
+
 ---
 
 ## 15. KNOWN LIMITATIONS (documented for submission)
@@ -338,10 +352,12 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 8. **ChatPage god component** — SRP violation acknowledged. Chart renderers should be extracted into separate components. Accepted tradeoff under deadline.
 9. **Tooltip backdrop-filter** — Frosted glass effect visible when tooltip overlaps coloured slices (most noticeable on the Treemap, where tiles are fully coloured). Appears cleaner over white/light backgrounds. Browser compositing limitation — accepted.
 10. **`MODEL_NARRATION` not wired** — The narration model tier is provisioned in config (`.env`, `.env.docker`, `k8s/configmap.yaml`) but no code reads it. Anomaly/forecast narration is not implemented in the current build; categorization uses `MODEL_LIGHT` and chat uses `MODEL_CHAT`.
+11. **Query-time RAG not wired** — Embeddings stored at upload; chat uses full statement context.
+12. **Chat streaming** — Non-streaming JSON response per message.
 
 ---
 
-## 16. PENDING WORK (as of 28 May 2026)
+## 16. PENDING WORK (as of 29 May 2026)
 
 **SUBMISSION CRITICAL (3 days left):**
 - [ ] PowerPoint deck (8+ slides, real screenshots)
@@ -359,6 +375,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 ## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
+feat(chat): topN chart type, highlightTransactionIds, server-side topN fallback, expanded system prompt
 chore(cleanup): remove StatementDetailPage + /dashboard/:id route + View Details link
 feat(dashboard): date-range filter (All Time / month / custom) + useCountUp zero-snap fix
 refactor(charts): remove CrystalPieCell, unify Treemap onto UniversalTooltip, donut tooltip transparency

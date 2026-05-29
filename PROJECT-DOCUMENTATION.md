@@ -84,14 +84,15 @@ handle the kind of work they are best suited for.
 - Real bank statement testing
 
 **Completed:**
-- ✅ React 18 + TypeScript + Vite frontend scaffolded
+- ✅ React 19 + TypeScript + Vite frontend scaffolded
 - ✅ Dashboard page: stat cards, donut chart, spending/income tabs,
   transaction list with summary panel
 - ✅ Transactions page: search, filter by category, sort, expandable
   rows, anomaly badge
 - ✅ Statements page: list, upload modal, delete with confirmation
 - ✅ Chat page: AI chat interface + dynamic chart panel
-  (pie/bar/line/anomaly/forecast; stacked/horizontal/treemap added in Week 4)
+  (pie/bar/line/anomaly/forecast; stacked/horizontal/treemap in Week 4;
+  topN + highlightTransactionIds in Week 5)
 - ✅ StatementDetailPage: per-statement transactions + charts tabs
   *(later removed in Week 4 — superseded by the Dashboard date-range filter)*
 - ✅ Chat-to-visualization bridge: `chartUpdate` JSON contract drives
@@ -122,8 +123,8 @@ handle the kind of work they are best suited for.
 **Completed:**
 - ✅ Unit tests: 16 passing (anomaly, forecasting, CSV parser)
 - ✅ Integration tests: 6 passing (Statements API)
-- ✅ QA manual test cases: 18 passing (TC-01 to TC-18)
-- ✅ E2E tests: 6 passing (Playwright critical path)
+- ✅ QA manual test cases: 19 passing (TC-01 to TC-19)
+- ✅ E2E tests: 6 passing (Playwright critical path); 47 total tests across four levels
 - ✅ Docker Compose: 3 containers (postgres, api, frontend)
 - ✅ Minikube K8s deployment with nginx API proxy
 - ✅ UI redesign: deep forest sidebar, CCE8EC background, honey amber
@@ -161,6 +162,28 @@ handle the kind of work they are best suited for.
 - `MODEL_NARRATION` is provisioned in config but unwired in code — the
   narration tier (anomaly/forecast narration) is not implemented in the
   current build. Documented as a known limitation.
+
+---
+
+### Week 5 (May 29) — Chat Intelligence & topN Charts
+
+**Completed:**
+- ✅ Ninth chart type: `topN` — ranked biggest expense transactions with
+  `highlightTransactionIds` driving per-transaction bars in the chat panel
+- ✅ Chat system prompt expanded: transaction `[ID:uuid]` markers, INCOME/EXPENSE
+  direction, merchant→category bar rules, mandatory `topN` for “biggest/top” queries
+- ✅ Server-side `topN` fallback in `OpenRouterChatService` when the model omits
+  the chart type but the user message matches top-N intent
+- ✅ Category-scoped `bar` charts: `chartUpdate.category` drills into individual
+  transactions within one category (e.g. Netflix → Subscriptions)
+
+**Clarified (documentation accuracy):**
+- Chat injects the **full transaction list** for the active statement into
+  each request — not query-time pgvector similarity search. Embeddings are
+  generated and stored at upload (semantic layer foundation); live RAG retrieval
+  remains deferred.
+- Token streaming to the frontend is **not implemented**; chat returns a
+  complete JSON response per message.
 
 ---
 
@@ -222,7 +245,7 @@ Stories are listed by epic. Status reflects the state at submission.
 |---|---|---|---|
 | 24 | Generate vector embeddings per transaction via OpenRouter | Major | ✅ Done |
 | 25 | Store embeddings in pgvector with cosine similarity index | Major | ✅ Done |
-| 26 | Implement RAG retrieval: embed query → similarity search → context | Major | ✅ Done |
+| 26 | Implement RAG retrieval: embed query → similarity search → context | Major | ⏳ Partial (embeddings at upload ✅; query-time retrieval deferred) |
 
 ### Epic 7 — Forecasting & Time-Series (4 stories)
 
@@ -238,7 +261,7 @@ Stories are listed by epic. Status reflects the state at submission.
 | # | Story | Tier | Status |
 |---|---|---|---|
 | 31 | Build chat API endpoint with RAG pipeline | Major | ✅ Done |
-| 32 | Implement streaming token delivery to frontend | Major | ✅ Done |
+| 32 | Implement streaming token delivery to frontend | Major | ❌ Not Started (non-streaming JSON response; deferred) |
 | 33 | Design guardrailed system prompt for financial scope | Major | ✅ Done |
 | 34 | Build chartUpdate JSON contract for AI-driven visualizations | Major | ✅ Done |
 | 35 | Implement witty on-brand deflections for off-topic queries | Additive | ✅ Done |
@@ -325,22 +348,31 @@ categories.
 
 **Chat prompt (MODEL_CHAT):**
 The prompt includes:
-1. System context (scope, brand voice, chartUpdate contract)
-2. Relevant transactions retrieved via RAG (top-k by cosine similarity)
-3. Full conversation history (multi-turn coherence)
+1. System context (scope, brand voice, chartUpdate contract, chart-selection rules)
+2. Full transaction list for the active statement (each line prefixed with
+   `[ID:uuid]`, INCOME/EXPENSE direction, category, amount)
+3. Full conversation history (multi-turn coherence; assistant turns serialized as JSON)
 4. User message
+
+> **Note:** Embeddings are stored in pgvector at upload, but chat does not yet
+> run query-time similarity search. Context is the complete statement dataset.
 
 The `chartUpdate` contract is defined in the system prompt:
 ```json
 {
-  "type": "pie|bar|line|anomalies|forecast|stacked|horizontal|treemap",
-  "data": { ... }
+  "answer": "narrative text",
+  "chartUpdate": {
+    "type": "pie|bar|line|anomalies|forecast|stacked|horizontal|treemap|topN",
+    "category": "optional category name",
+    "highlightTransactionIds": ["optional", "transaction", "uuids"]
+  }
 }
 ```
-When the AI determines a chart would help the response, it appends this
-JSON to its answer. The frontend detects and renders it. The contract was
-extended in Week 4 from five to eight chart types (adding `stacked`,
-`horizontal`, and `treemap`) without changing its shape.
+The API returns this shape directly (not markdown-wrapped). The frontend
+renders `chartUpdate` in the chart panel. Types grew from five (MVP) to
+nine (`topN` added Week 5). A server-side fallback forces `topN` with
+computed `highlightTransactionIds` when the user asks for biggest/top
+transactions but the model omits the chart.
 
 ### Agentic Patterns
 
@@ -350,10 +382,15 @@ categorization → embedding → anomaly detection → persistence. Each step
 is a discrete AI or statistical operation. The .NET API is the
 orchestrator — the browser never calls AI services directly.
 
-**RAG loop (retrieval-augmented generation):**
-Before every chat response, the system embeds the user's question,
-searches pgvector for the most semantically similar transactions, and
-injects them as context. This grounds AI responses in real data.
+**Chat context (current build):**
+Before every chat response, the service loads all transactions for the
+active statement and injects them as structured text context. This grounds
+responses in real data without hallucinating amounts.
+
+**RAG (planned — partial today):**
+At upload, each transaction is embedded and stored in pgvector. Query-time
+retrieval (embed question → cosine similarity → top-k context) is designed
+but not wired in `OpenRouterChatService` yet.
 
 ### Failure Handling
 
@@ -395,9 +432,9 @@ See `DECISIONS.md` for the full decision log. Key decisions:
 | Unit — Forecasting | 5 | ✅ All passing |
 | Unit — CSV Parser | 6 | ✅ All passing |
 | Integration — Statements API | 6 | ✅ All passing |
-| QA Manual Test Cases | 18 | ✅ All passing (TC-01 to TC-18) |
+| QA Manual Test Cases | 19 | ✅ All passing (TC-01 to TC-19) |
 | E2E — Playwright Critical Path | 6 | ✅ All passing |
-| **TOTAL** | **46** | **✅ All passing** |
+| **TOTAL** | **47** | **✅ All passing** |
 
 ### Test Locations
 
@@ -472,6 +509,8 @@ runtime, never from hardcoded values.
 | 8 | Sparklines + change vs last month not implemented | Deferred | Additive tier story; deferred for submission timeline |
 | 9 | `MODEL_NARRATION` configured but unwired | Known | Narration tier provisioned in env/k8s but read by no code; anomaly/forecast narration not implemented |
 | 10 | Tooltip frosted-glass tints over dense colour | Known | `UniversalTooltip` is translucent; over fully-coloured Treemap tiles it picks up tile colour. Browser compositing limitation; accepted |
+| 11 | Query-time RAG not wired in chat | Deferred | Embeddings stored at upload; chat uses full statement context today |
+| 12 | Chat token streaming | Deferred | Single JSON response per message; no SSE/streaming |
 
 ---
 
@@ -493,8 +532,9 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 **Feature Expansion (+Medium)**
 - Multi-bank CSV support (Standard, Huntington, Bank of America)
   with automatic format detection — no user configuration required
-- Eight AI-triggerable chart types (pie, bar, drilldown, line, anomalies,
-  forecast, stacked, horizontal, treemap) driven by the `chartUpdate` contract
+- Nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies,
+  forecast, stacked, horizontal, treemap, topN) driven by the `chartUpdate`
+  contract, including `highlightTransactionIds` for ranked expenses
 - Dashboard date-range filter (All Time / per-month / custom) scoping all
   stats, anomalies, and category totals to the chosen period
 - Custom chart visual system (`JewelBar`, `JewelSlice`, unified
@@ -513,8 +553,6 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 28 May 2026 — Week 4 visual system (palette.ts + 
-chartEffects.tsx, UniversalTooltip), three new chart types, theme 
-refinement, Parking & Tolls category, chat MaxTokens/context fixes, 
-Dashboard date-range filter, StatementDetailPage removed, MODEL_NARRATION 
-documented as unwired.*
+*Last updated: 29 May 2026 — Week 5 chat intelligence (topN chart, 
+highlightTransactionIds, expanded system prompt, server-side topN fallback); 
+docs corrected for full-context chat vs query-time RAG, streaming deferred.*

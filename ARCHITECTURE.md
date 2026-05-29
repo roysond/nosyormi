@@ -41,7 +41,7 @@ This is the foundation of the entire system. It is the largest layer by code vol
 
 Layer 1 uses no AI of any kind. Every function in this layer, given the same input, produces the same output every time. This is what allows the rest of the system to be trustworthy.
 
-**Technologies:** .NET 10 Web API, Entity Framework Core, CsvHelper, PdfPig, React, TypeScript, Recharts.
+**Technologies:** .NET 10 Web API, Entity Framework Core, CsvHelper, React 19, TypeScript, Recharts. (PdfPig planned, not in MVP.)
 
 ### Layer 2 — Statistical Layer
 
@@ -117,7 +117,7 @@ Different features call for different tools. The matrix below documents which to
 | Anomaly explanation | Layer 4 | LLM (narration tier) | Yes |
 | Forecast narration | Layer 4 | LLM (narration tier) | Yes |
 | Conversational chat | Layer 4 | LLM (chat tier) | Yes |
-| Chat-triggered visualization updates | Layers 1 + 4 | Structured JSON contract | Yes (LLM produces JSON) |
+| Chat-triggered visualization updates | Layers 1 + 4 | Structured JSON contract (`chartUpdate`, optional `highlightTransactionIds`) | Yes (LLM + server fallback for `topN`) |
 
 The pattern is consistent: numerical and structural work happens below Layer 4. Layer 4 narrates and converses on top of what the lower layers produce.
 
@@ -135,7 +135,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 28 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service** — the standalone anomaly-explanation and forecast-narration features it was reserved for are not part of the current build. The tier is retained as a documented placeholder; the routing abstraction makes wiring it later additive rather than structural. The feature rows below marked "narration tier" therefore describe the intended design, not currently shipping code.
+> **Implementation status (as of 29 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers), not query-time pgvector retrieval — embeddings are stored at upload for future RAG. Token streaming is not implemented. The feature rows below marked "narration tier" describe intended design, not shipping code.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -207,23 +207,28 @@ backend/
 │       ├── Transaction.cs
 │       └── Category.cs
 ├── Nosyormi.Application/        # Layer 1-4 business logic & contracts
-│   ├── Csv/
-│   │   ├── ICsvStatementParser.cs
-│   │   └── ParsedTransactionRow.cs
-│   └── Statements/
-│       ├── StatementUploadService.cs
-│       └── StatementQueryService.cs
+│   ├── Analysis/                # IAnomalyDetector, IForecastingService, ITimeSeriesService
+│   ├── Categorization/          # ICategoryClassifier, CategoryTaxonomy (11 categories)
+│   ├── Chat/                    # IChatService, ChatResponse, ChartUpdate
+│   ├── Csv/                     # ICsvStatementParser, ParsedTransactionRow
+│   ├── Embeddings/              # IEmbeddingService
+│   └── Statements/              # StatementUploadService, IStatementQueryService
 ├── Nosyormi.Infrastructure/     # External dependencies & implementations
+│   ├── Analysis/                # ZScoreAnomalyDetector, MovingAverageForecastingService, TimeSeriesService
+│   ├── Categorization/          # OpenRouterCategoryClassifier
+│   ├── Chat/                    # OpenRouterChatService (system prompt + chartUpdate parsing)
+│   ├── Embeddings/              # OpenRouterEmbeddingService
 │   ├── Migrations/              # EF Core migration history
-│   ├── Parsing/
-│   │   └── CsvStatementParser.cs
-│   └── Persistence/
-│       └── NosyormiDbContext.cs
+│   ├── Parsing/                 # CsvStatementParser (Standard, Huntington, BOA)
+│   ├── Persistence/             # NosyormiDbContext (pgvector on Transaction.Embedding)
+│   └── Statements/              # StatementQueryService
 └── Nosyormi.Api/                # Outermost: HTTP & composition root
     ├── Controllers/
-    │   └── StatementsController.cs
-    ├── Program.cs               # Service registration, middleware pipeline
-    ├── appsettings.json         # Default configuration (no secrets)
+    │   ├── StatementsController.cs
+    │   ├── ChatController.cs
+    │   ├── ForecastController.cs
+    │   └── TimeSeriesController.cs
+    ├── Program.cs               # Composition root, CORS, DI
     └── Nosyormi.Api.http        # Local request-testing fixtures
 ```
 
@@ -252,7 +257,7 @@ frontend/
 │   │   ├── DashboardPage.tsx        # "/"            — stats, donut, tabs, date-range filter
 │   │   ├── TransactionsPage.tsx     # "/transactions"— search, filter, sort, expand
 │   │   ├── StatementsPage.tsx       # "/statements"  — upload modal, list, delete
-│   │   └── ChatPage.tsx             # "/chat"        — chat + 8 chart types
+│   │   └── ChatPage.tsx             # "/chat"        — chat + 9 chart types (incl. topN)
 │   ├── components/
 │   │   ├── chartEffects.tsx         # JewelBar, JewelSlice, AnomalyBar, UniversalTooltip
 │   │   └── StatementPill.tsx        # Active-statement pill in the sidebar
@@ -268,7 +273,7 @@ frontend/
 └── .gitignore                   # Frontend-specific exclusions
 ```
 
-> **Routing note (28 May 2026):** The app has **four** routed pages. An earlier `StatementDetailPage` (route `/dashboard/:id`, reached via a "View Details →" link on the Statements page) was removed; per-statement deep-dive is no longer a separate view. Analysis now lives on the Dashboard (with a date-range filter) and the Transactions page.
+> **Routing note (29 May 2026):** The app has **four** routed pages. An earlier `StatementDetailPage` (route `/dashboard/:id`, reached via a "View Details →" link on the Statements page) was removed; per-statement deep-dive is no longer a separate view. Analysis now lives on the Dashboard (with a date-range filter) and the Transactions page.
 
 > **Chart styling architecture (28 May 2026):** All chart colour lives in `constants/palette.ts`; all chart visual effects (custom Recharts shapes and the shared frosted-glass `UniversalTooltip`) live in `components/chartEffects.tsx`. Pages compose these — colour and effect are changed in exactly one place each. This is a deliberate SRP/OCP application: adding a colour or a new chart effect does not require editing page components.
 
@@ -283,8 +288,6 @@ Holds CSV files used for development and manual testing of the upload pipeline. 
 ## 9. Decision Log
 
 A running record of significant architectural and product decisions, with rationale. This log is maintained incrementally throughout the project. Each entry captures *what* was decided, *why*, and the *context* at the time — so future-Royson (or any reviewer) understands the reasoning, not just the outcome.
-
-### 2026-05-11 — Brand and Identity
 
 ### 2026-05-11 — Brand and Identity
 
@@ -430,9 +433,9 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Decision:** Complete test coverage across four levels before deployment.
 - **Unit tests (16):** ZScoreAnomalyDetector (5), MovingAverageForecastingService (5), CsvStatementParser (6)
 - **Integration tests (6):** StatementsController API layer
-- **QA manual test cases (18):** TC-01 to TC-18 documented in `QA-TEST-CASES.md`
+- **QA manual test cases (19):** TC-01 to TC-19 documented in `QA-TEST-CASES.md`
 - **E2E tests (6):** Playwright critical path spec (`frontend/e2e/critical-path.spec.ts`)
-- **Result:** 46 tests, all passing. Test reports committed to repo.
+- **Result:** 47 tests, all passing (22 automated + 19 QA manual + 6 E2E). Test reports committed to repo.
 
 ### 2026-05-21 — Docker Containerization + Minikube Deployment
 
@@ -517,6 +520,17 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 
 - **Finding (documented, not a change):** A codebase scan confirmed `MODEL_NARRATION` is referenced only in configuration and docs — no service reads it. The narration tier described in Section 3 is design intent, not shipping code. Recorded here so the architecture's aspirational rows are not mistaken for implemented behavior.
 
+### 2026-05-29 — Chat `topN` Chart + Server-Side Fallback
+
+- **Decision:** Added `topN` as the ninth `chartUpdate` type. The system prompt requires it for “biggest/top/largest expense” queries and mandates `highlightTransactionIds` (expense transactions only, ranked by absolute amount). `OpenRouterChatService` includes a deterministic fallback: if the user message matches top-N intent but the model returns another chart type (or null), the API computes top-N IDs from the database and forces `chartUpdate.type = "topN"`.
+- **Transaction context:** Each line in chat context is prefixed with `[ID:uuid]` plus `[INCOME]` or `[EXPENSE]` so the model can reference real rows for highlights and merchant drilldowns.
+- **Category bar drilldown:** `chartUpdate.type = "bar"` with `category` set shows individual transactions within that category (not aggregated category totals) — used for merchant questions (e.g. Netflix → Subscriptions).
+- **RAG accuracy:** Chat loads **all** statement transactions per request; pgvector embeddings are written at upload but query-time similarity search is not implemented in chat yet.
+
+### 2026-05-29 — Streaming Deferred
+
+- **Finding:** `ChatController` returns a complete `ChatResponse` JSON payload. No SSE or chunked token delivery. Story marked deferred in project documentation.
+
 ---
 
 ## Sections Still To Be Added
@@ -531,9 +545,6 @@ As the corresponding parts of the system are built, the following sections will 
 
 ---
 
-*Last updated: Thursday, May 28, 2026 — Chart styling architecture 
-(palette.ts + chartEffects.tsx), unified UniversalTooltip, three new 
-chart types, Parking & Tolls category, chat robustness (MaxTokens 1500, 
-JSON context), theme refinement (#F4F7F9 + white cards + deep-forest 
-chrome), Dashboard date-range filter, StatementDetailPage removed, 
-MODEL_NARRATION confirmed unwired.*
+*Last updated: Thursday, May 29, 2026 — topN chart + highlightTransactionIds, 
+chat system prompt and server fallback, full-context chat documented, 
+RAG/streaming status clarified, backend folder tree expanded, React 19.*

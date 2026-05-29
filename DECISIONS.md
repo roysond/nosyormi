@@ -12,7 +12,7 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Decision | Choice | Why |
 |---|---|---|
 | Backend | .NET 10 Web API | Capstone requirement |
-| Frontend | React 18 + TypeScript + Vite | Modern tooling, fast HMR |
+| Frontend | React 19 + TypeScript + Vite | Modern tooling, fast HMR |
 | Database | PostgreSQL 16 + pgvector | Relational + vector in one DB |
 | AI Provider | OpenRouter | Single API, multiple model providers |
 | Containers | Docker Compose + Minikube | Local dev + K8s submission |
@@ -26,7 +26,9 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Decision | Choice | Why |
 |---|---|---|
 | Categorization model | `openai/gpt-4o-mini` (LIGHT) | Cheap, fast, per-transaction — **wired** |
-| Chat + RAG model | `anthropic/claude-sonnet-4-5` (CHAT) | Best reasoning for conversation — **wired** (`MaxTokens` 1500) |
+| Chat model | `anthropic/claude-sonnet-4-5` (CHAT) | Best reasoning for conversation — **wired** (`MaxTokens` 1500, full statement context) |
+| Chat context | Full transaction list per statement | Grounds answers in real data; query-time RAG deferred |
+| topN chart fallback | Server-side in `OpenRouterChatService` | Forces ranked expenses when model misses `topN` intent |
 | Narration model | `anthropic/claude-sonnet-4-5` (NARRATION) | Reserved for anomaly/forecast narration — **configured but not wired in current build** |
 | Embedding model | `openai/text-embedding-3-small` | 1536D, fixed — never changed post-data — **wired** |
 | Anomaly detection | Z-score (statistical, not AI) | Deterministic, auditable, exact |
@@ -78,7 +80,7 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 |---|---|---|
 | Chart styling architecture | `palette.ts` (colour) + `chartEffects.tsx` (effects) | Single source of truth each — SRP/OCP; tweak colour or effect in one place |
 | Shared tooltip | One `UniversalTooltip` for all charts | Replaced three duplicated tooltip components; consistency + DRY |
-| Chart types | Added `stacked`, `horizontal`, `treemap` (5 → 8) | Richer intent-matched answers; `chartUpdate` contract shape unchanged |
+| Chart types | Added `stacked`, `horizontal`, `treemap` (5 → 8), then `topN` (→ 9) | Richer intent-matched answers; `highlightTransactionIds` for ranked expenses |
 | Category taxonomy | Added `Parking & Tolls` (11 total) | Real statements needed it; taxonomy + classifier prompt kept in sync |
 | Chat robustness | `MaxTokens` 500 → 1500; assistant turns serialized as JSON | Stop mid-response truncation; coherent multi-turn context |
 | Theme | Content `#F4F7F9`, white cards + soft shadow, deep-forest `#071A1E` accent | Higher contrast for dense tables/charts; unified chrome |
@@ -87,4 +89,17 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 28 May 2026*
+## Week 5 Decisions (29 May 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| `topN` chart type | Ranked expense bars via `highlightTransactionIds` | “Biggest/top” questions need individual transactions, not category totals |
+| Server-side topN fallback | Keyword detection + DB sort by abs(amount) | Model sometimes returns `bar` instead of `topN`; deterministic correction |
+| Transaction IDs in chat context | `[ID:uuid]` on every line | Enables highlights and auditability; avoids date-as-ID mistakes |
+| Merchant questions | `bar` + `category` for the merchant's bucket | Shows all transactions in that category as separate bars |
+| Query-time RAG | Deferred | Embeddings stored at upload; full context sufficient for MVP statement sizes |
+| Token streaming | Deferred | Simpler JSON request/response; no SSE in `ChatController` |
+
+---
+
+*Last updated: 29 May 2026*

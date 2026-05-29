@@ -1,73 +1,66 @@
-# React + TypeScript + Vite
+# NOSYOR.M.I — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript single-page app built with Vite. Talks to the .NET API over HTTP; renders financial charts with Recharts and a shared visual system (`palette.ts` + `chartEffects.tsx`).
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Pages
 
-## React Compiler
+| Route | Component | Purpose |
+|---|---|---|
+| `/` | `DashboardPage` | Stat cards, donut chart, spending/income tabs, date-range filter |
+| `/transactions` | `TransactionsPage` | Search, category filter, sort, expandable rows, anomaly badges |
+| `/statements` | `StatementsPage` | Upload CSV, list statements, delete with confirmation |
+| `/chat` | `ChatPage` | AI chat + dynamic chart panel (9 chart types) |
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## Scripts
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # http://localhost:5173
+npm run build    # production bundle → dist/
+npm run lint
+npx playwright test   # E2E — requires app running
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## API base URL
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Local dev:** `VITE_API_BASE_URL` defaults to `http://localhost:5034` (see `vite.config.ts` / env).
+- **Docker / Minikube:** nginx proxies `/api` to the backend service; the built bundle uses relative `/api` paths.
+
+---
+
+## Chat visualization contract
+
+The chat endpoint returns `{ answer, chartUpdate }`. Supported `chartUpdate.type` values:
+
+`pie` · `bar` · `line` · `anomalies` · `forecast` · `stacked` · `horizontal` · `treemap` · `topN`
+
+Optional fields: `category` (scopes bar drilldown), `highlightTransactionIds` (for `topN` and anomaly highlights).
+
+Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffects.tsx`.
+
+---
+
+## State persistence
+
+- **Chat:** `sessionStorage` keys for messages, chart state, and active statement — survives in-tab navigation, cleared on tab close.
+- **Statement delete:** `nosyormi-statement-deleted` custom event clears chat when a statement is removed.
+
+---
+
+## Theme (current)
+
+- Content background: `#F4F7F9` · Cards: `#FFFFFF` with soft shadow
+- Sidebar: `#071A1E` · Active nav: `#E8C96A`
+- UI chrome accent: `#071A1E` · Line chart stroke: `#C9911A`
+
+---
+
+## Related docs
+
+Repo root: [ARCHITECTURE.md](../ARCHITECTURE.md), [PROJECT-DOCUMENTATION.md](../PROJECT-DOCUMENTATION.md).
