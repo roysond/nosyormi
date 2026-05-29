@@ -34,7 +34,7 @@ interface ChatMessage {
 }
 
 interface ChartUpdate {
-  type: 'pie' | 'bar' | 'line' | 'anomalies' | 'forecast' | 'stacked' | 'horizontal' | 'treemap';
+  type: 'pie' | 'bar' | 'line' | 'anomalies' | 'forecast' | 'stacked' | 'horizontal' | 'treemap' | 'topN';
   category: string | null;
   highlightTransactionIds: string[] | null;
 }
@@ -404,6 +404,7 @@ export default function ChatPage() {
     if (type === 'stacked') return 'Monthly Spending by Category';
     if (type === 'horizontal') return 'Category Comparison';
     if (type === 'treemap') return 'Spending Map';
+    if (type === 'topN') return 'Biggest Transactions';
     return 'Spending Overview';
   };
 
@@ -417,6 +418,7 @@ export default function ChatPage() {
     if (type === 'stacked') return 'Spending per category stacked by month';
     if (type === 'horizontal') return 'Categories ranked by total spend';
     if (type === 'treemap') return 'Size represents total spend per category';
+    if (type === 'topN') return 'Individual transactions ranked by amount';
     return 'Your spending distribution across categories';
   };
 
@@ -896,7 +898,7 @@ export default function ChatPage() {
       return (
         <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={440}>
+            <ResponsiveContainer width="100%" height={380}>
               <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
@@ -907,7 +909,13 @@ export default function ChatPage() {
                   height={80}
                   interval={0}
                 />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
+                <YAxis
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                  tickCount={5}
+                  allowDecimals={false}
+                  domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 50) * 50]}
+                />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 <Legend />
                 {categories.map((cat, index) => (
@@ -1016,6 +1024,67 @@ export default function ChatPage() {
               content={<CustomTreemapContent />}>
               <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
             </Treemap>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    if (type === 'topN') {
+      const n = chartUpdate?.highlightTransactionIds?.length ?? 10;
+      const topData = [...expenses]
+        .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+        .slice(0, n)
+        .map((t) => ({
+          id: t.id,
+          name: t.description.length > 16 ? `${t.description.substring(0, 16)}...` : t.description,
+          fullName: t.description,
+          value: Math.abs(t.amount),
+          isAnomaly: t.isAnomaly,
+          date: t.transactionDate,
+          category: t.category,
+        }));
+
+      const TopNTick = ({ x, y, payload }: any) => {
+        const entry = topData.find((d) => d.id === payload.value);
+        const label = entry?.name || payload.value;
+        return (
+          <g transform={`translate(${x},${y})`}>
+            <text
+              x={0} y={0} dy={12}
+              textAnchor="end"
+              fill="#64748B"
+              fontSize={10}
+              transform="rotate(-35)"
+            >
+              {label}
+            </text>
+          </g>
+        );
+      };
+
+      return (
+        <div key="topN" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={topData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis dataKey="id" tick={<TopNTick />} height={90} interval={0} />
+              <YAxis
+                tick={{ fill: '#64748B', fontSize: 11 }}
+                stroke="#E2E8F0"
+                tickCount={5}
+                allowDecimals={false}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 50) * 50]}
+              />
+              <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+              <Bar
+                dataKey="value"
+                shape={(props: any) => <AnomalyBar {...props} isAnomaly={topData[props.index]?.isAnomaly} />}
+              >
+                {topData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       );

@@ -40,7 +40,7 @@ public class OpenRouterChatService : IChatService
         {
           "answer": "your narrative response here",
           "chartUpdate": {
-            "type": "pie|bar|line|anomalies|forecast",
+            "type": "pie|bar|line|anomalies|forecast|stacked|horizontal|treemap|topN",
             "category": "optional category name",
             "highlightTransactionIds": ["optional", "transaction", "ids"]
           }
@@ -56,7 +56,9 @@ public class OpenRouterChatService : IChatService
         - "forecast" → when the user asks about next month or future spending predictions
         - "stacked" → when the user asks how spending changed month by month across categories, or wants to see monthly trends broken down by category. Example: "show me my spending by category each month" or "how has my spending changed over months"
         - "horizontal" → when the user asks to rank or compare categories from highest to lowest, or wants a clear side-by-side category comparison. Example: "rank my spending categories" or "which category costs me the most"
+        - "topN" → YOU MUST use this type — without exception — when the user mentions any of these: "biggest purchases", "top transactions", "largest expenses", "most expensive", "highest spending", "top N", "show me my top". Set type="topN", category=null. You MUST populate highlightTransactionIds with the IDs of the N highest-amount EXPENSE transactions (amount < 0) from the data, sorted by absolute value descending. N is the number the user specifies, or 10 if unspecified. This is a hard rule — never substitute type="bar" for these queries.
         - "treemap" → when the user wants a visual map or picture of their spending, or asks to see spending proportions visually. Example: "show me a spending map" or "visualise my budget" or "show me where my money goes as a picture"
+        - For general or open-ended questions about spending patterns, habits, or behaviour (e.g. "what patterns do you notice", "how do I spend", "what are my habits"), choose the chart type that best visualises what your answer actually describes: use "stacked" if your answer discusses month-over-month trends or consistency across months, use "bar" if your answer compares categories, use "line" if your answer focuses on spending rhythm or time-based flow, use "pie" if your answer is about proportional distribution across categories. Never leave chartUpdate null for pattern questions — always pick the most relevant type.
         - When highlighting specific transactions, always use the UUID from [ID:uuid] at the start of each transaction line. Never use dates as transaction IDs.
         - If no chart is relevant, set chartUpdate to null.
 
@@ -133,7 +135,7 @@ public class OpenRouterChatService : IChatService
                 cancellationToken);
 
             var content = completion?.Choices?.FirstOrDefault()?.Message?.Content;
-            return ParseChatResponse(content, validCategories);
+            return ParseChatResponse(content, validCategories, userMessage, transactions);
         }
     }
 
@@ -154,8 +156,10 @@ public class OpenRouterChatService : IChatService
             var category = transaction.Category?.Name ?? "Uncategorized";
             var anomalyTag = transaction.IsAnomaly ? " [ANOMALY]" : string.Empty;
 
+            var direction = transaction.Amount >= 0 ? "INCOME" : "EXPENSE";
+            var absAmount = Math.Abs(transaction.Amount);
             builder.AppendLine(
-                $"- [ID:{transaction.Id}] [{transaction.TransactionDate:yyyy-MM-dd}] {transaction.Description} ({category}): ${Math.Abs(transaction.Amount):F2}{anomalyTag}");
+                $"- [ID:{transaction.Id}] [{transaction.TransactionDate:yyyy-MM-dd}] [{direction}] {transaction.Description} ({category}): ${absAmount:F2}{anomalyTag}");
         }
 
         return builder.ToString();
@@ -213,7 +217,11 @@ public class OpenRouterChatService : IChatService
         return request;
     }
 
-    private static ChatResponse ParseChatResponse(string? content, HashSet<string> validCategories)
+    private static ChatResponse ParseChatResponse(
+        string? content,
+        HashSet<string> validCategories,
+        string userMessage,
+        IReadOnlyList<Transaction> transactions)
     {
         if (string.IsNullOrWhiteSpace(content))
             return FallbackResponse;
@@ -227,6 +235,50 @@ public class OpenRouterChatService : IChatService
                 return FallbackResponse;
 
             var chartUpdate = MapChartUpdate(parsed.ChartUpdate, validCategories);
+
+            // Force topN chart if query is about biggest/top transactions but AI didn't emit it
+            if (chartUpdate == null || chartUpdate.Type != "topN")
+            {
+                var lower = userMessage.ToLowerInvariant();
+                var isTopNQuery =
+                    lower.Contains("biggest purchase") ||
+                    lower.Contains("largest expense") ||
+                    lower.Contains("largest purchase") ||
+                    lower.Contains("most expensive") ||
+                    lower.Contains("top 7") ||
+                    lower.Contains("top 10") ||
+                    lower.Contains("top 5") ||
+                    lower.Contains("top transactions") ||
+                    lower.Contains("highest spending") ||
+                    lower.Contains("biggest expense");
+
+                if (isTopNQuery)
+                {
+                    // Extract N from message
+                    int n = 10;
+                    var words = lower.Split(' ');
+                    for (int i = 0; i < words.Length - 1; i++)
+                    {
+                        if ((words[i] == "top" || words[i] == "biggest" || words[i] == "largest") &&
+                            int.TryParse(words[i + 1], out var parsed2))
+                        {
+                            n = parsed2;
+                            break;
+                        }
+                    }
+
+                    // Pick top N expense transaction IDs by absolute amount
+                    var topIds = transactions
+                        .Where(t => t.Amount < 0)
+                        .OrderByDescending(t => Math.Abs(t.Amount))
+                        .Take(n)
+                        .Select(t => t.Id.ToString())
+                        .ToArray();
+
+                    chartUpdate = new ChartUpdate("topN", null, topIds);
+                }
+            }
+
             return new ChatResponse(parsed.Answer, chartUpdate);
         }
         catch (JsonException ex)
