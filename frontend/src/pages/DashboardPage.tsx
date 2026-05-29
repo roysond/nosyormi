@@ -204,8 +204,9 @@ function useCountUp(target: number, duration: number = 800): number {
   const previousTarget = useRef<number>(0);
 
   useEffect(() => {
-    if (target === 0 || target === previousTarget.current) return;
+    if (target === previousTarget.current) return;
     previousTarget.current = target;
+    if (target === 0) { setCurrent(0); return; }
 
     const startTime = performance.now();
     const startValue = 0;
@@ -231,6 +232,15 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'spending' | 'income'>('spending');
   const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+  const [dateFilter, setDateFilter] = useState<{
+    type: 'all' | 'month' | 'custom';
+    month?: string;
+    from?: string;
+    to?: string;
+  }>({ type: 'all' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const target = e.target as SVGElement | HTMLElement;
@@ -239,6 +249,17 @@ export default function DashboardPage() {
         target.closest?.('[class*="recharts-pie"]') !== null;
       if (!isPieSlice) {
         setActiveCategoryIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-datepicker]')) {
+        setShowDatePicker(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -289,6 +310,33 @@ export default function DashboardPage() {
     loadStatement(true);
   }, [loadStatement]);
 
+  const availablePeriods = useMemo(() => {
+    if (!statement) return ['all'];
+    const periodSet = new Set<string>();
+    statement.transactions.forEach((t) => {
+      const d = new Date(t.transactionDate + 'T00:00:00');
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      periodSet.add(key);
+    });
+    return ['all', ...Array.from(periodSet).sort()];
+  }, [statement]);
+
+  const filterTransactionsByDate = useCallback(
+    (transactions: Transaction[]) => {
+      if (dateFilter.type === 'all') return transactions;
+      if (dateFilter.type === 'month' && dateFilter.month) {
+        return transactions.filter((t) => t.transactionDate.startsWith(dateFilter.month!));
+      }
+      if (dateFilter.type === 'custom' && dateFilter.from && dateFilter.to) {
+        return transactions.filter(
+          (t) => t.transactionDate >= dateFilter.from! && t.transactionDate <= dateFilter.to!,
+        );
+      }
+      return transactions;
+    },
+    [dateFilter],
+  );
+
   const derived = useMemo(() => {
     if (!statement) {
       return {
@@ -304,8 +352,9 @@ export default function DashboardPage() {
       };
     }
 
-    const expenses = statement.transactions.filter((t) => t.amount < 0);
-    const income = statement.transactions.filter((t) => t.amount > 0);
+    const allFiltered = filterTransactionsByDate(statement.transactions);
+    const expenses = allFiltered.filter((t) => t.amount < 0);
+    const income = allFiltered.filter((t) => t.amount > 0);
     const totalSpend = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
     const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
 
@@ -338,7 +387,7 @@ export default function DashboardPage() {
             return (t.category || 'Other') === catName;
           });
 
-    const anomalyCount = statement.transactions.filter((t) => t.isAnomaly).length;
+    const anomalyCount = allFiltered.filter((t) => t.isAnomaly).length;
     const net = totalIncome - totalSpend;
     const incomeAverage = income.length > 0 ? totalIncome / income.length : 0;
 
@@ -353,7 +402,7 @@ export default function DashboardPage() {
       net,
       incomeAverage,
     };
-  }, [statement, activeCategoryIndex]);
+  }, [statement, activeCategoryIndex, dateFilter, filterTransactionsByDate]);
 
   const categoryTotals = derived.categoryTotals;
 
@@ -691,6 +740,169 @@ export default function DashboardPage() {
             <div style={styles.tabContent}>
               <div style={styles.chartRow}>
                 <div style={styles.chartColLeft}>
+                  <div
+                    style={{ position: 'relative', display: 'inline-block', marginBottom: 16 }}
+                    data-datepicker
+                  >
+                    <button
+                      onClick={() => setShowDatePicker((p) => !p)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '8px 14px',
+                        borderRadius: 8,
+                        border: '1px solid #E2E8F0',
+                        background: 'white',
+                        color: '#1E293B',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                      }}
+                    >
+                      <span>📅</span>
+                      <span>
+                        {dateFilter.type === 'all'
+                          ? 'All Time'
+                          : dateFilter.type === 'month' && dateFilter.month
+                          ? new Date(dateFilter.month + '-01T00:00:00').toLocaleString('default', {
+                              month: 'long',
+                              year: 'numeric',
+                            })
+                          : `${dateFilter.from} → ${dateFilter.to}`}
+                      </span>
+                      <span style={{ color: '#94A3B8' }}>▾</span>
+                    </button>
+                    {showDatePicker && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 'calc(100% + 8px)',
+                          left: 0,
+                          zIndex: 200,
+                          background: 'white',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 12,
+                          padding: 16,
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                          minWidth: 280,
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: '#94A3B8',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            marginBottom: 10,
+                          }}
+                        >
+                          Quick Select
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                          {availablePeriods.map((period) => {
+                            const isActive =
+                              period === 'all'
+                                ? dateFilter.type === 'all'
+                                : dateFilter.type === 'month' && dateFilter.month === period;
+                            const label =
+                              period === 'all'
+                                ? 'All Time'
+                                : new Date(period + '-01T00:00:00').toLocaleString('default', {
+                                    month: 'short',
+                                    year: 'numeric',
+                                  });
+                            return (
+                              <button
+                                key={period}
+                                onClick={() => {
+                                  if (period === 'all') setDateFilter({ type: 'all' });
+                                  else setDateFilter({ type: 'month', month: period });
+                                  setShowDatePicker(false);
+                                }}
+                                style={{
+                                  padding: '5px 12px',
+                                  borderRadius: 999,
+                                  border: isActive ? '1.5px solid #00637C' : '1px solid #E2E8F0',
+                                  background: isActive ? 'rgba(0,99,124,0.08)' : 'white',
+                                  color: isActive ? '#00637C' : '#475569',
+                                  fontSize: 12,
+                                  fontWeight: isActive ? 600 : 400,
+                                  cursor: 'pointer',
+                                }}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 600,
+                            color: '#94A3B8',
+                            letterSpacing: '0.08em',
+                            textTransform: 'uppercase',
+                            marginBottom: 10,
+                          }}
+                        >
+                          Custom Range
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                          <input
+                            type="date"
+                            value={customFrom}
+                            onChange={(e) => setCustomFrom(e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 10px',
+                              borderRadius: 8,
+                              border: '1px solid #E2E8F0',
+                              fontSize: 12,
+                              color: '#1E293B',
+                            }}
+                          />
+                          <span style={{ color: '#94A3B8', fontSize: 12 }}>→</span>
+                          <input
+                            type="date"
+                            value={customTo}
+                            onChange={(e) => setCustomTo(e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: '6px 10px',
+                              borderRadius: 8,
+                              border: '1px solid #E2E8F0',
+                              fontSize: 12,
+                              color: '#1E293B',
+                            }}
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (customFrom && customTo) {
+                              setDateFilter({ type: 'custom', from: customFrom, to: customTo });
+                            }
+                            setShowDatePicker(false);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '8px 0',
+                            borderRadius: 8,
+                            border: 'none',
+                            background: '#00637C',
+                            color: 'white',
+                            fontSize: 13,
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                          }}
+                        >
+                          Apply
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <h2 style={styles.sectionTitle}>Spending by Category</h2>
                   <div style={{ position: 'relative', zIndex: 1, animation: 'chartFadeIn 0.4s ease-out' }}>
                     <ResponsiveContainer width="100%" height={340}>
