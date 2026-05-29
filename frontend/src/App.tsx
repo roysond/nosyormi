@@ -11,7 +11,6 @@ import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
 import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
-import StatementDetailPage from './pages/StatementDetailPage';
 import StatementPill from './components/StatementPill';
 
 const styles = {
@@ -259,7 +258,6 @@ export default function App() {
           <Route path="/transactions" element={<TransactionsPage />} />
           <Route path="/statements" element={<StatementsPage />} />
           <Route path="/chat" element={<ChatPage />} />
-          <Route path="/dashboard/:id" element={<StatementDetailPage />} />
         </Routes>
       </main>
     </div>

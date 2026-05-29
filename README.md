@@ -18,7 +18,8 @@ It doesn't shame you. It doesn't moralize. It reflects.
 - **Anomaly detection** — spots the unusual spends that quietly drained the account. The holes you couldn't see.
 - **Next-month forecasting** — projects where your spending is heading based on the patterns it sees.
 - **Conversational chat interface** — ask questions in plain English; the AI answers *and* updates the visualizations to match.
-- **Live data visualizations** — charts that respond to the conversation, not static dashboards.
+- **Live data visualizations** — eight chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap) that respond to the conversation, not static dashboards.
+- **Date-range analysis** — scope the dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 
 ---
 

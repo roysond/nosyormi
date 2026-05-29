@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
 interface StatementSummary {
@@ -381,21 +379,6 @@ export default function StatementsPage() {
                 {statement.transactionCount} transaction
                 {statement.transactionCount === 1 ? '' : 's'}
               </span>
-              <Link
-                to={`/dashboard/${statement.id}`}
-                style={{
-                  fontSize: 13,
-                  color: '#071A1E',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  padding: '7px 16px',
-                  border: '1px solid rgba(7,26,30,0.3)',
-                  borderRadius: 8,
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                View Details →
-              </Link>
               <button
                 type="button"
                 style={{

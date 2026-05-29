@@ -4,7 +4,13 @@
 > expected result, and actual result observed during testing.
 > All tests performed against: http://localhost:5173 (frontend) 
 > and http://localhost:5034 (backend API).
-> Test date: 21 May 2026
+> Test date: 21 May 2026 · Revised 28 May 2026
+>
+> **Revision note (28 May 2026):** `StatementDetailPage` (route
+> `/dashboard/:id`) and its "View Details →" link were removed. The two
+> test cases that covered it (TC-13, TC-14) have been re-pointed at the
+> features that replaced it — the Dashboard date-range filter and the
+> new chat chart types — so coverage stays at 18 cases.
 
 ---
 
@@ -158,26 +164,34 @@
 
 ---
 
-## TC-13 — View Details navigation
+## TC-13 — Dashboard date-range filter
 
-**Precondition:** At least one statement uploaded.  
+> *(Revised 28 May 2026 — replaces the removed "View Details navigation"
+> case; per-statement scoping is now handled by the Dashboard filter.)*
+
+**Precondition:** A statement spanning more than one month is uploaded.  
 **Steps:**
-1. Navigate to Statements page
-2. Click "View Details →" on a statement
+1. Navigate to Dashboard
+2. Open the date-range dropdown (📅 button above "Spending by Category")
+3. Select a single-month quick-select pill
+4. Re-open the dropdown, enter a custom From/To range, click "Apply"
 
-**Expected:** Navigate to StatementDetailPage showing filename, transaction count, upload date, stat cards, and Transactions/Charts tabs.  
-**Actual:** ✅ Pass — navigated correctly, all data rendered.
+**Expected:** Stat cards (Income, Expenses, NET, Anomalies), donut chart, and transaction list all update to reflect only the selected period. Custom range applies only after "Apply". Clicking outside closes the dropdown.  
+**Actual:** ✅ Pass — all figures and the donut re-scope to the selected period; custom range commits on Apply; outside-click closes the picker.
 
 ---
 
-## TC-14 — StatementDetailPage Charts tab
+## TC-14 — Chat renders new chart types (treemap / stacked / horizontal)
 
-**Precondition:** Navigated to StatementDetailPage.  
+> *(Revised 28 May 2026 — replaces the removed "StatementDetailPage Charts
+> tab" case.)*
+
+**Precondition:** Statement uploaded; on the NOSYOR.M.I Chat page.  
 **Steps:**
-1. Click the "Charts" tab
+1. Ask "show me a treemap" (and similarly "stacked by month", "rank my categories")
 
-**Expected:** Donut chart renders with spending categories and period selector pills.  
-**Actual:** ✅ Pass — chart rendered, period filter working.
+**Expected:** The chart panel renders the requested type — treemap (proportional tiles), stacked bar (monthly by category), or horizontal bar (categories ranked) — each with the shared frosted-glass tooltip on hover.  
+**Actual:** ✅ Pass — each requested chart type renders correctly with the unified tooltip.
 
 ---
 
@@ -211,7 +225,7 @@
 **Steps:**
 1. Click each sidebar item: Dashboard, Transactions, Statements, NOSYOR.M.I Chat
 
-**Expected:** Each click navigates to the correct page. Active item highlighted with teal accent.  
+**Expected:** Each click navigates to the correct page. Active item highlighted with the gold accent (`#E8C96A`) and icon glow.  
 **Actual:** ✅ Pass — all navigation working, active state correct.
 
 ---

@@ -255,6 +255,63 @@ CSS filters, while SVG icons respond to them.
 
 ---
 
+## Week 4 — Visual System & Refinement (May 26–28)
+
+### Separating "what colour" from "what effect"
+
+When I started adding fancy chart effects (gradient bars, shimmering
+donut slices), the colour values and the effect code were getting tangled
+together inside each page. Changing one colour meant hunting through three
+different files, and the same tooltip was copy-pasted three times with
+slightly different styling.
+
+I split it into two files with one job each:
+- `constants/palette.ts` — *only* colours (`APP_COLORS` and named
+  constants). This is the single place I change a colour.
+- `components/chartEffects.tsx` — *only* effects (`JewelBar`,
+  `JewelSlice`, `AnomalyBar`, and one shared `UniversalTooltip`).
+
+This is the Single Responsibility Principle in plain terms: each file has
+one reason to change. Now adding a colour or a new chart effect is a
+one-file edit, and every chart on every page shares the exact same
+tooltip instead of three near-duplicates. Less code, fewer bugs, and the
+charts finally look consistent.
+
+### Why the same tooltip looked different on different charts
+
+After unifying the tooltip, I noticed the donut tooltip looked subtly
+different from the treemap tooltip even though they were now the *same*
+component. The cause taught me something about CSS: the tooltip uses a
+translucent "frosted glass" background, so it shows whatever is behind it.
+On the treemap (which is packed wall-to-wall with colour) the tooltip
+picked up the tile colour; on the donut (mostly white space) it stayed
+clean. Same component — different backdrop. A CSS `filter` on the chart
+wrapper was also bleeding onto the tooltip, which I fixed by making the
+tooltip wrapper transparent. Lesson: translucency and CSS filters affect
+everything behind/inside them, not just the element you think you styled.
+
+### Deleting a feature is also progress
+
+I built a whole `StatementDetailPage` (a per-statement deep-dive with its
+own charts and tabs) in Week 2. In Week 4 I deleted it. Once the Dashboard
+had a date-range filter, the detail page was just duplicating the same
+analysis with extra code to maintain. Removing it — the page, its route,
+and the link that pointed to it — made the app simpler without losing any
+real capability. I learned that taking code *out* can be as valuable as
+putting it in, and that "I built it" is not a reason to keep something.
+
+### Dead config is worth finding
+
+While reviewing the app I checked whether `MODEL_NARRATION` (one of my
+three AI model tiers) was actually used anywhere. It wasn't — it sits in
+my `.env`, Docker, and Kubernetes config but no code reads it. The
+narration feature it was meant for was never wired up. Rather than quietly
+pretend it works, I documented it honestly as a known limitation. Lesson:
+configuration that nothing reads is a trap for the next person (or
+future-me) — name it out loud.
+
+---
+
 ## The Most Important Thing I Learned
 
 **Working software is built incrementally, not all at once.**
@@ -278,4 +335,5 @@ learning came first. The speed came after.
 
 ---
 
-*Last updated: 25 May 2026*
+*Last updated: 28 May 2026 — added Week 4 (visual system, shared tooltip, 
+StatementDetailPage removal, dead-config lesson).*

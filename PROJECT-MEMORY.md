@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Thursday, 28 May 2026
+> Last updated: Thursday, 28 May 2026 (evening — StatementDetailPage removed, Dashboard date-range filter added, docs synced to code)
 
 ---
 
@@ -44,11 +44,11 @@ Upload bank statements or CSVs. The app categorizes spending, detects anomalies,
 | Containerization | Docker Compose (local dev) + Minikube (submission deployment) |
 | Testing | xUnit (unit + integration) + Playwright (E2E) |
 
-**Three-tier AI model routing:**
-- `MODEL_LIGHT` = `openai/gpt-4o-mini` — CSV categorization (cheap, fast, per-transaction)
-- `MODEL_NARRATION` = `anthropic/claude-sonnet-4-5` — narrative generation
-- `MODEL_CHAT` = `anthropic/claude-sonnet-4-5` — chat/RAG responses
-- `EMBEDDING_MODEL` = `openai/text-embedding-3-small` — vector embeddings
+**Three-tier AI model routing (config) — current wiring status:**
+- `MODEL_LIGHT` = `openai/gpt-4o-mini` — CSV categorization (cheap, fast, per-transaction) — **wired** (`OpenRouterCategoryClassifier`)
+- `MODEL_NARRATION` = `anthropic/claude-sonnet-4-5` — narrative generation — **configured but NOT wired in code.** Defined in `.env`/`.env.docker`/`k8s/configmap.yaml` and reserved for anomaly/forecast narration, but no service reads it in the current build. Dead config, kept as a documented placeholder for the planned narration tier.
+- `MODEL_CHAT` = `anthropic/claude-sonnet-4-5` — chat/RAG responses — **wired** (`OpenRouterChatService`, `MaxTokens = 1500`)
+- `EMBEDDING_MODEL` = `openai/text-embedding-3-small` — vector embeddings — **wired** (`OpenRouterEmbeddingService`)
 
 ---
 
@@ -137,24 +137,30 @@ GET    /health                       — health check
 
 | Page | Route | Status |
 |---|---|---|
-| Dashboard | `/` | ✅ Done — stat cards, donut chart, spending/income tabs, transaction list |
+| Dashboard | `/` | ✅ Done — stat cards, donut chart, spending/income tabs, transaction list, **date-range filter (All Time / month pills / custom range)** |
 | Transactions | `/transactions` | ✅ Done — search, filter, sort, expand rows, anomaly badge |
-| Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation, View Details |
+| Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation |
 | Chat | `/chat` | ✅ Done — chat + 8 chart types: pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap |
-| StatementDetailPage | `/dashboard/:id` | ✅ Done — light theme, Transactions tab + Charts tab |
 
-**Light theme tokens:**
-- Page bg: `#F8FAFC` · White surfaces: `#FFFFFF` · Border: `#E2E8F0`
+> **REMOVED (28 May 2026):** `StatementDetailPage` and its `/dashboard/:id` route were deleted from the app entirely, along with the "View Details →" link on the Statements page. There are now **4 frontend pages**.
+
+**Theme tokens (current — light content + deep forest sidebar):**
+- Page/content bg: `#F4F7F9` · Card surfaces: `#FFFFFF` (no hard border — soft `boxShadow: 0 4px 6px -1px rgba(0,0,0,0.05)`) · Inner muted surface: `#F8FAFC` · Hairline border (where used): `#E2E8F0`
+- Sidebar bg: `#071A1E` (deep forest) · Active nav text + icon: `#E8C96A` (gold glow)
 - Primary text: `#1E293B` · Muted: `#64748B` · Hint: `#94A3B8`
-- Accent teal: `#00637C` · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#F59E0B`
+- UI accent (buttons, pills, active tabs, send button): `#071A1E` (deep forest) — replaced the earlier honey amber `#C9911A` for most UI chrome
+- Line chart stroke: `#C9911A` (amber, retained) · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#F59E0B`
+- Data/chart palette: `APP_COLORS` (11 colours) from `palette.ts`
 
 **Key frontend decisions:**
 - Upload modal: Statements page only
 - All pages: dynamic statement lookup via `GET /api/statements` → take `summaries[0]`
+- Dashboard date-range filter: pure `availablePeriods` (derives `YYYY-MM` periods) + pure `filterTransactionsByDate` callback; all derived stats (expenses, income, anomalyCount, category totals) computed from the date-filtered set. Custom range stages in local `customFrom`/`customTo` state and only commits on "Apply". Click-outside closes the picker (`[data-datepicker]`).
 - Chat: sessionStorage persistence for `messages`, `chartUpdate`, `statementId`, `statementFileName`
 - Chat: custom event `nosyormi-statement-deleted` triggers auto-clear when statement deleted
 - Clear chat button in chat header (shown when messages.length > 0)
 - Click anywhere on page resets selected donut slice (document mousedown handler)
+- `useCountUp` hook: snaps to `0` immediately for zero targets (fixes stale stat value when a date range has no data)
 
 ---
 
@@ -261,17 +267,21 @@ AnomalyBar        — bar shape that switches to amber for anomalous transaction
 UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages.
 ```
 
+> **Note (28 May):** `CrystalPieCell.tsx` / `CRYSTAL_COLORS` were removed — all charts now use `APP_COLORS` from `palette.ts`. Only `chartEffects.tsx` + `palette.ts` remain under `components/`.
+
 **Effect applied per chart type:**
 | Chart | Effect |
 |---|---|
-| Donut (Dashboard, Chat, StatementDetail) | JewelSlice |
-| Category Bar | JewelBar + CRYSTAL_COLORS per cell |
+| Donut (Dashboard, Chat) | JewelSlice (active lift on hover/click) |
+| Category Bar | JewelBar + APP_COLORS per cell |
 | Drilldown Bar | AnomalyBar (JewelBar + amber for anomalies) |
 | Forecast Bar | JewelBar (teal actual, amber forecast) |
 | Horizontal Bar | JewelBar + APP_COLORS per cell |
 | Stacked Bar | JewelBar per stack segment |
 | Line Chart | Gradient fill + gold stroke |
-| Treemap | Flat solid fills with tooltip on hover |
+| Treemap | Flat solid fills + `UniversalTooltip` on hover |
+
+> All chart tooltips (every page, including the treemap) now route through the single shared `UniversalTooltip`. Donut tooltips on Dashboard use `wrapperStyle={{ background: 'transparent' }}` so the chart-wrapper colour filter does not bleed into the tooltip.
 
 ---
 
@@ -304,6 +314,16 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - Fixed Treemap ghost root label (depth === 0 guard)
 - Removed `isolation: 'isolate'` from Dashboard that was blocking backdrop-filter
 
+**May 28 (evening) — cleanup + Dashboard date filter:**
+- Removed `CrystalPieCell.tsx` / `CRYSTAL_COLORS`; all charts standardised on `APP_COLORS`
+- Unified the Treemap tooltip onto the shared `UniversalTooltip` (was a separate inline tooltip)
+- Set Dashboard/Chat donut `Pie` to `isAnimationActive={false}` + wrapped donut in `chartFadeIn` entry animation
+- Donut tooltips: `wrapperStyle` set to transparent so the wrapper colour filter doesn't tint the tooltip
+- **Added Dashboard date-range filter** — `availablePeriods` (pure), `filterTransactionsByDate` (pure), All Time / per-month pills / custom range; all derived stats (incl. `anomalyCount`) honour the selected range; custom range applies only on "Apply"
+- Fixed `useCountUp` so zero targets snap to `0` immediately (no stale value across date ranges)
+- **Removed `StatementDetailPage` entirely** — deleted the file, the `/dashboard/:id` route in `App.tsx`, and the "View Details →" link on the Statements page (and the now-unused `Link` import)
+- Confirmed `MODEL_NARRATION` is dead config (referenced only in env/k8s/docs, read by no code)
+
 ---
 
 ## 15. KNOWN LIMITATIONS (documented for submission)
@@ -313,10 +333,11 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 3. **User anomaly feedback loop** — No "mark as not anomaly". Deferred.
 4. **PDF support** — CSV only. Deferred.
 5. **Multi-bank filtering** — No per-bank grouping. Architecture supports it.
-6. **StatementDetailPage navigation** — Access via "View Details →" in Statements page only.
+6. **Per-statement deep-dive removed** — `StatementDetailPage` (`/dashboard/:id`) was removed on 28 May. Per-statement charts/transactions are no longer a separate view; the Dashboard (with its date-range filter) and Transactions page cover analysis.
 7. **Chat sessionStorage only** — Not persisted to database.
 8. **ChatPage god component** — SRP violation acknowledged. Chart renderers should be extracted into separate components. Accepted tradeoff under deadline.
-9. **Tooltip backdrop-filter** — Frosted glass effect visible when tooltip overlaps coloured slices. Appears more opaque over white backgrounds. Browser compositing limitation.
+9. **Tooltip backdrop-filter** — Frosted glass effect visible when tooltip overlaps coloured slices (most noticeable on the Treemap, where tiles are fully coloured). Appears cleaner over white/light backgrounds. Browser compositing limitation — accepted.
+10. **`MODEL_NARRATION` not wired** — The narration model tier is provisioned in config (`.env`, `.env.docker`, `k8s/configmap.yaml`) but no code reads it. Anomaly/forecast narration is not implemented in the current build; categorization uses `MODEL_LIGHT` and chat uses `MODEL_CHAT`.
 
 ---
 
@@ -331,7 +352,6 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - [ ] Draggable divider between chat and chart panels
 - [ ] Typing animation — emerald/gold gradient dots on AI thinking bubble
 - [ ] Vibrancy Glass on Treemap tiles
-- [ ] StatementDetailPage center label fade-in animation
 - [ ] Upload pulse animation during CSV processing
 
 ---
@@ -339,6 +359,9 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 ## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
+chore(cleanup): remove StatementDetailPage + /dashboard/:id route + View Details link
+feat(dashboard): date-range filter (All Time / month / custom) + useCountUp zero-snap fix
+refactor(charts): remove CrystalPieCell, unify Treemap onto UniversalTooltip, donut tooltip transparency
 feat(ui): JewelSlice on all donuts, UniversalTooltip unified, new chart types, animation fixes
 feat(charts): add treemap, stacked bar, horizontal bar — palette.ts and chartEffects.tsx architecture
 refactor(ui): clean architecture for charts — palette.ts, chartEffects.tsx, JewelBar on all charts

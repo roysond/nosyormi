@@ -25,9 +25,10 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Categorization model | `openai/gpt-4o-mini` (LIGHT) | Cheap, fast, per-transaction |
-| Chat + RAG model | `anthropic/claude-sonnet-4-5` (CHAT) | Best reasoning for conversation |
-| Embedding model | `openai/text-embedding-3-small` | 1536D, fixed — never changed post-data |
+| Categorization model | `openai/gpt-4o-mini` (LIGHT) | Cheap, fast, per-transaction — **wired** |
+| Chat + RAG model | `anthropic/claude-sonnet-4-5` (CHAT) | Best reasoning for conversation — **wired** (`MaxTokens` 1500) |
+| Narration model | `anthropic/claude-sonnet-4-5` (NARRATION) | Reserved for anomaly/forecast narration — **configured but not wired in current build** |
+| Embedding model | `openai/text-embedding-3-small` | 1536D, fixed — never changed post-data — **wired** |
 | Anomaly detection | Z-score (statistical, not AI) | Deterministic, auditable, exact |
 | Forecasting | Weighted moving average (not AI) | Deterministic, no hallucination risk |
 | Orchestrator | .NET API | Browser never calls AI directly |
@@ -66,7 +67,24 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | sessionStorage chat history | Persistence across browser close | DB chat persistence adds schema complexity, deferred |
 | Single statement view | Per-bank filtering | Multi-bank grouping adds app-wide state, deferred |
 | CSV only | PDF upload | PdfPig integration deferred — CSV covers real bank exports |
+| ChatPage as one large component | Extracted chart components | Chart renderers belong in their own modules; deferred under deadline |
+| `MODEL_NARRATION` left as dead config | Implemented narration tier | Routing abstraction makes wiring it later additive; not needed for MVP |
 
 ---
 
-*Last updated: 25 May 2026*
+## Week 4 Decisions (28 May 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Chart styling architecture | `palette.ts` (colour) + `chartEffects.tsx` (effects) | Single source of truth each — SRP/OCP; tweak colour or effect in one place |
+| Shared tooltip | One `UniversalTooltip` for all charts | Replaced three duplicated tooltip components; consistency + DRY |
+| Chart types | Added `stacked`, `horizontal`, `treemap` (5 → 8) | Richer intent-matched answers; `chartUpdate` contract shape unchanged |
+| Category taxonomy | Added `Parking & Tolls` (11 total) | Real statements needed it; taxonomy + classifier prompt kept in sync |
+| Chat robustness | `MaxTokens` 500 → 1500; assistant turns serialized as JSON | Stop mid-response truncation; coherent multi-turn context |
+| Theme | Content `#F4F7F9`, white cards + soft shadow, deep-forest `#071A1E` accent | Higher contrast for dense tables/charts; unified chrome |
+| Dashboard date filter | All Time / per-month / custom range | Scopes all stats to a period; replaces the removed per-statement view |
+| `StatementDetailPage` | Removed (page + `/dashboard/:id` route + View Details link) | Duplicated Dashboard/Transactions analysis; superseded by date filter |
+
+---
+
+*Last updated: 28 May 2026*

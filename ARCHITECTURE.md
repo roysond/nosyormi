@@ -135,6 +135,8 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
+> **Implementation status (as of 28 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service** — the standalone anomaly-explanation and forecast-narration features it was reserved for are not part of the current build. The tier is retained as a documented placeholder; the routing abstraction makes wiring it later additive rather than structural. The feature rows below marked "narration tier" therefore describe the intended design, not currently shipping code.
+
 ### Embeddings: A Single Model, Used Consistently
 
 Unlike LLMs, embeddings use a single model across the entire system. This is not a stylistic choice — it is a correctness requirement. Embeddings from different models are not comparable to each other; switching the embedding model after data has been embedded would require re-embedding the entire dataset. The model is therefore fixed early and changed deliberately, with a full re-embedding cycle if it is ever changed.
@@ -237,16 +239,27 @@ This direction is enforced by .NET project references. Domain depends on nothing
 
 ### Frontend — `/frontend`
 
-The frontend is a Vite-scaffolded React + TypeScript single-page application. It is intentionally lightweight at this stage and will grow as design and feature work progresses.
+The frontend is a Vite-scaffolded React + TypeScript single-page application using `react-router-dom` for routing and Recharts for visualization.
 
 ```
 frontend/
 ├── src/
-│   ├── App.tsx                  # Top-level component
+│   ├── App.tsx                  # Shell: collapsible sidebar, nav, routes
 │   ├── App.css                  # Component-scoped styling
 │   ├── main.tsx                 # Entry point — mounts <App /> to #root
-│   ├── index.css                # Global resets and base styles
+│   ├── index.css                # Global resets, fonts, shared @keyframes
+│   ├── pages/                   # One component per route (4 pages)
+│   │   ├── DashboardPage.tsx        # "/"            — stats, donut, tabs, date-range filter
+│   │   ├── TransactionsPage.tsx     # "/transactions"— search, filter, sort, expand
+│   │   ├── StatementsPage.tsx       # "/statements"  — upload modal, list, delete
+│   │   └── ChatPage.tsx             # "/chat"        — chat + 8 chart types
+│   ├── components/
+│   │   ├── chartEffects.tsx         # JewelBar, JewelSlice, AnomalyBar, UniversalTooltip
+│   │   └── StatementPill.tsx        # Active-statement pill in the sidebar
+│   ├── constants/
+│   │   └── palette.ts               # APP_COLORS + chart colour constants (single source of truth)
 │   └── assets/                  # Static assets bundled by Vite
+├── e2e/                         # Playwright end-to-end specs
 ├── public/                      # Static files served at root path
 ├── index.html                   # Single HTML shell — Vite injects scripts
 ├── package.json                 # Dependency manifest
@@ -254,6 +267,10 @@ frontend/
 ├── vite.config.ts               # Vite build configuration
 └── .gitignore                   # Frontend-specific exclusions
 ```
+
+> **Routing note (28 May 2026):** The app has **four** routed pages. An earlier `StatementDetailPage` (route `/dashboard/:id`, reached via a "View Details →" link on the Statements page) was removed; per-statement deep-dive is no longer a separate view. Analysis now lives on the Dashboard (with a date-range filter) and the Transactions page.
+
+> **Chart styling architecture (28 May 2026):** All chart colour lives in `constants/palette.ts`; all chart visual effects (custom Recharts shapes and the shared frosted-glass `UniversalTooltip`) live in `components/chartEffects.tsx`. Pages compose these — colour and effect are changed in exactly one place each. This is a deliberate SRP/OCP application: adding a colour or a new chart effect does not require editing page components.
 
 The frontend communicates with the backend exclusively via HTTP, calling endpoints under `http://localhost:5034/api/*`. CORS is enabled on the backend specifically for the frontend's origin (configured via `FRONTEND_ORIGIN` in `.env`).
 
@@ -464,6 +481,42 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Icons:** Replaced emoji nav icons with `@tabler/icons-react` — enables CSS `filter: drop-shadow` for the emerald glow effect on active icons.
 - **Rationale:** The original Crystal Teal accent (`#00637C`) became invisible against the new `#CCE8EC` background (same hue family). Honey Amber creates genuine warm-cool tension against the forest tint. The collapsible sidebar matches industry-standard dashboard UX patterns.
 
+### 2026-05-28 — Theme Refinement (Light Content + Deep-Forest Chrome)
+
+- **Supersedes the 25 May palette for content surfaces.** Main content background moved from `#CCE8EC` to `#F4F7F9`; card surfaces moved from champagne `#FBF8F2` to white `#FFFFFF` with a soft `boxShadow: 0 4px 6px -1px rgba(0,0,0,0.05)` replacing hard `1px` borders.
+- **UI accent unified to deep forest `#071A1E`** for buttons, pills, active tabs, and the chat send button (the honey-amber `#C9911A` accent is retained only as the line-chart stroke). Sidebar stays `#071A1E`; active nav text/icon stays gold `#E8C96A`.
+- **Rationale:** A cleaner, higher-contrast light surface for dense financial tables and charts; deep-forest chrome ties the content area back to the sidebar for one coherent identity.
+
+### 2026-05-28 — Chart Styling Architecture (`palette.ts` + `chartEffects.tsx`)
+
+- **Decision:** Centralised all chart colour in `frontend/src/constants/palette.ts` (`APP_COLORS` + named constants) and all chart visual effects in `frontend/src/components/chartEffects.tsx` (`JewelBar`, `JewelSlice`, `AnomalyBar`, `UniversalTooltip`). Pages import and compose; they never define colours or effect shapes inline.
+- **What changed:** Three previously duplicated tooltip components collapsed into one shared `UniversalTooltip` (used by every chart on every page, including the Treemap). The interim `CrystalPieCell.tsx` / `CRYSTAL_COLORS` was removed; all charts now read `APP_COLORS`.
+- **Rationale:** Direct SRP/OCP application — colour and effect each have a single source of truth, so a palette tweak or a new chart effect is an additive one-file change.
+
+### 2026-05-28 — New AI-Triggerable Chart Types
+
+- **Decision:** Extended the chat `chartUpdate` contract from five to eight chart types, adding `stacked` (monthly spend by category), `horizontal` (categories ranked by total), and `treemap` (proportional spend map). The system prompt was updated so the model can select them.
+- **Rationale:** Richer, intent-matched visual answers without changing the chat→visualization contract shape (type discriminator stays the same).
+
+### 2026-05-28 — Category Taxonomy + Chat Robustness
+
+- **Taxonomy:** Added `Parking & Tolls`, bringing `CategoryTaxonomy.All` to 11 categories; the classifier system prompt was updated to match (single taxonomy honoured in both places).
+- **Chat context:** Assistant turns are serialized as JSON when rebuilt into model context, and the chat request `MaxTokens` was raised `500 → 1500` to stop mid-response truncation. JSON parse failures are now logged with the raw payload for diagnosis.
+
+### 2026-05-28 — Dashboard Date-Range Filter
+
+- **Decision:** Added a date-range filter to the Dashboard (All Time / per-month quick-select pills / custom from–to range). All derived figures — expenses, income, anomaly count, and category totals — are computed from the date-filtered transaction set via a pure `filterTransactionsByDate` helper and a memoized `availablePeriods` derivation.
+- **Rationale:** Per-statement deep-dive was removed (below); a date filter on the always-available Dashboard is the simpler, more general way to scope analysis to a period.
+
+### 2026-05-28 — `StatementDetailPage` Removed
+
+- **Decision:** Deleted `StatementDetailPage`, its `/dashboard/:id` route in `App.tsx`, and the "View Details →" link on the Statements page (and the now-unused `Link` import). The app now has four routed pages.
+- **Rationale:** The per-statement view duplicated Dashboard/Transactions analysis. With the Dashboard date-range filter in place, the separate page no longer earned its complexity; removing it reduces surface area and duplication.
+
+### 2026-05-28 — `MODEL_NARRATION` Confirmed as Unwired Config
+
+- **Finding (documented, not a change):** A codebase scan confirmed `MODEL_NARRATION` is referenced only in configuration and docs — no service reads it. The narration tier described in Section 3 is design intent, not shipping code. Recorded here so the architecture's aspirational rows are not mistaken for implemented behavior.
+
 ---
 
 ## Sections Still To Be Added
@@ -478,6 +531,9 @@ As the corresponding parts of the system are built, the following sections will 
 
 ---
 
-*Last updated: Wednesday, May 20, 2026 — Multi-statement refactor, 
-Statements management page, SHA-256 deduplication, cascade delete, 
-architectural fixes.*
+*Last updated: Thursday, May 28, 2026 — Chart styling architecture 
+(palette.ts + chartEffects.tsx), unified UniversalTooltip, three new 
+chart types, Parking & Tolls category, chat robustness (MaxTokens 1500, 
+JSON context), theme refinement (#F4F7F9 + white cards + deep-forest 
+chrome), Dashboard date-range filter, StatementDetailPage removed, 
+MODEL_NARRATION confirmed unwired.*

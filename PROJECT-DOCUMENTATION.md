@@ -89,11 +89,11 @@ handle the kind of work they are best suited for.
   transaction list with summary panel
 - ✅ Transactions page: search, filter by category, sort, expandable
   rows, anomaly badge
-- ✅ Statements page: list, upload modal, delete with confirmation,
-  View Details navigation
+- ✅ Statements page: list, upload modal, delete with confirmation
 - ✅ Chat page: AI chat interface + dynamic chart panel
-  (pie/bar/line/anomaly/forecast)
+  (pie/bar/line/anomaly/forecast; stacked/horizontal/treemap added in Week 4)
 - ✅ StatementDetailPage: per-statement transactions + charts tabs
+  *(later removed in Week 4 — superseded by the Dashboard date-range filter)*
 - ✅ Chat-to-visualization bridge: `chartUpdate` JSON contract drives
   live chart rendering
 - ✅ SHA-256 deduplication: duplicate uploads return 409 Conflict
@@ -131,6 +131,36 @@ handle the kind of work they are best suited for.
 - ✅ ARCHITECTURE.md, DECISIONS.md, LEARNING-LOG.md
 - ✅ 6 architectural diagrams (draw.io)
 - ✅ PROJECT-DOCUMENTATION.md (this file)
+
+---
+
+### Week 4 (May 26–28) — Visual System & Refinement
+
+**Completed:**
+- ✅ Chart styling architecture: `constants/palette.ts` (colour) +
+  `components/chartEffects.tsx` (effects) as single sources of truth
+- ✅ Custom Recharts effects: `JewelBar` (bars), `JewelSlice` (donut
+  slices with active lift), `AnomalyBar` (amber for anomalies)
+- ✅ Unified `UniversalTooltip` — one frosted-glass tooltip across every
+  chart on every page (replaced three separate tooltip components)
+- ✅ Three new AI-triggerable chart types: stacked bar (monthly by
+  category), horizontal bar (ranked), treemap (proportional spend map)
+- ✅ Theme refinement: content background `#F4F7F9`, white cards with
+  soft shadow, deep-forest `#071A1E` UI accent (buttons/pills/tabs)
+- ✅ Backend: added `Parking & Tolls` category (11 total); chat
+  `MaxTokens` 500 → 1500; assistant turns serialized as JSON for
+  multi-turn context; JSON parse-failure logging
+- ✅ Dashboard date-range filter (All Time / per-month / custom range) —
+  scopes all stats, anomalies, and category totals to the selected period
+- ✅ `useCountUp` zero-snap fix (no stale stat value across date ranges)
+- ✅ Removed `StatementDetailPage` and its `/dashboard/:id` route —
+  superseded by the Dashboard date-range filter
+- ✅ Removed interim `CrystalPieCell.tsx` / `CRYSTAL_COLORS`
+
+**Noted (not a change):**
+- `MODEL_NARRATION` is provisioned in config but unwired in code — the
+  narration tier (anomaly/forecast narration) is not implemented in the
+  current build. Documented as a known limitation.
 
 ---
 
@@ -221,14 +251,14 @@ Stories are listed by epic. Status reflects the state at submission.
 | 37 | Build Transactions page with search, filter, sort | Major | ✅ Done |
 | 38 | Build Statements page with upload modal and list | Major | ✅ Done |
 | 39 | Build Chat page with message interface and chart panel | Major | ✅ Done |
-| 40 | Build StatementDetailPage with transactions + charts tabs | Minor | ✅ Done |
+| 40 | Build StatementDetailPage with transactions + charts tabs | Minor | ✅ Done → ⛔ Removed (Week 4, superseded by Dashboard date-range filter) |
 | 41 | Connect all pages to live API endpoints | Major | ✅ Done |
 | 42 | Implement dynamic chart rendering from chartUpdate JSON | Major | ✅ Done |
 | 43 | Add spending/income tab switching on Dashboard | Minor | ✅ Done |
 | 44 | Add expandable transaction rows with full details | Minor | ✅ Done |
 | 45 | Implement sessionStorage chat persistence across navigation | Minor | ✅ Done |
 | 46 | Add clear chat button and auto-clear on statement delete | Minor | ✅ Done |
-| 47 | Restyle StatementDetailPage to match light theme | Minor | ⏳ In Progress |
+| 47 | Restyle StatementDetailPage to match light theme | Minor | ⛔ Dropped — page removed in Week 4 |
 | 48 | Dashboard cards — surface change vs last month and sparklines | Additive | ❌ Not Started |
 | 49 | Persistent last uploaded statement pill across navigation | Additive | ✅ Done |
 
@@ -271,6 +301,11 @@ NOSYOR.M.I uses three AI model tiers, all routed through OpenRouter:
 | MODEL_CHAT | anthropic/claude-sonnet-4-5 | Conversational chat + RAG responses |
 | EMBEDDING_MODEL | openai/text-embedding-3-small | 1536D vector embeddings for RAG |
 
+> A third tier, `MODEL_NARRATION`, is provisioned in configuration for a
+> planned anomaly/forecast narration feature but is **not wired into any
+> service in the current build**. Categorization uses `MODEL_LIGHT`; chat
+> uses `MODEL_CHAT`. (See Known Issues & Limitations.)
+
 ### System Prompt Strategy
 
 The chat endpoint uses a guardrailed system prompt that:
@@ -298,12 +333,14 @@ The prompt includes:
 The `chartUpdate` contract is defined in the system prompt:
 ```json
 {
-  "type": "pie|bar|line|anomalies|forecast",
+  "type": "pie|bar|line|anomalies|forecast|stacked|horizontal|treemap",
   "data": { ... }
 }
 ```
 When the AI determines a chart would help the response, it appends this
-JSON to its answer. The frontend detects and renders it.
+JSON to its answer. The frontend detects and renders it. The contract was
+extended in Week 4 from five to eight chart types (adding `stacked`,
+`horizontal`, and `treemap`) without changing its shape.
 
 ### Agentic Patterns
 
@@ -430,9 +467,11 @@ runtime, never from hardcoded values.
 | 3 | No "mark as not anomaly" user feedback | Deferred | Would require new endpoint + UI |
 | 4 | PDF upload not supported | Deferred | CSV covers real bank exports; PdfPig integration deferred |
 | 5 | No per-bank statement filtering | Deferred | Architecture supports it; not needed for MVP |
-| 6 | StatementDetailPage not in primary nav | Known | Accessible via "View Details →" in Statements page |
+| 6 | No per-statement deep-dive page | Changed | `StatementDetailPage` removed in Week 4; Dashboard date-range filter + Transactions page cover analysis |
 | 7 | Chat history lost on browser close | By design | sessionStorage only; DB persistence deferred |
 | 8 | Sparklines + change vs last month not implemented | Deferred | Additive tier story; deferred for submission timeline |
+| 9 | `MODEL_NARRATION` configured but unwired | Known | Narration tier provisioned in env/k8s but read by no code; anomaly/forecast narration not implemented |
+| 10 | Tooltip frosted-glass tints over dense colour | Known | `UniversalTooltip` is translucent; over fully-coloured Treemap tiles it picks up tile colour. Browser compositing limitation; accepted |
 
 ---
 
@@ -454,8 +493,12 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 **Feature Expansion (+Medium)**
 - Multi-bank CSV support (Standard, Huntington, Bank of America)
   with automatic format detection — no user configuration required
-- StatementDetailPage: per-statement deep-dive with transactions and
-  charts tabs
+- Eight AI-triggerable chart types (pie, bar, drilldown, line, anomalies,
+  forecast, stacked, horizontal, treemap) driven by the `chartUpdate` contract
+- Dashboard date-range filter (All Time / per-month / custom) scoping all
+  stats, anomalies, and category totals to the chosen period
+- Custom chart visual system (`JewelBar`, `JewelSlice`, unified
+  `UniversalTooltip`) centralised in `palette.ts` + `chartEffects.tsx`
 
 **Production-Grade Engineering (+Medium)**
 - SHA-256 deduplication enforced at DB level with unique index
@@ -470,4 +513,8 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 25 May 2026*
+*Last updated: 28 May 2026 — Week 4 visual system (palette.ts + 
+chartEffects.tsx, UniversalTooltip), three new chart types, theme 
+refinement, Parking & Tolls category, chat MaxTokens/context fixes, 
+Dashboard date-range filter, StatementDetailPage removed, MODEL_NARRATION 
+documented as unwired.*
