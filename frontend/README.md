@@ -2,6 +2,8 @@
 
 React 19 + TypeScript single-page app built with Vite. Talks to the .NET API over HTTP; renders financial charts with Recharts and a shared visual system (`palette.ts` + `chartEffects.tsx`).
 
+> **Chat context note:** The frontend calls `POST /api/chat/{statementId}`. The backend injects the **full statement** as LLM context (not query-time pgvector RAG). Reliable for roughly ≤ 750 transactions per statement under current architecture.
+
 ---
 
 ## Pages
@@ -30,7 +32,8 @@ npx playwright test   # E2E — requires app running
 ## API base URL
 
 - **Local dev:** `VITE_API_BASE_URL` defaults to `http://localhost:5034` (see `vite.config.ts` / env).
-- **Docker / Minikube:** nginx proxies `/api` to the backend service; the built bundle uses relative `/api` paths.
+- **Docker Compose:** frontend built with `VITE_API_BASE_URL=http://localhost:5034` (direct API calls from browser).
+- **Minikube:** nginx proxies `/api` to the backend service; K8s frontend image uses relative `/api` when built with empty base URL.
 
 ---
 
@@ -57,9 +60,11 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 - Content background: `#F4F7F9` · Cards: `#FFFFFF` with soft shadow
 - Sidebar: `#071A1E` · Active nav: `#E8C96A`
-- UI chrome accent: `#071A1E` · Line chart stroke: `#C9911A`
+- UI chrome accent: `#071A1E` · Line chart stroke: `#C9911A` · Anomaly: `#DC2626`
 
 ---
+
+*Last updated: 29 May 2026*
 
 ## Related docs
 

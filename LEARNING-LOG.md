@@ -91,8 +91,11 @@ text (with `[ID:uuid]` on each line) — not similarity search. That still
 grounds answers in real data, but it is not query-time RAG yet.
 
 Why both? Embeddings are the foundation for semantic search later. For
-MVP-sized statements, full context is simpler and avoids retrieval bugs.
-When statements grow large, query-time RAG becomes necessary.
+MVP-sized statements (roughly **≤ 750 transactions**), full context is
+simpler and avoids retrieval bugs. **Above ~750 transactions**, query-time
+RAG becomes necessary — prompt size, latency, cost, and answer quality
+degrade when every row is injected. The ceiling is architectural, not
+enforced in code (no upload or chat rejection at 750).
 
 ### The EMBEDDING_MODEL missing from .env.docker
 
@@ -342,6 +345,22 @@ I originally documented "RAG chat" in submission materials. The code stores
 embeddings but chat loads all rows. Updating the docs to match reality was
 important — reviewers and future-me need to know what is implemented vs planned.
 
+**What is actually wired:**
+- **Upload:** embed every transaction → store in pgvector ✅
+- **Chat:** load all transactions + monthly summary → send to LLM ✅
+- **Chat:** embed question → pgvector search → top-K retrieval ❌
+
+**The ~750 transaction limit:** Because chat sends the entire statement as
+text context (plus system prompt and history), the architecture has a practical
+ceiling of about **750 transactions**. Below that, full context is accurate
+and simpler. Beyond that, you need query-time RAG — otherwise the prompt is
+too large, slow, expensive, and the model starts missing or contradicting data.
+Nothing in the app blocks you at 750; it is a design constraint we document
+honestly after reviewing the architecture with Claude.
+
+**Diagrams corrected (29 May):** All six PNGs in `docs/diagrams/` were
+regenerated so submission materials no longer imply pgvector retrieval is active.
+
 ---
 
 ## The Most Important Thing I Learned
@@ -367,5 +386,4 @@ learning came first. The speed came after.
 
 ---
 
-*Last updated: 29 May 2026 — added Week 5 (topN chart, server fallback, 
-transaction IDs, full-context vs RAG clarification); corrected RAG section.*
+*Last updated: 29 May 2026 — diagram audit, 750-txn ceiling, RAG scope clarified, categorization rules.*

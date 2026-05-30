@@ -14,10 +14,10 @@ It doesn't shame you. It doesn't moralize. It reflects.
 ## What it does
 
 - **CSV & bank statement ingestion** — drop in a file; the app parses Standard, Huntington, and Bank of America export formats automatically.
-- **Automatic categorization** — every transaction sorted into 11 meaningful buckets without manual tagging.
+- **Automatic categorization** — every transaction sorted into 13 meaningful buckets (rule-based bypass + AI fallback) without manual tagging.
 - **Anomaly detection** — Z-score analysis flags unusual spends at upload time.
 - **Next-month forecasting** — weighted moving average projects spending by category.
-- **Conversational chat interface** — ask questions in plain English; the AI answers and updates live visualizations to match.
+- **Conversational chat interface** — ask questions in plain English; the AI answers from your full statement context and updates live visualizations to match.
 - **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
 - **Date-range analysis** — scope the Dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 
@@ -128,6 +128,22 @@ Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
 | [DECISIONS.md](./DECISIONS.md) | Key product and technical decisions |
 | [QA-TEST-CASES.md](./QA-TEST-CASES.md) | Manual test cases and results |
 | [PROJECT-MEMORY.md](./PROJECT-MEMORY.md) | Session context anchor for development |
+| [docs/diagrams/](./docs/diagrams/) | Six architectural PNG diagrams (system, AI flow, schema, API, deployment, user flow) |
+
+---
+
+## Known limitations (summary)
+
+| Limitation | Detail |
+|---|---|
+| **Not query-time RAG** | Embeddings are stored at upload; chat injects the **full statement** as text context — no pgvector similarity search at chat time. |
+| **~750 transaction ceiling** | Full-context chat is architecturally reliable for typical single-statement CSVs (≤ ~750 rows). Beyond that, query-time RAG is required. Not enforced in code. |
+| **CSV only** | PDF ingestion deferred. |
+| **`MODEL_NARRATION` unwired** | Configured in env/k8s but no service reads it. |
+| **No chat streaming** | Complete JSON response per message. |
+| **Chat history** | `sessionStorage` only — cleared on tab close. |
+
+See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--limitations) for the full list.
 
 ---
 

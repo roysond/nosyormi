@@ -28,6 +28,7 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Categorization model | `openai/gpt-4o-mini` (LIGHT) | Cheap, fast, per-transaction — **wired** |
 | Chat model | `anthropic/claude-sonnet-4-5` (CHAT) | Best reasoning for conversation — **wired** (`MaxTokens` 1500, full statement context) |
 | Chat context | Full transaction list per statement | Grounds answers in real data; query-time RAG deferred |
+| ~750 txn ceiling | Full context injection below ~750 rows | Above this, prompt size/latency/cost degrade — RAG retrieval required; not enforced in code |
 | topN chart fallback | Server-side in `OpenRouterChatService` | Forces ranked expenses when model misses `topN` intent |
 | Narration model | `anthropic/claude-sonnet-4-5` (NARRATION) | Reserved for anomaly/forecast narration — **configured but not wired in current build** |
 | Embedding model | `openai/text-embedding-3-small` | 1536D, fixed — never changed post-data — **wired** |
@@ -97,9 +98,12 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Server-side topN fallback | Keyword detection + DB sort by abs(amount) | Model sometimes returns `bar` instead of `topN`; deterministic correction |
 | Transaction IDs in chat context | `[ID:uuid]` on every line | Enables highlights and auditability; avoids date-as-ID mistakes |
 | Merchant questions | `bar` + `category` for the merchant's bucket | Shows all transactions in that category as separate bars |
-| Query-time RAG | Deferred | Embeddings stored at upload; full context sufficient for MVP statement sizes |
+| Query-time RAG | Deferred | Embeddings stored at upload; full context sufficient for MVP statement sizes (≤ ~750 txns) |
 | Token streaming | Deferred | Simpler JSON request/response; no SSE in `ChatController` |
+| Architectural diagrams | Regenerated in `docs/diagrams/` | Corrected to match codebase: React 19, upload order, full-context chat, API response shapes |
+| Categorization rules | Rule bypass before MODEL_LIGHT | Subscriptions, ATM/cash, transfers, Square TST*, DoorDash food — reduces LLM calls and mislabels |
+| Category taxonomy | 13 categories | Added Transfers & Payments, ATM & Cash for real bank statement patterns |
 
 ---
 
-*Last updated: 29 May 2026*
+*Last updated: 29 May 2026 — diagram audit, 750-txn ceiling, categorization rules, RAG scope clarified*

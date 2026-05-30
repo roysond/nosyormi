@@ -59,7 +59,7 @@ Like Layer 1, Layer 2 uses no LLMs. Its outputs are numerical and explainable �
 
 Transaction descriptions on a bank statement are messy. "AMZN MKTPLACE 7/14 SEATTLE" and "AMAZON RETAIL PURCHASE" refer to the same thing, but a database doesn't know that. The Semantic Layer solves this by converting text into numerical vectors (embeddings) that capture meaning. Similar transactions land near each other in vector space; dissimilar ones land far apart.
 
-This layer powers semantic search ("find transactions like this one"), retrieval for the chat interface ("pull the relevant transactions before the LLM answers a question"), and assists categorization where rule-based matching falls short.
+This layer powers semantic search ("find transactions like this one") and is **designed** to support retrieval for the chat interface ("pull the relevant transactions before the LLM answers a question"). **Today:** embeddings are generated and stored at upload; query-time similarity search in chat is **not implemented** — chat uses full statement context injection instead (reliable up to ~750 transactions; beyond that, retrieval becomes necessary).
 
 The Semantic Layer is *not* an LLM. Embedding models are a separate kind of AI — they measure meaning, they do not generate text.
 
@@ -111,7 +111,7 @@ Different features call for different tools. The matrix below documents which to
 | Transaction storage | Layer 1 | EF Core entities | No |
 | Rule-based categorization | Layer 1 | C# rules engine | No |
 | AI-assisted categorization (fallback) | Layer 4 | LLM (light tier) | Yes |
-| Semantic similarity search | Layer 3 | pgvector + embeddings | Yes (embeddings) |
+| Semantic similarity search | Layer 3 | pgvector + embeddings | Yes (embeddings at upload; **retrieval not wired in chat**) |
 | Anomaly detection | Layer 2 | ML.NET / statistical methods | No |
 | Time-series forecasting | Layer 2 | ML.NET SSA forecaster | No |
 | Anomaly explanation | Layer 4 | LLM (narration tier) | Yes |
@@ -135,7 +135,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 29 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers), not query-time pgvector retrieval — embeddings are stored at upload for future RAG. Token streaming is not implemented. The feature rows below marked "narration tier" describe intended design, not shipping code.
+> **Implementation status (as of 29 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. Token streaming is not implemented. The feature rows below marked "narration tier" describe intended design, not shipping code.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -208,7 +208,7 @@ backend/
 │       └── Category.cs
 ├── Nosyormi.Application/        # Layer 1-4 business logic & contracts
 │   ├── Analysis/                # IAnomalyDetector, IForecastingService, ITimeSeriesService
-│   ├── Categorization/          # ICategoryClassifier, CategoryTaxonomy (11 categories)
+│   ├── Categorization/          # ICategoryClassifier, CategoryTaxonomy (13 categories)
 │   ├── Chat/                    # IChatService, ChatResponse, ChartUpdate
 │   ├── Csv/                     # ICsvStatementParser, ParsedTransactionRow
 │   ├── Embeddings/              # IEmbeddingService
@@ -531,6 +531,23 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 
 - **Finding:** `ChatController` returns a complete `ChatResponse` JSON payload. No SSE or chunked token delivery. Story marked deferred in project documentation.
 
+### 2026-05-29 — Architectural Diagrams Aligned to Codebase
+
+- **Decision:** Regenerated all six PNG diagrams in `docs/diagrams/` to match the shipping application (React 19, upload pipeline order categorize → anomaly → embed, full-context chat not pgvector retrieval, corrected API response shapes, deployment tags, 9 chart types).
+- **Rationale:** Earlier diagrams and submission copy labelled chat as "RAG" while only the upload-half of RAG (embed + store) was implemented. Accurate diagrams prevent reviewers and future development from assuming similarity search is active.
+
+### 2026-05-29 — Categorization Rule Bypass Expanded
+
+- **Decision:** `OpenRouterCategoryClassifier` pre-classifies high-confidence patterns before calling MODEL_LIGHT: subscriptions (DashPass, Prime, etc.), ATM/cash, Zelle/transfers, Square terminal vendors (`TST*`, `SQ *`) → Dining & Takeaway, DoorDash food orders (excluding DashPass).
+- **Taxonomy:** Added `Transfers & Payments` and `ATM & Cash` (13 categories total); classifier prompt and `CategoryTaxonomy.All` kept in sync.
+
+### 2026-05-29 — ~750 Transaction Ceiling (Full Context vs RAG)
+
+- **Finding:** Chat injects the entire statement into every request (system prompt + monthly summary + all transaction lines + history). This is **not query-time RAG**.
+- **Ceiling:** Reliable for roughly **≤ 750 transactions** per statement under current architecture. Above that, input token volume, latency, OpenRouter cost, and answer quality degrade materially.
+- **Not enforced:** No code rejects uploads or chat requests at 750 — this is a documented architectural limit, not runtime validation.
+- **When RAG is required:** Epic 6 story 26 — embed user question → pgvector cosine similarity → top-K transactions → LLM. Storage layer exists; retrieval in `OpenRouterChatService` does not.
+
 ---
 
 ## Sections Still To Be Added
@@ -545,6 +562,4 @@ As the corresponding parts of the system are built, the following sections will 
 
 ---
 
-*Last updated: Thursday, May 29, 2026 — topN chart + highlightTransactionIds, 
-chat system prompt and server fallback, full-context chat documented, 
-RAG/streaming status clarified, backend folder tree expanded, React 19.*
+*Last updated: Friday, 29 May 2026 — diagram audit, 750-txn ceiling, categorization rules, RAG scope clarified, full-context chat documented.*

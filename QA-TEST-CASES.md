@@ -9,6 +9,7 @@
 > **Revision notes:**
 > - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
 > - **29 May 2026:** TC-14 extended for `topN`; TC-19 added for top-N fallback behaviour.
+> - **29 May 2026:** Documentation aligned — chat uses full context injection, not query-time RAG; ~750 txn architectural ceiling documented (no new test case — design limit, not runtime validation).
 
 ---
 

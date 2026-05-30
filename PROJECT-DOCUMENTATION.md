@@ -130,7 +130,7 @@ handle the kind of work they are best suited for.
 - ✅ UI redesign: deep forest sidebar, CCE8EC background, honey amber
   accent, emerald icon glow, Inter font, collapsible sidebar
 - ✅ ARCHITECTURE.md, DECISIONS.md, LEARNING-LOG.md
-- ✅ 6 architectural diagrams (draw.io)
+- ✅ 6 architectural diagrams in `docs/diagrams/` (regenerated 29 May to match codebase)
 - ✅ PROJECT-DOCUMENTATION.md (this file)
 
 ---
@@ -181,9 +181,20 @@ handle the kind of work they are best suited for.
 - Chat injects the **full transaction list** for the active statement into
   each request — not query-time pgvector similarity search. Embeddings are
   generated and stored at upload (semantic layer foundation); live RAG retrieval
-  remains deferred.
+  remains deferred (Epic 6 story 26).
 - Token streaming to the frontend is **not implemented**; chat returns a
   complete JSON response per message.
+- **~750 transaction ceiling:** full-context chat is architecturally reliable
+  for typical single-statement CSVs (≤ ~750 transactions). Beyond that, query-time
+  RAG becomes necessary. Not enforced in code — documented design limit.
+
+**Completed (continued):**
+- ✅ Categorization rule bypass expanded: subscriptions, ATM & Cash, transfers,
+  Square TST*/SQ*, DoorDash food vs DashPass; taxonomy → 13 categories
+- ✅ Chat: pre-computed monthly totals in context; AI reasoning accuracy rules;
+  transfer/month comparison prompt fixes
+- ✅ Chart UI: draggable chat/chart divider, anomaly colour `#DC2626`, height/sort polish
+- ✅ All 6 architectural diagrams in `docs/diagrams/` regenerated to match codebase
 
 ---
 
@@ -245,7 +256,7 @@ Stories are listed by epic. Status reflects the state at submission.
 |---|---|---|---|
 | 24 | Generate vector embeddings per transaction via OpenRouter | Major | ✅ Done |
 | 25 | Store embeddings in pgvector with cosine similarity index | Major | ✅ Done |
-| 26 | Implement RAG retrieval: embed query → similarity search → context | Major | ⏳ Partial (embeddings at upload ✅; query-time retrieval deferred) |
+| 26 | Implement RAG retrieval: embed query → similarity search → context | Major | ⏳ Partial (embeddings at upload ✅; query-time retrieval deferred — required above ~750 txns) |
 
 ### Epic 7 — Forecasting & Time-Series (4 stories)
 
@@ -260,7 +271,7 @@ Stories are listed by epic. Status reflects the state at submission.
 
 | # | Story | Tier | Status |
 |---|---|---|---|
-| 31 | Build chat API endpoint with RAG pipeline | Major | ✅ Done |
+| 31 | Build chat API endpoint with full-context LLM pipeline | Major | ✅ Done (query-time RAG deferred) |
 | 32 | Implement streaming token delivery to frontend | Major | ❌ Not Started (non-streaming JSON response; deferred) |
 | 33 | Design guardrailed system prompt for financial scope | Major | ✅ Done |
 | 34 | Build chartUpdate JSON contract for AI-driven visualizations | Major | ✅ Done |
@@ -321,7 +332,7 @@ NOSYOR.M.I uses three AI model tiers, all routed through OpenRouter:
 | Tier | Model | Used For |
 |---|---|---|
 | MODEL_LIGHT | openai/gpt-4o-mini | Per-transaction categorization at upload |
-| MODEL_CHAT | anthropic/claude-sonnet-4-5 | Conversational chat + RAG responses |
+| MODEL_CHAT | anthropic/claude-sonnet-4-5 | Conversational chat (full statement context injection) |
 | EMBEDDING_MODEL | openai/text-embedding-3-small | 1536D vector embeddings for RAG |
 
 > A third tier, `MODEL_NARRATION`, is provisioned in configuration for a
@@ -349,13 +360,16 @@ categories.
 **Chat prompt (MODEL_CHAT):**
 The prompt includes:
 1. System context (scope, brand voice, chartUpdate contract, chart-selection rules)
-2. Full transaction list for the active statement (each line prefixed with
-   `[ID:uuid]`, INCOME/EXPENSE direction, category, amount)
-3. Full conversation history (multi-turn coherence; assistant turns serialized as JSON)
-4. User message
+2. Pre-computed monthly category totals (model must cite these figures exactly)
+3. Full transaction list for the active statement (each line prefixed with
+   `[ID:uuid]`, INCOME/EXPENSE direction, category, amount, anomaly flag)
+4. Full conversation history (multi-turn coherence; assistant turns serialized as JSON)
+5. User message
 
 > **Note:** Embeddings are stored in pgvector at upload, but chat does not yet
 > run query-time similarity search. Context is the complete statement dataset.
+> This full-context approach is reliable for roughly **≤ 750 transactions**;
+> beyond that, query-time RAG (story 26) is architecturally required.
 
 The `chartUpdate` contract is defined in the system prompt:
 ```json
@@ -378,7 +392,7 @@ transactions but the model omits the chart.
 
 **Upload pipeline (multi-step agentic):**
 The upload endpoint orchestrates a sequential multi-step pipeline:
-categorization → embedding → anomaly detection → persistence. Each step
+categorization (rule bypass + MODEL_LIGHT) → anomaly detection → embedding → persistence. Each step
 is a discrete AI or statistical operation. The .NET API is the
 orchestrator — the browser never calls AI services directly.
 
@@ -390,7 +404,13 @@ responses in real data without hallucinating amounts.
 **RAG (planned — partial today):**
 At upload, each transaction is embedded and stored in pgvector. Query-time
 retrieval (embed question → cosine similarity → top-k context) is designed
-but not wired in `OpenRouterChatService` yet.
+but not wired in `OpenRouterChatService` yet. Chat today uses **full context
+injection** — every transaction line plus pre-computed monthly totals.
+
+**Why RAG matters at scale:** Full context works for typical bank CSVs
+(roughly ≤ 750 transactions). Above that ceiling, prompt size, latency, cost,
+and answer quality degrade; retrieval becomes necessary. The limit is
+documented, not enforced in code.
 
 ### Failure Handling
 
@@ -510,7 +530,9 @@ runtime, never from hardcoded values.
 | 9 | `MODEL_NARRATION` configured but unwired | Known | Narration tier provisioned in env/k8s but read by no code; anomaly/forecast narration not implemented |
 | 10 | Tooltip frosted-glass tints over dense colour | Known | `UniversalTooltip` is translucent; over fully-coloured Treemap tiles it picks up tile colour. Browser compositing limitation; accepted |
 | 11 | Query-time RAG not wired in chat | Deferred | Embeddings stored at upload; chat uses full statement context today |
-| 12 | Chat token streaming | Deferred | Single JSON response per message; no SSE/streaming |
+| 12 | ~750 transaction ceiling (architectural) | By design | Full context reliable ≤ ~750 txns; RAG required beyond; not enforced in code |
+| 13 | Chat token streaming | Deferred | Single JSON response per message; no SSE/streaming |
+| 14 | Early docs labelled chat as "RAG" | Corrected 29 May | Upload-half done; retrieval-half not implemented; diagrams updated |
 
 ---
 
@@ -553,6 +575,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 29 May 2026 — Week 5 chat intelligence (topN chart, 
-highlightTransactionIds, expanded system prompt, server-side topN fallback); 
-docs corrected for full-context chat vs query-time RAG, streaming deferred.*
+*Last updated: 29 May 2026 — diagram audit, categorization rules, 750-txn ceiling, RAG scope clarified, full-context chat documented.*

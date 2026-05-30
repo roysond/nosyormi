@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Friday, 29 May 2026 — topN chart, chat prompt/fallback, docs aligned to full-context chat (RAG deferred)
+> Last updated: Friday, 29 May 2026 — diagram audit, categorization rules, RAG/750-txn limit documented
 
 ---
 
@@ -38,7 +38,7 @@ Upload bank statements or CSVs. The app categorizes spending, detects anomalies,
 |---|---|
 | Frontend | React 19 + TypeScript + Vite + react-router-dom + Recharts |
 | Backend | .NET 10 Web API — Clean Architecture (4 projects) |
-| Database | PostgreSQL 16 + pgvector (vector embeddings for RAG) |
+| Database | PostgreSQL 16 + pgvector (embeddings stored at upload; query-time RAG not wired) |
 | AI | OpenRouter — 3-tier model routing |
 | Embeddings | `openai/text-embedding-3-small` via OpenRouter |
 | Containerization | Docker Compose (local dev) + Minikube (submission deployment) |
@@ -47,7 +47,7 @@ Upload bank statements or CSVs. The app categorizes spending, detects anomalies,
 **Three-tier AI model routing (config) — current wiring status:**
 - `MODEL_LIGHT` = `openai/gpt-4o-mini` — CSV categorization (cheap, fast, per-transaction) — **wired** (`OpenRouterCategoryClassifier`)
 - `MODEL_NARRATION` = `anthropic/claude-sonnet-4-5` — narrative generation — **configured but NOT wired in code.** Defined in `.env`/`.env.docker`/`k8s/configmap.yaml` and reserved for anomaly/forecast narration, but no service reads it in the current build. Dead config, kept as a documented placeholder for the planned narration tier.
-- `MODEL_CHAT` = `anthropic/claude-sonnet-4-5` — chat/RAG responses — **wired** (`OpenRouterChatService`, `MaxTokens = 1500`)
+- `MODEL_CHAT` = `anthropic/claude-sonnet-4-5` — conversational chat (full context injection, not query-time RAG) — **wired** (`OpenRouterChatService`, `MaxTokens = 1500`)
 - `EMBEDDING_MODEL` = `openai/text-embedding-3-small` — vector embeddings — **wired** (`OpenRouterEmbeddingService`)
 
 ---
@@ -72,19 +72,21 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 **Upload pipeline (per CSV):**
 1. SHA-256 hash → duplicate check → reject 409 if exists
 2. CSV parsed → `ParsedTransactionRow[]`
-3. Each transaction → `MODEL_LIGHT` (OpenRouter) → category assigned
-4. Each transaction → `openai/text-embedding-3-small` → vector embedding stored in pgvector
-5. All transactions → `ZScoreAnomalyDetector` → `isAnomaly` flag set
+3. Each transaction → rule bypass OR `MODEL_LIGHT` (OpenRouter) → category assigned
+4. All transactions → `ZScoreAnomalyDetector` → `isAnomaly` flag set
+5. Each transaction → `openai/text-embedding-3-small` → vector embedding stored in pgvector
 6. Everything saved to PostgreSQL
 
-**Chat pipeline (full context — query-time RAG deferred):**
-1. Load all transactions for `statementId` from PostgreSQL
-2. Build structured context (`[ID:uuid]`, date, INCOME/EXPENSE, description, category, amount)
+**Chat pipeline (full context injection — NOT query-time RAG):**
+1. Load **all** transactions for `statementId` from PostgreSQL
+2. Build structured context: pre-computed monthly category totals + every transaction line (`[ID:uuid]`, date, INCOME/EXPENSE, description, category, amount, anomaly flag)
 3. Full conversation history + context + user message → `MODEL_CHAT` (claude-sonnet-4-5)
 4. Parse JSON response → `answer` + optional `chartUpdate`
 5. If user asked for top/biggest expenses but model omitted `topN`, server computes top-N expense IDs and forces `chartUpdate.type = "topN"`
 
-> Embeddings are written at upload into pgvector; similarity search at chat time is **not wired** yet.
+> **Not RAG today:** embeddings are written at upload into pgvector, but chat never embeds the user's question or runs similarity search. Query-time retrieval (Epic 6 story 26) is deferred.
+
+**~750 transaction architectural ceiling:** Full context injection works reliably for typical single-statement CSVs (roughly up to **~750 transactions**). Beyond that, prompt size, latency, cost, and answer quality degrade — **query-time RAG becomes necessary**. There is no hard cap in code; this is a documented architectural limit.
 
 **Chart types the AI can trigger:**
 - `pie` — spending distribution across categories
@@ -102,16 +104,18 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 **4 conceptual layers:**
 - Layer 1: Deterministic — CSV parsing, HTTP, persistence
 - Layer 2: Statistical — Z-score anomaly detection, weighted moving average forecasting
-- Layer 3: Semantic — pgvector embeddings, RAG retrieval
+- Layer 3: Semantic — pgvector embeddings at upload (**retrieval at chat time not wired**)
 - Layer 4: Reasoning — LLMs via OpenRouter (3 model tiers)
 
 ---
 
 ## 6. DATABASE SCHEMA
 
-**Statements** — `Id` (GUID), `FileName`, `FileHash` (SHA-256, unique index), `UploadedAt`, `TransactionCount`  
-**Transactions** — `Id`, `StatementId` (FK cascade), `TransactionDate`, `Description`, `Amount`, `Category`, `CategoryId` (FK), `IsAnomaly`, `Embedding` (vector), `CreatedAt`  
-**Categories** — `Id`, `Name`
+**Statements** — `Id` (GUID), `FileName`, `FileHash` (SHA-256, unique index), `UploadedAt`  
+**Transactions** — `Id`, `StatementId` (FK cascade), `TransactionDate`, `Description`, `Amount`, `CategoryId` (nullable FK), `IsAnomaly`, `Embedding` (vector 1536), `CreatedAt`  
+**Categories** — `Id`, `Name`, `IconKey` (optional)  
+
+> `TransactionCount` on API list responses is computed at query time (`COUNT`) — not a DB column.
 
 **Migrations applied (in order):**
 1. `InitialCreate`
@@ -119,8 +123,10 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 3. `AddEmbeddingToTransaction`
 4. `20260521031445_AddFileHashToStatement`
 
-**Category taxonomy (11 categories as of May 28):**
-Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Other
+**Category taxonomy (13 categories as of May 29):**
+Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Other
+
+**Rule-based categorization bypass (before MODEL_LIGHT):** Square terminal (`TST*`, `SQ *`) → Dining & Takeaway; DoorDash food orders (not DashPass) → Dining & Takeaway; subscription keywords → Subscriptions; ATM/cash keywords → ATM & Cash; Zelle/Payment ID → Transfers & Payments.
 
 ---
 
@@ -256,7 +262,7 @@ dotnet ef database update --project Nosyormi.Infrastructure --startup-project No
 ### `frontend/src/constants/palette.ts`
 Single source of truth for all colours. Change colours here ONLY.
 ```
-APP_COLORS[]              — 11-colour palette for pie/bar charts
+APP_COLORS[]              — 13-colour palette for pie/bar charts (13 categories)
 FORECAST_ACTUAL_COLOR     — #00637C (teal)
 FORECAST_PREDICTED_COLOR  — #f4a623 (amber)
 LINE_STROKE_COLOR         — #C9911A
@@ -335,8 +341,17 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - Expanded `OpenRouterChatService` system prompt (chart rules, IDs, merchant→category bar, mandatory topN phrases)
 - Server-side fallback: keyword match on user message → force `topN` with DB-sorted expense IDs
 - Transaction context lines: `[ID:uuid]`, `[INCOME]` / `[EXPENSE]`
-- Documentation corrected: chat = full context, not query-time pgvector RAG
+- Pre-computed monthly category totals injected at top of chat context (model must cite these figures, not self-sum)
+- AI reasoning accuracy rules + transfer/month comparison fixes in system prompt
+- Documentation corrected: chat = full context injection, **not** query-time pgvector RAG
 - QA: TC-19 (topN chart) added → **47** total tests (22 + 19 + 6)
+
+**May 29 — categorization & charts:**
+- Added categories: `Transfers & Payments`, `ATM & Cash` (taxonomy → 13)
+- Rule-based pre-classification: subscriptions, ATM/cash, Zelle/transfers, Square TST*/SQ* → Dining, DoorDash food vs DashPass split
+- Chart UI: draggable chat/chart divider, anomaly colour `#DC2626` via `palette.ts`, chart height/sort/tooltip polish
+- All **6 architectural diagrams** in `docs/diagrams/` regenerated to match current codebase (React 19, upload order, full-context chat, API shapes, deployment tags)
+- Documented **~750 transaction ceiling** — full context works below this; RAG required beyond it
 
 ---
 
@@ -352,8 +367,10 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 8. **ChatPage god component** — SRP violation acknowledged. Chart renderers should be extracted into separate components. Accepted tradeoff under deadline.
 9. **Tooltip backdrop-filter** — Frosted glass effect visible when tooltip overlaps coloured slices (most noticeable on the Treemap, where tiles are fully coloured). Appears cleaner over white/light backgrounds. Browser compositing limitation — accepted.
 10. **`MODEL_NARRATION` not wired** — The narration model tier is provisioned in config (`.env`, `.env.docker`, `k8s/configmap.yaml`) but no code reads it. Anomaly/forecast narration is not implemented in the current build; categorization uses `MODEL_LIGHT` and chat uses `MODEL_CHAT`.
-11. **Query-time RAG not wired** — Embeddings stored at upload; chat uses full statement context.
-12. **Chat streaming** — Non-streaming JSON response per message.
+11. **Query-time RAG not wired** — Embeddings stored at upload; chat loads the **entire** statement as text context. No embed-query → pgvector search → top-K retrieval step exists in `OpenRouterChatService`.
+12. **~750 transaction ceiling (architectural, not enforced)** — Full context injection is reliable for typical single-statement CSVs (~750 transactions or fewer). Beyond that, prompt size, latency, cost, and answer quality degrade; query-time RAG (story 26) becomes necessary. No upload or chat rejection at 750 — this is a documented design limit, not runtime validation.
+13. **Chat streaming** — Non-streaming JSON response per message.
+14. **Misleading “RAG” labelling in early docs/diagrams** — Corrected 29 May 2026. Upload half of RAG (embed + store) is done; retrieval half is not.
 
 ---
 
@@ -365,7 +382,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - [ ] Demo video (3-5 minutes, story-driven)
 
 **UI POLISH (remaining):**
-- [ ] Draggable divider between chat and chart panels
+- [x] Draggable divider between chat and chart panels *(done 29 May)*
 - [ ] Typing animation — emerald/gold gradient dots on AI thinking bubble
 - [ ] Vibrancy Glass on Treemap tiles
 - [ ] Upload pulse animation during CSV processing
@@ -375,6 +392,10 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 ## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
+docs: update all 6 architectural diagrams to match current application state
+feat(categorization): pre-classify Square TST*/SQ* as Dining, DoorDash food vs DashPass split
+feat(chat): fix AI reasoning accuracy rule, transfer summary month identification
+feat(categorization): subscriptions, ATM & Cash, Transfers & Payments; 13-category taxonomy
 feat(chat): topN chart type, highlightTransactionIds, server-side topN fallback, expanded system prompt
 chore(cleanup): remove StatementDetailPage + /dashboard/:id route + View Details link
 feat(dashboard): date-range filter (All Time / month / custom) + useCountUp zero-snap fix
@@ -409,7 +430,7 @@ feat(ui): Glass Slice donuts, Pill Green bars, Jewel bars, chart effects complet
 > 
 > In NOSYOR.M.I, the .NET Web API coordinates:
 > - OpenRouter (categorization, chat, narration)
-> - pgvector (embedding storage + similarity search)  
+> - pgvector (embedding storage at upload; query-time similarity search **not wired in chat**)  
 > - ZScoreAnomalyDetector (statistical analysis)
 > - MovingAverageForecastingService (time-series prediction)
 > - PostgreSQL (persistence)
