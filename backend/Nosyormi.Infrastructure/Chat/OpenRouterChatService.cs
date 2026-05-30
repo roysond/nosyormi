@@ -35,7 +35,7 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
-        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
