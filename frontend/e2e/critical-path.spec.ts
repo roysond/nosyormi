@@ -57,8 +57,10 @@ test.describe('NOSYOR.M.I Critical Path', () => {
     // Upload button visible
     await expect(page.getByRole('button', { name: '+ Upload Statement' })).toBeVisible();
 
-    // At least one statement card visible
-    await expect(page.getByText('sample_statement.csv')).toBeVisible({ timeout: 5000 });
+    // Filename in the statements list card (<p> in main), not the sidebar pill (<div> in aside)
+    await expect(
+      page.getByRole('main').locator('p').filter({ hasText: 'sample_statement.csv' }),
+    ).toBeVisible({ timeout: 5000 });
   });
 
   test('TC-E2E-05: Chat page loads with spending overview', async ({ page }) => {
