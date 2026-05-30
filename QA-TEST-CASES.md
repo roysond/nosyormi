@@ -2,14 +2,41 @@
 
 > Manual test cases for submission. Each case documents the action taken,
 > expected result, and actual result observed during testing.
-> All tests performed against: http://localhost:5173 (frontend) 
-> and http://localhost:5034 (backend API).
-> Test date: 21 May 2026 · Revised 29 May 2026
+> Environment: http://localhost:5173 (frontend) · http://localhost:5034 (backend API)  
+> Postgres: localhost:5432 (Postgres.app, `pgvector` enabled)
+>
+> **Last full manual run:** 29 May 2026  
+> **Last regression check:** 30 May 2026 (Postgres online — automated suite + API spot checks; manual TC-01–TC-19 status unchanged)
 >
 > **Revision notes:**
 > - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
-> - **29 May 2026:** TC-14 extended for `topN`; TC-19 added for top-N fallback behaviour.
-> - **29 May 2026:** Documentation aligned — chat uses full context injection, not query-time RAG; ~750 txn architectural ceiling documented (no new test case — design limit, not runtime validation).
+> - **29 May 2026:** TC-19 added for `topN` chart / server fallback; documentation aligned (full-context chat, not query-time RAG).
+> - **30 May 2026:** Re-verified all automated tests with DB online; E2E TC-E2E-04 locator scoped to statement list `<p>` in `main` (excludes sidebar pill).
+
+---
+
+## Automated regression summary (30 May 2026)
+
+| Level | Location | Count | Result |
+|-------|----------|-------|--------|
+| Unit | `backend/Nosyormi.Tests` — anomaly, forecasting, CSV parser | 16 | ✅ Pass |
+| Integration | `backend/Nosyormi.Tests` — Statements API | 6 | ✅ Pass |
+| E2E | `frontend/e2e/critical-path.spec.ts` (Playwright) | 6 | ✅ Pass |
+| **Automated total** | | **22** | **✅ All pass** |
+
+**API spot checks (30 May 2026):** `GET /health` → 200 · duplicate CSV upload → 409 · non-CSV upload → 400
+
+**E2E ↔ manual overlap:** TC-E2E-01/02/03/04/05/06 cover Dashboard stats, sidebar (TC-17), Transactions list, Statements list/upload modal, and Chat shell — not a replacement for chat-AI or date-filter manual cases (TC-13–TC-16, TC-19).
+
+**Run commands:**
+
+```bash
+# Backend (load .env first)
+cd backend && dotnet test
+
+# E2E (app on :5173 and :5034; seed sample_statement.csv if DB empty)
+cd frontend && npx playwright test
+```
 
 ---
 
@@ -37,7 +64,7 @@
 4. Click "Reflect on this statement"
 
 **Expected:** Error message shown: "This file has already been uploaded. Duplicate statements are not allowed."  
-**Actual:** ✅ Pass — 409 Conflict returned, error message displayed in modal.
+**Actual:** ✅ Pass — 409 Conflict returned, error message displayed in modal. *(API re-confirmed 30 May 2026: POST duplicate → 409.)*
 
 ---
 
@@ -50,7 +77,7 @@
 3. Select any `.txt` or `.pdf` file
 
 **Expected:** Error message: "Only .csv files are supported."  
-**Actual:** ✅ Pass — file rejected before upload attempt, error shown in modal.
+**Actual:** ✅ Pass — file rejected before upload attempt, error shown in modal. *(API re-confirmed 30 May 2026: POST non-CSV → 400.)*
 
 ---
 
@@ -60,8 +87,8 @@
 **Steps:**
 1. Navigate to Dashboard
 
-**Expected:** Dashboard shows Total Income, Total Expenses, NET, Anomalies stat cards. Donut chart renders with spending categories. Transaction list shows below.  
-**Actual:** ✅ Pass — all stat cards populated, donut chart rendered, transactions listed correctly.
+**Expected:** Dashboard shows **Total Income**, **Total Expenses**, **Net**, and **Anomalies** stat cards. Donut chart renders with spending categories. Transaction list shows below.  
+**Actual:** ✅ Pass — all stat cards populated, donut chart rendered, transactions listed correctly. *(Re-confirmed 30 May 2026 via TC-E2E-01.)*
 
 ---
 
@@ -238,7 +265,7 @@
 1. Click each sidebar item: Dashboard, Transactions, Statements, NOSYOR.M.I Chat
 
 **Expected:** Each click navigates to the correct page. Active item highlighted with the gold accent (`#E8C96A`) and icon glow.  
-**Actual:** ✅ Pass — all navigation working, active state correct.
+**Actual:** ✅ Pass — all navigation working, active state correct. *(Re-confirmed 30 May 2026 via TC-E2E-02.)*
 
 ---
 
@@ -248,9 +275,18 @@
 **Steps:**
 1. Open browser and navigate to http://localhost:5034/health
 
-**Expected:** Returns 200 OK.  
-**Actual:** ✅ Pass — health endpoint responds correctly.
+**Expected:** Returns 200 OK with healthy status JSON.  
+**Actual:** ✅ Pass — `GET /health` returns 200 (`{"status":"healthy",...}`). *(Re-confirmed 30 May 2026.)*
 
 ---
 
-*Total: 19 test cases | Passed: 19 | Failed: 0*
+## Summary
+
+| Suite | Cases | Passed | Failed | Last verified |
+|-------|-------|--------|--------|---------------|
+| Manual QA (this document) | 19 | 19 | 0 | 29 May 2026 (full) · 30 May 2026 (no regressions; API/E2E spot checks) |
+| Unit + integration (`dotnet test`) | 22 | 22 | 0 | 30 May 2026 |
+| E2E Playwright (`critical-path.spec.ts`) | 6 | 6 | 0 | 30 May 2026 |
+| **Grand total (submission)** | **47** | **47** | **0** | 30 May 2026 |
+
+**Sample data:** `sample-data/sample_statement.csv` (32 transactions) — used for upload, anomaly (Uber Eats), and E2E tests.
