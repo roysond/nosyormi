@@ -39,6 +39,20 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
         // Pre-classify known patterns to bypass AI for high-confidence cases
         var upperDesc = description.ToUpperInvariant();
 
+        // Square terminal payments (TST*) are almost always cafes, restaurants, or food vendors
+        if (upperDesc.StartsWith("TST*") || upperDesc.StartsWith("SQ *"))
+        {
+            return new CategoryResult("Dining & Takeaway", 0.95f);
+        }
+
+        // DoorDash food orders (not DashPass) are dining
+        if ((upperDesc.Contains("DOORDASH") || upperDesc.Contains("DD *DOORDASH")) &&
+            !upperDesc.Contains("DASHPASS") &&
+            !upperDesc.Contains("DASH PASS"))
+        {
+            return new CategoryResult("Dining & Takeaway", 0.95f);
+        }
+
         if (upperDesc.Contains("DASHPASS") ||
             upperDesc.Contains("DASH PASS") ||
             upperDesc.Contains("AMAZON PRIME") ||
