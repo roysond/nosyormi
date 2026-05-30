@@ -24,6 +24,8 @@ public static class CategoryTaxonomy
         "Healthcare",
         "Entertainment",
         "Dining & Takeaway",
+        "Transfers & Payments",
+        "ATM & Cash",
         "Other",
     ];
 }

@@ -127,6 +127,7 @@ export default function ChatPage() {
   const [inputFocused, setInputFocused] = useState(false);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
   const [chatWidth, setChatWidth] = useState(55);
+  const [hoveredStackCategory, setHoveredStackCategory] = useState<string | null>(null);
   const isDragging = useRef(false);
   const dragStartX = useRef(0);
   const dragStartWidth = useRef(55);
@@ -670,6 +671,9 @@ export default function ChatPage() {
                 <YAxis
                   tick={{ fill: '#64748B', fontSize: 11 }}
                   stroke="#E2E8F0"
+                  tickCount={5}
+                  allowDecimals={false}
+                  domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.2) / 10) * 10]}
                 />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 {isDrillDown ? (
@@ -898,7 +902,7 @@ export default function ChatPage() {
       return (
         <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={480}>
+            <ResponsiveContainer width="100%" height={560}>
               <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
@@ -916,7 +920,33 @@ export default function ChatPage() {
                   allowDecimals={false}
                   domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 50) * 50]}
                 />
-                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const target = hoveredStackCategory
+                      ? payload.find((e: any) => e.dataKey === hoveredStackCategory)
+                      : payload[payload.length - 1];
+                    if (!target || Number(target.value) === 0) return null;
+                    return (
+                      <div style={{
+                        background: 'white',
+                        border: `2px solid ${target.color}`,
+                        borderRadius: 8,
+                        padding: '10px 14px',
+                        fontSize: 12,
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+                        minWidth: 160,
+                      }}>
+                        <div style={{ color: '#64748B', marginBottom: 4, fontSize: 11 }}>{label}</div>
+                        <div style={{ color: target.color, fontWeight: 700, fontSize: 14 }}>{target.name}</div>
+                        <div style={{ color: '#1E293B', fontWeight: 600, marginTop: 2 }}>
+                          ${Number(target.value).toFixed(2)}
+                        </div>
+                      </div>
+                    );
+                  }}
+                  wrapperStyle={{ zIndex: 9999 }}
+                />
                 <Legend />
                 {categories.map((cat, index) => (
                   <Bar
@@ -925,6 +955,8 @@ export default function ChatPage() {
                     stackId="a"
                     fill={APP_COLORS[index % APP_COLORS.length]}
                     shape={<JewelBar />}
+                    onMouseEnter={() => setHoveredStackCategory(cat)}
+                    onMouseLeave={() => setHoveredStackCategory(null)}
                   />
                 ))}
               </BarChart>
@@ -950,10 +982,7 @@ export default function ChatPage() {
                   tick={{ fill: '#64748B', fontSize: 11 }}
                   stroke="#E2E8F0"
                   tickCount={5}
-                  domain={[
-                    (dataMin: number) => Math.floor(dataMin * 0.7 / 10) * 10,
-                    (dataMax: number) => Math.ceil(dataMax * 1.1 / 50) * 50,
-                  ]}
+                  domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.1 / 50) * 50]}
                 />
                 <YAxis type="category" dataKey="name" tick={{ fill: '#64748B', fontSize: 11 }} width={75} />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
@@ -1082,17 +1111,14 @@ export default function ChatPage() {
                 stroke="#E2E8F0"
                 tickCount={5}
                 allowDecimals={false}
-                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 50) * 50]}
+                domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.2) / 10) * 10]}
               />
               <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
               <Bar
                 dataKey="value"
                 shape={(props: any) => <AnomalyBar {...props} isAnomaly={topData[props.index]?.isAnomaly} />}
-              >
-                {topData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Bar>
+                fill="#00637C"
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

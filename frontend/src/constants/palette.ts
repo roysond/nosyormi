@@ -3,17 +3,19 @@
 // Add or remove colours from this array freely — effects will pick them up automatically.
 
 export const APP_COLORS = [
-  '#00637C', // dark teal
-  '#38c9b0', // mint
-  '#f4a623', // amber
-  '#9b7fe8', // violet
-  '#e8607a', // rose
-  '#5ad97a', // lime
-  '#f97316', // orange
-  '#a855f7', // purple
-  '#ec4899', // pink
-  '#14b8a6', // teal
-  '#0891B2', // sky
+  '#59A14F', // Food & Groceries
+  '#F28E2B', // Transport & Fuel
+  '#EDC948', // Parking & Tolls
+  '#FF9DA7', // Subscriptions
+  '#4E79A7', // Shopping
+  '#B07AA1', // Utilities & Bills
+  '#BCBD22', // Income
+  '#E15759', // Healthcare
+  '#17BECF', // Entertainment
+  '#76B7B2', // Dining & Takeaway
+  '#7B4F9E', // Transfers & Payments
+  '#9C755F', // ATM & Cash
+  '#BAB0AC', // Other
 ];
 
 export const FORECAST_ACTUAL_COLOR = '#00637C';
