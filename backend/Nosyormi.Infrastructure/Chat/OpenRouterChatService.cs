@@ -35,6 +35,7 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
@@ -150,13 +151,45 @@ public class OpenRouterChatService : IChatService
     private static string BuildTransactionContext(IReadOnlyList<Transaction> transactions)
     {
         var builder = new StringBuilder();
-        builder.AppendLine("Here is the user's transaction data:");
 
+        // Pre-compute monthly category totals for accurate AI summarization
+        var monthlySummary = transactions
+            .Where(t => t.Amount < 0)
+            .GroupBy(t => new {
+                Year = t.TransactionDate.Year,
+                Month = t.TransactionDate.Month,
+                Category = t.Category?.Name ?? "Uncategorized"
+            })
+            .Select(g => new {
+                Period = $"{new DateTime(g.Key.Year, g.Key.Month, 1):MMM yyyy}",
+                g.Key.Category,
+                Total = g.Sum(t => Math.Abs(t.Amount))
+            })
+            .OrderBy(x => x.Period)
+            .ThenBy(x => x.Category)
+            .ToList();
+
+        builder.AppendLine("=== PRE-COMPUTED MONTHLY CATEGORY TOTALS (use these exact figures when citing amounts) ===");
+        var periods = monthlySummary.Select(x => x.Period).Distinct().OrderBy(x => x);
+        foreach (var period in periods)
+        {
+            var periodItems = monthlySummary.Where(x => x.Period == period).ToList();
+            var periodTotal = periodItems.Sum(x => x.Total);
+            builder.AppendLine($"[{period}] Total: ${periodTotal:F2}");
+            foreach (var item in periodItems)
+            {
+                builder.AppendLine($"  - {item.Category}: ${item.Total:F2}");
+            }
+        }
+        builder.AppendLine("=== END OF SUMMARY ===");
+        builder.AppendLine();
+
+        // Individual transaction lines
+        builder.AppendLine("Here is the user's transaction data:");
         foreach (var transaction in transactions)
         {
             var category = transaction.Category?.Name ?? "Uncategorized";
             var anomalyTag = transaction.IsAnomaly ? " [ANOMALY]" : string.Empty;
-
             var direction = transaction.Amount >= 0 ? "INCOME" : "EXPENSE";
             var absAmount = Math.Abs(transaction.Amount);
             builder.AppendLine(

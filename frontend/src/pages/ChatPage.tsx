@@ -642,7 +642,7 @@ export default function ChatPage() {
           style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={isDrillDown ? 520 : 280}>
               <BarChart
                 data={barData}
                 margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
@@ -717,7 +717,7 @@ export default function ChatPage() {
           style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={380}>
+            <ResponsiveContainer width="100%" height={580}>
               <LineChart data={lineData}>
                 <defs>
                   <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
@@ -884,7 +884,13 @@ export default function ChatPage() {
             return `${d.toLocaleString('default', { month: 'short' })} ${d.getFullYear()}`;
           }),
         ),
-      ).sort();
+      ).sort((a, b) => {
+        const monthOrder = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const [aMonth, aYear] = a.split(' ');
+        const [bMonth, bYear] = b.split(' ');
+        if (aYear !== bYear) return Number(aYear) - Number(bYear);
+        return monthOrder.indexOf(aMonth) - monthOrder.indexOf(bMonth);
+      });
       const categories = Array.from(new Set(expenses.map((t) => t.category || 'Other')));
       const stackedData = months.map((month) => {
         const row: Record<string, string | number> = { month };
@@ -902,7 +908,7 @@ export default function ChatPage() {
       return (
         <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={560}>
+            <ResponsiveContainer width="100%" height={620}>
               <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis
@@ -927,6 +933,7 @@ export default function ChatPage() {
                       ? payload.find((e: any) => e.dataKey === hoveredStackCategory)
                       : payload[payload.length - 1];
                     if (!target || Number(target.value) === 0) return null;
+                    const monthTotal = payload.reduce((sum: number, e: any) => sum + Number(e.value), 0);
                     return (
                       <div style={{
                         background: 'white',
@@ -941,6 +948,15 @@ export default function ChatPage() {
                         <div style={{ color: target.color, fontWeight: 700, fontSize: 14 }}>{target.name}</div>
                         <div style={{ color: '#1E293B', fontWeight: 600, marginTop: 2 }}>
                           ${Number(target.value).toFixed(2)}
+                        </div>
+                        <div style={{
+                          color: '#94A3B8',
+                          fontSize: 11,
+                          marginTop: 6,
+                          borderTop: '1px solid #F1F5F9',
+                          paddingTop: 6
+                        }}>
+                          Month total: ${monthTotal.toFixed(2)}
                         </div>
                       </div>
                     );
@@ -974,7 +990,7 @@ export default function ChatPage() {
       return (
         <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={Math.max(420, hData.length * 72)}>
+            <ResponsiveContainer width="100%" height={Math.max(520, hData.length * 80)}>
               <BarChart data={hData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
                 <XAxis
@@ -1102,7 +1118,7 @@ export default function ChatPage() {
 
       return (
         <div key="topN" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
-          <ResponsiveContainer width="100%" height={360}>
+          <ResponsiveContainer width="100%" height={560}>
             <BarChart data={topData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis dataKey="id" tick={<TopNTick />} height={90} interval={0} />
@@ -1498,11 +1514,10 @@ export default function ChatPage() {
             flex: 1,
             minHeight: 0,
             overflowX: 'hidden',
+            overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: '100%',
+            paddingTop: 12,
           }}
         >
           {renderChart()}
