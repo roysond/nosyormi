@@ -22,4 +22,4 @@ export const FORECAST_ACTUAL_COLOR = '#00637C';
 export const FORECAST_PREDICTED_COLOR = '#f4a623';
 export const LINE_STROKE_COLOR = '#C9911A';
 export const LINE_FILL_COLOR = 'rgba(0,99,124,0.28)';
-export const ANOMALY_COLOR = '#F59E0B';
+export const ANOMALY_COLOR = '#D97706';

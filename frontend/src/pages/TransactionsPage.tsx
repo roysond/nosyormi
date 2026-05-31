@@ -425,7 +425,7 @@ export default function TransactionsPage() {
             borderRadius: 8,
             borderBottom: '1px solid #F1F5F9',
             background: tx.isAnomaly
-              ? 'rgba(245,158,11,0.06)'
+              ? 'rgba(217,119,6,0.06)'
               : isExpanded
                 ? '#F4F7F9'
                 : 'white',
@@ -533,8 +533,8 @@ export default function TransactionsPage() {
     >
       <style>{`
         @keyframes chat-anomaly-pulse {
-          0%, 100% { box-shadow: inset 0 0 0 0 rgba(245,158,11,0); }
-          50% { box-shadow: inset 0 0 22px rgba(245,158,11,0.22); }
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(217,119,6,0); }
+          50% { box-shadow: inset 0 0 22px rgba(217,119,6,0.22); }
         }
         @keyframes anomalyDotPulse {
           0%, 100% { opacity: 0.5; transform: scale(1); }

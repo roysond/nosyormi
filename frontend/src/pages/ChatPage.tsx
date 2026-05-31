@@ -841,7 +841,7 @@ export default function ChatPage() {
                 alignItems: 'center',
                 padding: '12px 10px',
                 marginBottom: 8,
-                background: 'rgba(245,158,11,0.06)',
+                background: 'rgba(217,119,6,0.06)',
                 borderRadius: 4,
               }}
             >
@@ -1198,8 +1198,8 @@ export default function ChatPage() {
           40% { opacity: 1; transform: scale(1); }
         }
         @keyframes chat-anomaly-pulse {
-          0%, 100% { box-shadow: inset 0 0 0 0 rgba(245,158,11,0); }
-          50% { box-shadow: inset 0 0 22px rgba(245,158,11,0.22); }
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(217,119,6,0); }
+          50% { box-shadow: inset 0 0 22px rgba(217,119,6,0.22); }
         }
         @keyframes loadingBorderSpin {
           0% { background-position: 0% 50%; }

@@ -470,7 +470,7 @@ export default function DashboardPage() {
         padding: '12px 16px',
         borderRadius: 6,
         borderBottom: '1px solid #F1F5F9',
-        background: tx.isAnomaly ? 'rgba(245,158,11,0.06)' : 'white',
+        background: tx.isAnomaly ? 'rgba(217,119,6,0.06)' : 'white',
         ...(tx.isAnomaly
           ? { animation: 'chat-anomaly-pulse 2s ease-in-out infinite' }
           : {}),
@@ -607,8 +607,8 @@ export default function DashboardPage() {
           50% { opacity: 1; }
         }
         @keyframes chat-anomaly-pulse {
-          0%, 100% { box-shadow: inset 0 0 0 0 rgba(245,158,11,0); }
-          50% { box-shadow: inset 0 0 22px rgba(245,158,11,0.22); }
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(217,119,6,0); }
+          50% { box-shadow: inset 0 0 22px rgba(217,119,6,0.22); }
         }
         @keyframes chartFadeIn {
           from { opacity: 0; transform: translateY(8px); }
