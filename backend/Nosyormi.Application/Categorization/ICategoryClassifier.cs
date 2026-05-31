@@ -26,6 +26,7 @@ public static class CategoryTaxonomy
         "Dining & Takeaway",
         "Transfers & Payments",
         "ATM & Cash",
+        "Education",
         "Other",
     ];
 }

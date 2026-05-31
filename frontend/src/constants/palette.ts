@@ -15,6 +15,7 @@ export const APP_COLORS = [
   '#76B7B2', // Dining & Takeaway
   '#7B4F9E', // Transfers & Payments
   '#9C755F', // ATM & Cash
+  '#06B6D4', // Education
   '#BAB0AC', // Other
 ];
 
