@@ -182,8 +182,6 @@ handle the kind of work they are best suited for.
   each request — not query-time pgvector similarity search. Embeddings are
   generated and stored at upload (semantic layer foundation); live RAG retrieval
   remains deferred (Epic 6 story 26).
-- Token streaming to the frontend is **not implemented**; chat returns a
-  complete JSON response per message.
 - **~750 transaction ceiling:** full-context chat is architecturally reliable
   for typical single-statement CSVs (≤ ~750 transactions). Beyond that, query-time
   RAG becomes necessary. Not enforced in code — documented design limit.
@@ -193,8 +191,23 @@ handle the kind of work they are best suited for.
   Square TST*/SQ*, DoorDash food vs DashPass; taxonomy → 13 categories
 - ✅ Chat: pre-computed monthly totals in context; AI reasoning accuracy rules;
   transfer/month comparison prompt fixes
-- ✅ Chart UI: draggable chat/chart divider, anomaly colour `#DC2626`, height/sort polish
+- ✅ Chart UI: draggable chat/chart divider, height/sort polish
 - ✅ All 6 architectural diagrams in `docs/diagrams/` regenerated to match codebase
+
+---
+
+### Week 6 (May 30) — Streaming, QA, CSV & anomaly polish
+
+**Completed:**
+- ✅ **SSE chat streaming** — `StreamChatAsync` + `ChatController` (`text/event-stream`); frontend `ReadableStream` reader; word-by-word answer display after full JSON parse
+- ✅ **CamelCase SSE payloads** — all chat events serialized with `JsonOptions` (`chartUpdate.highlightTransactionIds`, etc.)
+- ✅ **Unified anomaly styling** — amber `#D97706` / `rgba(217,119,6,...)`; inner-glow `chat-anomaly-pulse` on rows (no red borders); `ANOMALY_COLOR` in `palette.ts`
+- ✅ **CSV description fallback** — `ParseDescription` uses Memo when Payee Name is empty (e.g. ATM cash deposits)
+- ✅ **QA regression** — 47/47 tests documented pass (22 automated + 19 manual + 6 E2E); E2E TC-E2E-04 locator fixed for statement list
+
+**Submission still pending:**
+- ⏳ PowerPoint deck (story #60)
+- ⏳ Product demo video / Animaker (story #63)
 
 ---
 
@@ -272,7 +285,7 @@ Stories are listed by epic. Status reflects the state at submission.
 | # | Story | Tier | Status |
 |---|---|---|---|
 | 31 | Build chat API endpoint with full-context LLM pipeline | Major | ✅ Done (query-time RAG deferred) |
-| 32 | Implement streaming token delivery to frontend | Major | ❌ Not Started (non-streaming JSON response; deferred) |
+| 32 | Implement streaming token delivery to frontend | Major | ✅ Done (SSE: OpenRouter stream → parse JSON → word-by-word answer + chart/done events) |
 | 33 | Design guardrailed system prompt for financial scope | Major | ✅ Done |
 | 34 | Build chartUpdate JSON contract for AI-driven visualizations | Major | ✅ Done |
 | 35 | Implement witty on-brand deflections for off-topic queries | Additive | ✅ Done |
@@ -382,8 +395,18 @@ The `chartUpdate` contract is defined in the system prompt:
   }
 }
 ```
-The API returns this shape directly (not markdown-wrapped). The frontend
-renders `chartUpdate` in the chart panel. Types grew from five (MVP) to
+The model returns this shape inside its JSON response (not markdown-wrapped).
+After the OpenRouter stream completes, the API parses `answer` and `chartUpdate`,
+then delivers them to the browser over **Server-Sent Events**:
+
+| Event `type` | Payload | Purpose |
+|---|---|---|
+| `text` | `{ content: "word " }` | Parsed answer streamed word-by-word (~18ms delay) |
+| `chart` | `{ chartUpdate: {...} }` | Chart panel update (camelCase via `JsonOptions`) |
+| `done` | — | Stream complete |
+| `error` | `{ message: "..." }` | Graceful fallback |
+
+The frontend renders `chartUpdate` in the chart panel. Types grew from five (MVP) to
 nine (`topN` added Week 5). A server-side fallback forces `topN` with
 computed `highlightTransactionIds` when the user asks for biggest/top
 transactions but the model omits the chart.
@@ -414,8 +437,8 @@ documented, not enforced in code.
 
 ### Failure Handling
 
-- **Rate limits:** OpenRouter errors are caught and return a structured
-  error response with a user-friendly message
+- **Rate limits:** OpenRouter errors are caught; chat emits an SSE `error`
+  event with a user-friendly message
 - **Hallucination guardrails:** The system prompt explicitly instructs
   the AI not to invent transaction data. RAG retrieval provides the
   factual grounding
@@ -531,7 +554,7 @@ runtime, never from hardcoded values.
 | 10 | Tooltip frosted-glass tints over dense colour | Known | `UniversalTooltip` is translucent; over fully-coloured Treemap tiles it picks up tile colour. Browser compositing limitation; accepted |
 | 11 | Query-time RAG not wired in chat | Deferred | Embeddings stored at upload; chat uses full statement context today |
 | 12 | ~750 transaction ceiling (architectural) | By design | Full context reliable ≤ ~750 txns; RAG required beyond; not enforced in code |
-| 13 | Chat token streaming | Deferred | Single JSON response per message; no SSE/streaming |
+| 13 | Chat streaming model | By design | OpenRouter streams to API; client receives parsed answer word-by-word via SSE (not raw JSON tokens) |
 | 14 | Early docs labelled chat as "RAG" | Corrected 29 May | Upload-half done; retrieval-half not implemented; diagrams updated |
 
 ---
@@ -575,4 +598,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 29 May 2026 — diagram audit, categorization rules, 750-txn ceiling, RAG scope clarified, full-context chat documented.*
+*Last updated: 30 May 2026 — SSE streaming, unified anomaly styling (#D97706), CSV memo fallback, QA 47/47, submission status.*

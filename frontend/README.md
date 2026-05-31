@@ -2,7 +2,7 @@
 
 React 19 + TypeScript single-page app built with Vite. Talks to the .NET API over HTTP; renders financial charts with Recharts and a shared visual system (`palette.ts` + `chartEffects.tsx`).
 
-> **Chat context note:** The frontend calls `POST /api/chat/{statementId}`. The backend injects the **full statement** as LLM context (not query-time pgvector RAG). Reliable for roughly ≤ 750 transactions per statement under current architecture.
+> **Chat:** `POST /api/chat/{statementId}` returns **Server-Sent Events** (`text/event-stream`). The backend buffers the OpenRouter stream, parses JSON (`answer` + `chartUpdate`), then streams the parsed answer word-by-word. Chart updates arrive in a separate `chart` event. Full statement context is injected server-side (not query-time pgvector RAG; reliable for roughly ≤ 750 transactions).
 
 ---
 
@@ -13,7 +13,7 @@ React 19 + TypeScript single-page app built with Vite. Talks to the .NET API ove
 | `/` | `DashboardPage` | Stat cards, donut chart, spending/income tabs, date-range filter |
 | `/transactions` | `TransactionsPage` | Search, category filter, sort, expandable rows, anomaly badges |
 | `/statements` | `StatementsPage` | Upload CSV, list statements, delete with confirmation |
-| `/chat` | `ChatPage` | AI chat + dynamic chart panel (9 chart types) |
+| `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types) |
 
 ---
 
@@ -37,15 +37,24 @@ npx playwright test   # E2E — requires app running
 
 ---
 
-## Chat visualization contract
+## Chat SSE contract
 
-The chat endpoint returns `{ answer, chartUpdate }`. Supported `chartUpdate.type` values:
+The chat endpoint streams events (not a single JSON body):
+
+| Event `type` | Purpose |
+|---|---|
+| `text` | Parsed answer fragment (`content` — typically one word + space) |
+| `chart` | `{ chartUpdate }` — camelCase fields (`highlightTransactionIds`, etc.) |
+| `done` | Stream finished |
+| `error` | User-friendly fallback message |
+
+Supported `chartUpdate.type` values:
 
 `pie` · `bar` · `line` · `anomalies` · `forecast` · `stacked` · `horizontal` · `treemap` · `topN`
 
 Optional fields: `category` (scopes bar drilldown), `highlightTransactionIds` (for `topN` and anomaly highlights).
 
-Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffects.tsx`.
+Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffects.tsx`, `chartEffects.css`.
 
 ---
 
@@ -60,11 +69,12 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 - Content background: `#F4F7F9` · Cards: `#FFFFFF` with soft shadow
 - Sidebar: `#071A1E` · Active nav: `#E8C96A`
-- UI chrome accent: `#071A1E` · Line chart stroke: `#C9911A` · Anomaly: `#DC2626`
+- UI chrome accent: `#071A1E` · Line chart stroke: `#C9911A`
+- Anomaly highlight: `#D97706` (`ANOMALY_COLOR`) — inner-glow row pulse; expense amounts stay `#EF4444`
 
 ---
 
-*Last updated: 29 May 2026*
+*Last updated: 30 May 2026*
 
 ## Related docs
 

@@ -361,6 +361,20 @@ honestly after reviewing the architecture with Claude.
 **Diagrams corrected (29 May):** All six PNGs in `docs/diagrams/` were
 regenerated so submission materials no longer imply pgvector retrieval is active.
 
+### SSE streaming (30 May)
+
+The capstone required streaming so the chat does not feel frozen. The model
+returns a **JSON object** (`answer` + `chartUpdate`), not plain sentences.
+Streaming raw tokens to the browser would have shown `{` and `"answer"` on screen.
+
+The fix: let OpenRouter stream into a `StringBuilder` on the server, parse the
+complete JSON with the existing `ParseChatResponse` logic, then send the
+**parsed answer** to the frontend one word at a time over Server-Sent Events.
+The chart update arrives in a separate `chart` event after the words finish.
+
+Lesson: “streaming” in a product can mean streaming *parsed output*, not
+necessarily streaming the model’s raw bytes.
+
 ---
 
 ## The Most Important Thing I Learned
@@ -386,4 +400,4 @@ learning came first. The speed came after.
 
 ---
 
-*Last updated: 29 May 2026 — diagram audit, 750-txn ceiling, RAG scope clarified, categorization rules.*
+*Last updated: 30 May 2026 — SSE streaming, anomaly styling, CSV memo fallback.*

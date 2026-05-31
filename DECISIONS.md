@@ -99,11 +99,23 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Transaction IDs in chat context | `[ID:uuid]` on every line | Enables highlights and auditability; avoids date-as-ID mistakes |
 | Merchant questions | `bar` + `category` for the merchant's bucket | Shows all transactions in that category as separate bars |
 | Query-time RAG | Deferred | Embeddings stored at upload; full context sufficient for MVP statement sizes (≤ ~750 txns) |
-| Token streaming | Deferred | Simpler JSON request/response; no SSE in `ChatController` |
+| Chat delivery (SSE) | Stream → parse JSON → word-by-word `text` events | Meets capstone “no frozen spinner”; keeps valid `chartUpdate` parsing |
 | Architectural diagrams | Regenerated in `docs/diagrams/` | Corrected to match codebase: React 19, upload order, full-context chat, API response shapes |
 | Categorization rules | Rule bypass before MODEL_LIGHT | Subscriptions, ATM/cash, transfers, Square TST*, DoorDash food — reduces LLM calls and mislabels |
 | Category taxonomy | 13 categories | Added Transfers & Payments, ATM & Cash for real bank statement patterns |
 
 ---
 
-*Last updated: 29 May 2026 — diagram audit, 750-txn ceiling, categorization rules, RAG scope clarified*
+## Week 6 Decisions (30 May 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| SSE chat streaming | `StreamChatAsync` + `ReadableStream` on frontend | Capstone streaming requirement; progressive answer display |
+| Stream parsing order | Buffer OpenRouter → `ParseChatResponse` → emit words | Model returns JSON object, not plain text — avoids showing raw JSON in UI |
+| SSE serialization | `JsonOptions` (camelCase) on all events | Frontend expects `highlightTransactionIds`, not PascalCase |
+| Anomaly colour | `#D97706` + inner-glow pulse | Unified amber highlight; expense amounts stay `#EF4444` |
+| CSV Payee/Memo | Memo used when Payee Name empty | Real bank exports (ATM deposits) had blank payee |
+
+---
+
+*Last updated: 30 May 2026 — SSE streaming, anomaly styling, CSV memo fallback, docs aligned*

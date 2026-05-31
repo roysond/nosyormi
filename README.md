@@ -17,7 +17,7 @@ It doesn't shame you. It doesn't moralize. It reflects.
 - **Automatic categorization** — every transaction sorted into 13 meaningful buckets (rule-based bypass + AI fallback) without manual tagging.
 - **Anomaly detection** — Z-score analysis flags unusual spends at upload time.
 - **Next-month forecasting** — weighted moving average projects spending by category.
-- **Conversational chat interface** — ask questions in plain English; the AI answers from your full statement context and updates live visualizations to match.
+- **Conversational chat interface** — ask questions in plain English; the AI answers from your full statement context, streams the reply word-by-word (SSE), and updates live visualizations to match.
 - **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
 - **Date-range analysis** — scope the Dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 
@@ -140,7 +140,7 @@ Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
 | **~750 transaction ceiling** | Full-context chat is architecturally reliable for typical single-statement CSVs (≤ ~750 rows). Beyond that, query-time RAG is required. Not enforced in code. |
 | **CSV only** | PDF ingestion deferred. |
 | **`MODEL_NARRATION` unwired** | Configured in env/k8s but no service reads it. |
-| **No chat streaming** | Complete JSON response per message. |
+| **Chat streaming (implementation detail)** | OpenRouter streams to the API; the server parses full JSON, then streams the **parsed answer** word-by-word to the client (not raw model tokens). |
 | **Chat history** | `sessionStorage` only — cleared on tab close. |
 
 See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--limitations) for the full list.
@@ -149,8 +149,9 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 
 ## Project status
 
-**In active development** · AI Integration Capstone · Solo build  
-**Target completion:** before 4 June 2026
+**Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
+**Target completion:** before 4 June 2026  
+**Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.
 

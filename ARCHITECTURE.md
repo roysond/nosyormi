@@ -135,7 +135,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 29 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. Token streaming is not implemented. The feature rows below marked "narration tier" describe intended design, not shipping code.
+> **Implementation status (as of 30 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. The feature rows below marked "narration tier" describe intended design, not shipping code.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -527,9 +527,19 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Category bar drilldown:** `chartUpdate.type = "bar"` with `category` set shows individual transactions within that category (not aggregated category totals) — used for merchant questions (e.g. Netflix → Subscriptions).
 - **RAG accuracy:** Chat loads **all** statement transactions per request; pgvector embeddings are written at upload but query-time similarity search is not implemented in chat yet.
 
-### 2026-05-29 — Streaming Deferred
+### 2026-05-30 — SSE Chat Streaming
 
-- **Finding:** `ChatController` returns a complete `ChatResponse` JSON payload. No SSE or chunked token delivery. Story marked deferred in project documentation.
+- **Decision:** Replace `ChatAsync` with `StreamChatAsync`. `ChatController` sets `Content-Type: text/event-stream`. OpenRouter called with `"stream": true`; deltas accumulated server-side until `[DONE]`, then `ParseChatResponse` extracts `answer` and `chartUpdate`.
+- **Client UX:** Parsed `answer` streamed word-by-word (~18ms between words) so the UI updates progressively without exposing raw JSON tokens. `chart` and `done` events follow; payloads use `JsonOptions` (camelCase) for `chartUpdate` fields.
+- **Tradeoff:** Not true end-to-end token streaming — the server waits for the full model JSON before parsing. Chosen so `chartUpdate` and `answer` stay structurally valid.
+
+### 2026-05-30 — Unified Anomaly Visual Language
+
+- **Decision:** Single anomaly colour `#D97706` (`ANOMALY_COLOR` in `palette.ts`). Row highlights use `rgba(217,119,6,0.06)` background and inner-glow `chat-anomaly-pulse` (no left border). Expense amount text remains red (`#EF4444`). `AnomalyBar` and `barAnomalyGlow` use amber drop-shadow.
+
+### 2026-05-30 — CSV Memo-as-Description Fallback
+
+- **Decision:** `CsvStatementParser.ParseDescription` returns Memo when Payee Name is empty but Memo is present (e.g. Huntington ATM rows).
 
 ### 2026-05-29 — Architectural Diagrams Aligned to Codebase
 

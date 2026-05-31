@@ -6,12 +6,12 @@
 > Postgres: localhost:5432 (Postgres.app, `pgvector` enabled)
 >
 > **Last full manual run:** 29 May 2026  
-> **Last regression check:** 30 May 2026 (Postgres online — automated suite + API spot checks; manual TC-01–TC-19 status unchanged)
+> **Last regression check:** 30 May 2026 (Postgres online — 47/47 automated + API spot checks; manual TC-01–TC-19 unchanged)
 >
 > **Revision notes:**
 > - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
 > - **29 May 2026:** TC-19 added for `topN` chart / server fallback; documentation aligned (full-context chat, not query-time RAG).
-> - **30 May 2026:** Re-verified all automated tests with DB online; E2E TC-E2E-04 locator scoped to statement list `<p>` in `main` (excludes sidebar pill).
+> - **30 May 2026:** Re-verified automated suite; E2E TC-E2E-04 locator scoped to statement list `<p>` in `main`. Docs synced for SSE streaming, anomaly `#D97706`, CSV memo fallback.
 
 ---
 
@@ -242,8 +242,8 @@ cd frontend && npx playwright test
 2. Type "Where did I spend the most?"
 3. Press Enter or click →
 
-**Expected:** Message sent. Typing indicator appears. AI response arrives with spending insight. Chart panel may update.  
-**Actual:** ✅ Pass — response received with accurate spending breakdown.
+**Expected:** Message sent. Loading indicator appears, then answer streams in word-by-word. AI response includes spending insight. Chart panel may update after text completes.  
+**Actual:** ✅ Pass — SSE streaming works; response accurate; chart updates when applicable. *(Re-confirmed 30 May 2026 after SSE implementation.)*
 
 ---
 

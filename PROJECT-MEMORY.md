@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Friday, 29 May 2026 — diagram audit, categorization rules, RAG/750-txn limit documented
+> Last updated: Friday, 30 May 2026 — SSE streaming, unified anomaly (#D97706), CSV memo fallback, QA 47/47, docs sync
 
 ---
 
@@ -80,9 +80,10 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 **Chat pipeline (full context injection — NOT query-time RAG):**
 1. Load **all** transactions for `statementId` from PostgreSQL
 2. Build structured context: pre-computed monthly category totals + every transaction line (`[ID:uuid]`, date, INCOME/EXPENSE, description, category, amount, anomaly flag)
-3. Full conversation history + context + user message → `MODEL_CHAT` (claude-sonnet-4-5)
-4. Parse JSON response → `answer` + optional `chartUpdate`
-5. If user asked for top/biggest expenses but model omitted `topN`, server computes top-N expense IDs and forces `chartUpdate.type = "topN"`
+3. Full conversation history + context + user message → `MODEL_CHAT` (claude-sonnet-4-5) with `stream: true`
+4. Accumulate OpenRouter SSE deltas → `ParseChatResponse` → `answer` + optional `chartUpdate`
+5. Emit SSE to browser: `text` (answer word-by-word), `chart`, `done` (camelCase via `JsonOptions`)
+6. If user asked for top/biggest expenses but model omitted `topN`, server computes top-N expense IDs and forces `chartUpdate.type = "topN"`
 
 > **Not RAG today:** embeddings are written at upload into pgvector, but chat never embeds the user's question or runs similarity search. Query-time retrieval (Epic 6 story 26) is deferred.
 
@@ -161,7 +162,7 @@ GET    /health                       — health check
 - Sidebar bg: `#071A1E` (deep forest) · Active nav text + icon: `#E8C96A` (gold glow)
 - Primary text: `#1E293B` · Muted: `#64748B` · Hint: `#94A3B8`
 - UI accent (buttons, pills, active tabs, send button): `#071A1E` (deep forest) — replaced the earlier honey amber `#C9911A` for most UI chrome
-- Line chart stroke: `#C9911A` (amber, retained) · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#F59E0B`
+- Line chart stroke: `#C9911A` (amber, retained) · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#D97706` (`ANOMALY_COLOR`)
 - Data/chart palette: `APP_COLORS` (11 colours) from `palette.ts`
 
 **Key frontend decisions:**
@@ -267,7 +268,7 @@ FORECAST_ACTUAL_COLOR     — #00637C (teal)
 FORECAST_PREDICTED_COLOR  — #f4a623 (amber)
 LINE_STROKE_COLOR         — #C9911A
 LINE_FILL_COLOR           — rgba(0,99,124,0.28)
-ANOMALY_COLOR             — #F59E0B
+ANOMALY_COLOR             — #D97706
 ```
 
 ### `frontend/src/components/chartEffects.tsx`
@@ -349,7 +350,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 **May 29 — categorization & charts:**
 - Added categories: `Transfers & Payments`, `ATM & Cash` (taxonomy → 13)
 - Rule-based pre-classification: subscriptions, ATM/cash, Zelle/transfers, Square TST*/SQ* → Dining, DoorDash food vs DashPass split
-- Chart UI: draggable chat/chart divider, anomaly colour `#DC2626` via `palette.ts`, chart height/sort/tooltip polish
+- Chart UI: draggable chat/chart divider, chart height/sort/tooltip polish; anomaly colour later unified to `#D97706` (30 May)
 - All **6 architectural diagrams** in `docs/diagrams/` regenerated to match current codebase (React 19, upload order, full-context chat, API shapes, deployment tags)
 - Documented **~750 transaction ceiling** — full context works below this; RAG required beyond it
 
@@ -369,21 +370,29 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 10. **`MODEL_NARRATION` not wired** — The narration model tier is provisioned in config (`.env`, `.env.docker`, `k8s/configmap.yaml`) but no code reads it. Anomaly/forecast narration is not implemented in the current build; categorization uses `MODEL_LIGHT` and chat uses `MODEL_CHAT`.
 11. **Query-time RAG not wired** — Embeddings stored at upload; chat loads the **entire** statement as text context. No embed-query → pgvector search → top-K retrieval step exists in `OpenRouterChatService`.
 12. **~750 transaction ceiling (architectural, not enforced)** — Full context injection is reliable for typical single-statement CSVs (~750 transactions or fewer). Beyond that, prompt size, latency, cost, and answer quality degrade; query-time RAG (story 26) becomes necessary. No upload or chat rejection at 750 — this is a documented design limit, not runtime validation.
-13. **Chat streaming** — Non-streaming JSON response per message.
+13. **Chat streaming** — SSE implemented: server buffers OpenRouter stream, parses JSON, streams parsed answer word-by-word (not raw model tokens).
 14. **Misleading “RAG” labelling in early docs/diagrams** — Corrected 29 May 2026. Upload half of RAG (embed + store) is done; retrieval half is not.
 
 ---
 
-## 16. PENDING WORK (as of 29 May 2026)
+## 16. PENDING WORK (as of 30 May 2026)
 
-**SUBMISSION CRITICAL (3 days left):**
-- [ ] PowerPoint deck (8+ slides, real screenshots)
-- [ ] Project documentation (all 56 user stories, sprint log, AI integration details)
-- [ ] Demo video (3-5 minutes, story-driven)
+**SUBMISSION CRITICAL:**
+- [ ] PowerPoint deck (8+ slides, real screenshots) — story #60
+- [ ] Product demo video (3–5 min, story-driven) — story #63 / Animaker optional
 
-**UI POLISH (remaining):**
-- [x] Draggable divider between chat and chart panels *(done 29 May)*
-- [ ] Typing animation — emerald/gold gradient dots on AI thinking bubble
+**COMPLETE (submission app + docs):**
+- [x] Project documentation (`PROJECT-DOCUMENTATION.md`, diagrams, creativity notes)
+- [x] SSE chat streaming (story #32)
+- [x] QA suite documented — 47/47 pass (`QA-TEST-CASES.md`, last run 30 May)
+- [x] Docker + Minikube deployment
+- [x] Core FinSight features + nine chart types
+
+**OPTIONAL / DEFERRED:**
+- [ ] Query-time RAG in chat (story #26 — partial; embeddings at upload only)
+- [ ] PDF upload (story #15, additive)
+- [ ] Dashboard sparklines / vs last month (story #48, additive)
+- [ ] Typing animation on AI thinking bubble
 - [ ] Vibrancy Glass on Treemap tiles
 - [ ] Upload pulse animation during CSV processing
 

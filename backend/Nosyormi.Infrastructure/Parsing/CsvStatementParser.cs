@@ -17,7 +17,8 @@ public class CsvStatementParser : ICsvStatementParser
             HasHeaderRecord = true,
             TrimOptions = TrimOptions.Trim,
             MissingFieldFound = null,
-            BadDataFound = null
+            BadDataFound = null,
+            PrepareHeaderForMatch = args => args.Header.ToLowerInvariant()
         };
 
         var headerReader = await CreateReaderStartingAtHeaderAsync(csvStream);
@@ -34,7 +35,7 @@ public class CsvStatementParser : ICsvStatementParser
 
         while (await csv.ReadAsync())
         {
-            var rawDate = csv.GetField("Date");
+            var rawDate = csv.GetField("Date") ?? csv.GetField("DATE") ?? csv.GetField("date");
             if (string.IsNullOrWhiteSpace(rawDate))
                 continue;
 
@@ -122,7 +123,7 @@ public class CsvStatementParser : ICsvStatementParser
 
     private static string ParseDescription(CsvReader csv)
     {
-        var description = csv.GetField("Description")?.Trim();
+        var description = (csv.GetField("Description") ?? csv.GetField("DESCRIPTION"))?.Trim();
         if (!string.IsNullOrWhiteSpace(description))
             return description;
 
