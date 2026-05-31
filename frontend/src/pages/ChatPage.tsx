@@ -903,24 +903,35 @@ export default function ChatPage() {
       return (
         <div
           key={chartUpdate?.type ?? 'pie'}
-          style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
+          style={{
+            animation: 'chartFadeIn 0.3s ease-out',
+            width: '100%',
+            height: '100%',
+            flex: 1,
+          }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={520}>
               <BarChart
                 data={chartData}
-                margin={{ top: 10, right: 20, left: 0, bottom: 60 }}
+                margin={{ top: 20, right: 20, left: 0, bottom: 100 }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.06)" />
                 <XAxis
                   dataKey="name"
                   tick={{ fill: '#64748B', fontSize: 10 }}
+                  height={90}
                   angle={-45}
                   textAnchor="end"
-                  height={80}
                   stroke="#E2E8F0"
                 />
-                <YAxis tick={{ fill: '#64748B', fontSize: 11 }} stroke="#E2E8F0" />
+                <YAxis
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                  tickCount={5}
+                  allowDecimals={false}
+                  domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 50) * 50]}
+                />
                 <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
                 <Legend />
                 <Bar dataKey="actual" name="Actual Avg" shape={<JewelBar />} fill={FORECAST_ACTUAL_COLOR} />
