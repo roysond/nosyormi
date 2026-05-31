@@ -122,9 +122,6 @@ export default function ChatPage() {
   const [statementFileName, setStatementFileName] = useState<string>('your statement');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const angleRef = useRef(0);
-  const rafRef = useRef<number | null>(null);
-  const bubblesRef = useRef<Array<{ canvas: HTMLCanvasElement; bubble: HTMLDivElement }>>([]);
   const [inputFocused, setInputFocused] = useState(false);
   const [hoveredPieIndex, setHoveredPieIndex] = useState<number | null>(null);
   const [chatWidth, setChatWidth] = useState(55);
@@ -139,6 +136,8 @@ export default function ChatPage() {
     dragStartWidth.current = chatWidth;
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
   };
 
   const handleDragMove = useCallback((e: MouseEvent) => {
@@ -154,71 +153,9 @@ export default function ChatPage() {
     isDragging.current = false;
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
-  }, []);
-
-  useEffect(() => {
-    document.addEventListener('mousemove', handleDragMove);
-    document.addEventListener('mouseup', handleDragEnd);
-    return () => {
-      document.removeEventListener('mousemove', handleDragMove);
-      document.removeEventListener('mouseup', handleDragEnd);
-    };
-  }, [handleDragMove, handleDragEnd]);
-
-  function drawBorder(canvas: HTMLCanvasElement, bubble: HTMLDivElement, angle: number) {
-    canvas.width = bubble.offsetWidth;
-    canvas.height = bubble.offsetHeight;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const w = canvas.width;
-    const h = canvas.height;
-    const cx = w / 2;
-    const cy = h / 2;
-    const r = Math.max(w, h);
-    ctx.clearRect(0, 0, w, h);
-    for (let i = 0; i < 360; i++) {
-      const a1 = ((i + angle) * Math.PI) / 180;
-      const a2 = ((i + 1 + angle) * Math.PI) / 180;
-      const t = i / 360;
-      let r2: number;
-      let g: number;
-      let b: number;
-      if (t < 0.5) {
-        const p = t * 2;
-        r2 = Math.round(52 + (232 - 52) * p);
-        g = Math.round(211 + (201 - 211) * p);
-        b = Math.round(153 + (106 - 153) * p);
-      } else {
-        const p = (t - 0.5) * 2;
-        r2 = Math.round(232 + (52 - 232) * p);
-        g = Math.round(201 + (211 - 201) * p);
-        b = Math.round(106 + (153 - 106) * p);
-      }
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, a1, a2);
-      ctx.closePath();
-      ctx.fillStyle = `rgb(${r2},${g},${b})`;
-      ctx.fill();
-    }
-    ctx.globalCompositeOperation = 'destination-out';
-    ctx.beginPath();
-    ctx.roundRect(3, 3, w - 6, h - 6, 14);
-    ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-  }
-
-  function startLoop() {
-    if (rafRef.current) return;
-    function loop() {
-      angleRef.current = (angleRef.current + 1.0) % 360;
-      bubblesRef.current.forEach(({ canvas, bubble }) => {
-        drawBorder(canvas, bubble, angleRef.current);
-      });
-      rafRef.current = requestAnimationFrame(loop);
-    }
-    rafRef.current = requestAnimationFrame(loop);
-  }
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+  }, [handleDragMove]);
 
   const expenses = useMemo(
     () => transactions.filter((t) => t.amount < 0),
@@ -310,12 +247,6 @@ export default function ChatPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading]);
-
-  useEffect(() => {
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    };
-  }, []);
 
   useEffect(() => {
     sessionStorage.setItem('nosyormi-chat-messages', JSON.stringify(messages));
@@ -1212,10 +1143,22 @@ export default function ChatPage() {
           0%, 100% { box-shadow: inset 0 0 0 0 rgba(217,119,6,0); }
           50% { box-shadow: inset 0 0 22px rgba(217,119,6,0.22); }
         }
-        @keyframes loadingBorderSpin {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
+        @keyframes rotateBorder {
+          from { --angle: 0deg; }
+          to { --angle: 360deg; }
+        }
+        @supports (background: conic-gradient(red, blue)) {
+          .ai-bubble-wrapper {
+            background: conic-gradient(
+              from var(--angle, 0deg),
+              #34D399,
+              #E8C96A,
+              #C96AE8,
+              #6A9BE8,
+              #34D399
+            );
+            animation: rotateBorder 2s linear infinite;
+          }
         }
         .chat-anomaly-row {
           animation: chat-anomaly-pulse 2s ease-in-out infinite;
@@ -1341,45 +1284,19 @@ export default function ChatPage() {
             ) : (
               <div
                 key={index}
-                ref={(el) => {
-                  if (el) {
-                    const canvas = el.querySelector('canvas') as HTMLCanvasElement;
-                    const bubble = el as HTMLDivElement;
-                    const existing = bubblesRef.current.find((b) => b.bubble === bubble);
-                    if (!existing && canvas) {
-                      bubblesRef.current.push({ canvas, bubble });
-                      startLoop();
-                    }
-                  }
-                }}
+                className="ai-bubble-wrapper"
                 style={{
                   alignSelf: 'flex-start',
                   position: 'relative',
                   borderRadius: '18px 18px 18px 4px',
                   padding: '3px',
-                  maxWidth: '78%',
+                  background:
+                    'conic-gradient(from 0deg, #34D399, #E8C96A, #C96AE8, #6A9BE8, #34D399)',
+                  animation: 'rotateBorder 2s linear infinite',
                   boxShadow:
-                    '0 8px 24px rgba(52,211,153,0.15), 0 4px 10px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.05)',
+                    '0 8px 24px rgba(52,211,153,0.15), 0 4px 10px rgba(0,0,0,0.08)',
                 }}
               >
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    borderRadius: '18px 18px 18px 4px',
-                    overflow: 'hidden',
-                    zIndex: 0,
-                  }}
-                >
-                  <canvas
-                    style={{
-                      position: 'absolute',
-                      inset: 0,
-                      width: '100%',
-                      height: '100%',
-                    }}
-                  />
-                </div>
                 <div
                   style={{
                     position: 'relative',
@@ -1406,13 +1323,12 @@ export default function ChatPage() {
             <div
               style={{
                 alignSelf: 'flex-start',
-                position: 'relative',
                 borderRadius: '18px 18px 18px 4px',
-                padding: '2px',
-                background: 'linear-gradient(135deg, #34D399, #E8C96A, #34D399)',
-                backgroundSize: '200% 200%',
-                animation: 'loadingBorderSpin 0.5s linear infinite',
-                boxShadow: '0 0 20px rgba(52,211,153,0.8), 0 0 40px rgba(232,201,106,0.6), 0 0 60px rgba(52,211,153,0.3)',
+                padding: '3px',
+                background:
+                  'conic-gradient(from 0deg, #34D399, #E8C96A, #C96AE8, #6A9BE8, #34D399)',
+                animation: 'rotateBorder 0.8s linear infinite',
+                boxShadow: '0 0 20px rgba(52,211,153,0.5)',
               }}
             >
               <div style={{
