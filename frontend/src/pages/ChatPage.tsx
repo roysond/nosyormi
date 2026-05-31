@@ -277,18 +277,26 @@ export default function ChatPage() {
   }, [loadActiveStatement]);
 
   useEffect(() => {
-    return subscribeStatementSwitched(() => {
-      setMessages([]);
-      setChartUpdate(null);
-      sessionStorage.removeItem('nosyormi-chat-messages');
-      sessionStorage.removeItem('nosyormi-chat-chart-update');
+    const handleStatementSwitched = () => {
+      const newId = sessionStorage.getItem(STATEMENT_ID_KEY);
       const savedFileName = sessionStorage.getItem(STATEMENT_FILENAME_KEY);
+      if (newId !== statementId) {
+        clearChat();
+        if (newId) {
+          sessionStorage.setItem(STATEMENT_ID_KEY, newId);
+        }
+        if (savedFileName) {
+          sessionStorage.setItem(STATEMENT_FILENAME_KEY, savedFileName);
+        }
+      }
       if (savedFileName) {
         setStatementFileName(savedFileName);
       }
       void loadActiveStatement();
-    });
-  }, [loadActiveStatement]);
+    };
+
+    return subscribeStatementSwitched(handleStatementSwitched);
+  }, [loadActiveStatement, statementId]);
 
   useEffect(() => {
     if (chartUpdate?.type !== 'forecast' || statementId === null) return;
@@ -313,6 +321,10 @@ export default function ChatPage() {
   }, []);
 
   useEffect(() => {
+    const stored = sessionStorage.getItem('nosyormi-chat-messages');
+    if (messages.length === 0 && stored) {
+      return;
+    }
     sessionStorage.setItem('nosyormi-chat-messages', JSON.stringify(messages));
   }, [messages]);
 
