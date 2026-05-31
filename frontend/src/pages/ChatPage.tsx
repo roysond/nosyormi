@@ -1144,21 +1144,32 @@ export default function ChatPage() {
           50% { box-shadow: inset 0 0 22px rgba(217,119,6,0.22); }
         }
         @keyframes rotateBorder {
-          from { --angle: 0deg; }
-          to { --angle: 360deg; }
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
         }
-        @supports (background: conic-gradient(red, blue)) {
-          .ai-bubble-wrapper {
-            background: conic-gradient(
-              from var(--angle, 0deg),
-              #34D399,
-              #E8C96A,
-              #C96AE8,
-              #6A9BE8,
-              #34D399
-            );
-            animation: rotateBorder 2s linear infinite;
-          }
+        .ai-bubble-wrapper {
+          position: relative;
+          align-self: flex-start;
+          border-radius: 18px 18px 18px 4px;
+          padding: 3px;
+          background: transparent;
+          box-shadow: 0 8px 24px rgba(52,211,153,0.15), 0 4px 10px rgba(0,0,0,0.08);
+        }
+        .ai-bubble-wrapper::before {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          border-radius: 20px 20px 20px 6px;
+          background: conic-gradient(#34D399, #E8C96A, #34D399, #E8C96A, #34D399);
+          animation: rotateBorder 2s linear infinite;
+          z-index: 0;
+        }
+        .ai-bubble-wrapper > div {
+          position: relative;
+          z-index: 1;
+        }
+        .ai-bubble-wrapper.loading::before {
+          animation-duration: 0.6s;
         }
         .chat-anomaly-row {
           animation: chat-anomaly-pulse 2s ease-in-out infinite;
@@ -1282,25 +1293,9 @@ export default function ChatPage() {
                 {msg.content}
               </div>
             ) : (
-              <div
-                key={index}
-                className="ai-bubble-wrapper"
-                style={{
-                  alignSelf: 'flex-start',
-                  position: 'relative',
-                  borderRadius: '18px 18px 18px 4px',
-                  padding: '3px',
-                  background:
-                    'conic-gradient(from 0deg, #34D399, #E8C96A, #C96AE8, #6A9BE8, #34D399)',
-                  animation: 'rotateBorder 2s linear infinite',
-                  boxShadow:
-                    '0 8px 24px rgba(52,211,153,0.15), 0 4px 10px rgba(0,0,0,0.08)',
-                }}
-              >
+              <div key={index} className="ai-bubble-wrapper" style={{}}>
                 <div
                   style={{
-                    position: 'relative',
-                    zIndex: 1,
                     background: 'rgba(255,255,255,0.97)',
                     borderRadius: '16px 16px 16px 3px',
                     padding: '11px 17px',
@@ -1320,17 +1315,7 @@ export default function ChatPage() {
           )}
 
           {loading && (
-            <div
-              style={{
-                alignSelf: 'flex-start',
-                borderRadius: '18px 18px 18px 4px',
-                padding: '3px',
-                background:
-                  'conic-gradient(from 0deg, #34D399, #E8C96A, #C96AE8, #6A9BE8, #34D399)',
-                animation: 'rotateBorder 0.8s linear infinite',
-                boxShadow: '0 0 20px rgba(52,211,153,0.5)',
-              }}
-            >
+            <div className="ai-bubble-wrapper loading" style={{ alignSelf: 'flex-start' }}>
               <div style={{
                 background: '#F8FAFC',
                 borderRadius: '16px 16px 16px 3px',
