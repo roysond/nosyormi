@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ANOMALY_COLOR } from '../constants/palette';
 import {
+  dispatchStatementSwitched,
   getSelectedStatementId,
   selectStatement,
   STATEMENT_FILENAME_KEY,
@@ -426,6 +427,7 @@ export default function StatementsPage() {
                 style={styles.reflectBtn}
                 onClick={() => {
                   selectStatement(statement.id, statement.fileName);
+                  dispatchStatementSwitched(statement.fileName);
                   setActiveStatementId(statement.id);
                 }}
               >

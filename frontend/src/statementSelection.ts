@@ -2,6 +2,8 @@ export const STATEMENT_ID_KEY = 'nosyormi-chat-statement-id';
 export const STATEMENT_FILENAME_KEY = 'nosyormi-chat-statement-filename';
 export const STATEMENT_SWITCHED_EVENT = 'nosyormi-statement-switched';
 
+export type StatementSwitchedDetail = { fileName: string };
+
 export function getSelectedStatementId(): string | null {
   return sessionStorage.getItem(STATEMENT_ID_KEY);
 }
@@ -9,7 +11,14 @@ export function getSelectedStatementId(): string | null {
 export function selectStatement(id: string, fileName: string): void {
   sessionStorage.setItem(STATEMENT_ID_KEY, id);
   sessionStorage.setItem(STATEMENT_FILENAME_KEY, fileName);
-  window.dispatchEvent(new Event(STATEMENT_SWITCHED_EVENT));
+}
+
+export function dispatchStatementSwitched(fileName: string): void {
+  window.dispatchEvent(
+    new CustomEvent<StatementSwitchedDetail>(STATEMENT_SWITCHED_EVENT, {
+      detail: { fileName },
+    }),
+  );
 }
 
 export function subscribeStatementSwitched(listener: () => void): () => void {
