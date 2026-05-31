@@ -39,11 +39,6 @@ interface ChartUpdate {
   highlightTransactionIds: string[] | null;
 }
 
-interface ChatResponse {
-  answer: string;
-  chartUpdate: ChartUpdate | null;
-}
-
 interface StatementSummary {
   id: string;
   fileName: string;
@@ -371,19 +366,63 @@ export default function ChatPage() {
         body: JSON.stringify({ message: trimmed, history }),
       });
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(body?.error ?? `Chat failed (HTTP ${response.status}).`);
+      if (!response.ok || !response.body) {
+        throw new Error(`Chat failed (HTTP ${response.status}).`);
       }
 
-      const data: ChatResponse = await response.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.answer }]);
-      if (data.chartUpdate) {
-        setChartUpdate(data.chartUpdate);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let streamedContent = '';
+      let assistantMessageAdded = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() ?? '';
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (!jsonStr) continue;
+
+          try {
+            const event = JSON.parse(jsonStr);
+
+            if (event.type === 'text') {
+              streamedContent += event.content;
+              if (!assistantMessageAdded) {
+                setMessages((prev) => [...prev, { role: 'assistant', content: streamedContent }]);
+                assistantMessageAdded = true;
+                setLoading(false);
+              } else {
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: 'assistant', content: streamedContent };
+                  return updated;
+                });
+              }
+            }
+
+            if (event.type === 'chart' && event.chartUpdate) {
+              setChartUpdate(event.chartUpdate);
+            }
+
+            if (event.type === 'error') {
+              setMessages((prev) => [...prev, { role: 'assistant', content: event.message }]);
+              setLoading(false);
+            }
+
+          } catch {
+            // ignore malformed SSE lines
+          }
+        }
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Something went wrong. Please try again.';
+      const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
       setMessages((prev) => [...prev, { role: 'assistant', content: message }]);
     } finally {
       setLoading(false);

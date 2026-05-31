@@ -20,20 +20,27 @@ public class ChatController : ControllerBase
     }
 
     [HttpPost("{statementId:guid}")]
-    public async Task<IActionResult> Chat(
+    public async Task Chat(
         Guid statementId,
         [FromBody] ChatRequest request,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(request.Message))
-            return BadRequest(new { error = "Message cannot be empty." });
+        {
+            Response.StatusCode = 400;
+            await Response.WriteAsync("{\"error\":\"Message cannot be empty.\"}");
+            return;
+        }
 
-        var response = await _chatService.ChatAsync(
+        Response.Headers["Content-Type"] = "text/event-stream";
+        Response.Headers["Cache-Control"] = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no";
+
+        await _chatService.StreamChatAsync(
             statementId,
             request.Message,
             request.History,
+            Response,
             cancellationToken);
-
-        return Ok(response);
     }
 }

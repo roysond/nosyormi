@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Chat;
 using Nosyormi.Domain.Entities;
@@ -94,50 +95,133 @@ public class OpenRouterChatService : IChatService
         _db = db;
     }
 
-    public async Task<ChatResponse> ChatAsync(
+    public async Task StreamChatAsync(
         Guid statementId,
         string userMessage,
         IReadOnlyList<ChatMessage> conversationHistory,
+        HttpResponse httpResponse,
         CancellationToken cancellationToken = default)
     {
-        var transactions = await _db.Set<Transaction>()
-            .Include(t => t.Category)
-            .Where(t => t.StatementId == statementId)
-            .ToListAsync(cancellationToken);
+        const string errorMessage = "I had trouble reflecting on that. Could you rephrase your question?";
 
-        var context = BuildTransactionContext(transactions);
-        var validCategories = GetValidCategories(transactions);
-        var messages = BuildMessages(context, conversationHistory, userMessage);
+        async Task WriteErrorAsync()
+        {
+            await httpResponse.WriteAsync(
+                $"data: {JsonSerializer.Serialize(new { type = "error", message = errorMessage }, JsonOptions)}\n\n",
+                cancellationToken);
+            await httpResponse.Body.FlushAsync(cancellationToken);
+        }
 
-        var apiKey = Environment.GetEnvironmentVariable(ApiKeyEnvVar);
-        var model = Environment.GetEnvironmentVariable(ModelEnvVar);
-
-        if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
-            return FallbackResponse;
-
-        using var request = BuildRequest(messages, model, apiKey);
-
-        HttpResponseMessage response;
         try
         {
-            response = await _httpClient.SendAsync(request, cancellationToken);
+            var transactions = await _db.Set<Transaction>()
+                .Include(t => t.Category)
+                .Where(t => t.StatementId == statementId)
+                .ToListAsync(cancellationToken);
+
+            var context = BuildTransactionContext(transactions);
+            var validCategories = GetValidCategories(transactions);
+            var messages = BuildMessages(context, conversationHistory, userMessage);
+
+            var apiKey = Environment.GetEnvironmentVariable(ApiKeyEnvVar);
+            var model = Environment.GetEnvironmentVariable(ModelEnvVar);
+
+            if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
+            {
+                await WriteErrorAsync();
+                return;
+            }
+
+            using var request = BuildRequest(messages, model, apiKey);
+
+            HttpResponseMessage response;
+            try
+            {
+                response = await _httpClient.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+            }
+            catch (HttpRequestException)
+            {
+                await WriteErrorAsync();
+                return;
+            }
+
+            using (response)
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    await WriteErrorAsync();
+                    return;
+                }
+
+                var accumulated = new StringBuilder();
+                await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                using var reader = new StreamReader(stream);
+
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    var line = await reader.ReadLineAsync(cancellationToken);
+                    if (line is null)
+                        break;
+                    if (string.IsNullOrWhiteSpace(line))
+                        continue;
+                    if (!line.StartsWith("data: ", StringComparison.Ordinal))
+                        continue;
+
+                    var data = line["data: ".Length..].Trim();
+                    if (data == "[DONE]")
+                        break;
+
+                    ChatStreamChunk? chunk;
+                    try
+                    {
+                        chunk = JsonSerializer.Deserialize<ChatStreamChunk>(data, JsonOptions);
+                    }
+                    catch (JsonException)
+                    {
+                        continue;
+                    }
+
+                    var delta = chunk?.Choices?.FirstOrDefault()?.Delta?.Content;
+                    if (string.IsNullOrEmpty(delta))
+                        continue;
+
+                    accumulated.Append(delta);
+                }
+
+                var parsed = ParseChatResponse(
+                    accumulated.ToString(),
+                    validCategories,
+                    userMessage,
+                    transactions);
+
+                var words = parsed.Answer.Split(' ');
+                foreach (var word in words)
+                {
+                    await httpResponse.WriteAsync(
+                        $"data: {JsonSerializer.Serialize(new { type = "text", content = word + " " }, JsonOptions)}\n\n",
+                        cancellationToken);
+                    await httpResponse.Body.FlushAsync(cancellationToken);
+                    await Task.Delay(18, cancellationToken);
+                }
+
+                var chartUpdate = parsed.ChartUpdate;
+                await httpResponse.WriteAsync(
+                    $"data: {JsonSerializer.Serialize(new { type = "chart", chartUpdate }, JsonOptions)}\n\n",
+                    cancellationToken);
+                await httpResponse.Body.FlushAsync(cancellationToken);
+
+                await httpResponse.WriteAsync(
+                    $"data: {JsonSerializer.Serialize(new { type = "done" }, JsonOptions)}\n\n",
+                    cancellationToken);
+                await httpResponse.Body.FlushAsync(cancellationToken);
+            }
         }
-        catch (HttpRequestException)
+        catch
         {
-            return FallbackResponse;
-        }
-
-        using (response)
-        {
-            if (!response.IsSuccessStatusCode)
-                return FallbackResponse;
-
-            var completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(
-                JsonOptions,
-                cancellationToken);
-
-            var content = completion?.Choices?.FirstOrDefault()?.Message?.Content;
-            return ParseChatResponse(content, validCategories, userMessage, transactions);
+            await WriteErrorAsync();
         }
     }
 
@@ -237,7 +321,8 @@ public class OpenRouterChatService : IChatService
             Model = model,
             Messages = messages,
             MaxTokens = 1500,
-            Temperature = 0.7f
+            Temperature = 0.7f,
+            Stream = true
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, ChatCompletionsUrl)
@@ -363,27 +448,28 @@ public class OpenRouterChatService : IChatService
         public required List<ChatRequestMessage> Messages { get; init; }
         public int MaxTokens { get; init; }
         public float Temperature { get; init; }
+        public bool Stream { get; init; }
+    }
+
+    private sealed class ChatStreamChunk
+    {
+        public List<ChatStreamChoice>? Choices { get; init; }
+    }
+
+    private sealed class ChatStreamChoice
+    {
+        public ChatStreamDelta? Delta { get; init; }
+    }
+
+    private sealed class ChatStreamDelta
+    {
+        public string? Content { get; init; }
     }
 
     private sealed class ChatRequestMessage
     {
         public required string Role { get; init; }
         public required string Content { get; init; }
-    }
-
-    private sealed class ChatCompletionResponse
-    {
-        public List<ChatChoice>? Choices { get; init; }
-    }
-
-    private sealed class ChatChoice
-    {
-        public ChatResponseMessage? Message { get; init; }
-    }
-
-    private sealed class ChatResponseMessage
-    {
-        public string? Content { get; init; }
     }
 
     private sealed class ParsedChatPayload
