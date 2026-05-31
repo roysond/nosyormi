@@ -16,6 +16,7 @@ export const APP_COLORS = [
   '#7B4F9E', // Transfers & Payments
   '#9C755F', // ATM & Cash
   '#06B6D4', // Education
+  '#F97316', // Government & Fees
   '#BAB0AC', // Other
 ];
 

@@ -35,7 +35,7 @@ public class OpenRouterChatService : IChatService
         - Never use alarming language. Use calm, reflective language at all times.
 
         CATEGORY NAMES (exact strings for chartUpdate.category when drilling into one category):
-        Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Other.
+        Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Government & Fees, Other.
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.

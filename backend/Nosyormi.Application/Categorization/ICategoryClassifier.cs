@@ -27,6 +27,7 @@ public static class CategoryTaxonomy
         "Transfers & Payments",
         "ATM & Cash",
         "Education",
+        "Government & Fees",
         "Other",
     ];
 }

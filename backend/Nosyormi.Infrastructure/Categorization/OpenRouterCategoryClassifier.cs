@@ -13,7 +13,7 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
     private const string ModelEnvVar = "MODEL_LIGHT";
 
     private const string SystemPrompt =
-        "You are a financial transaction categorizer. Given a transaction description and amount, return ONLY a JSON object with two fields: 'category' (string) and 'confidence' (float between 0 and 1). Choose category from this exact list only: Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Other.\n\nCATEGORIZATION RULES — follow strictly, top rules take priority:\n- Income: any money received, deposits, Zelle received, direct deposits, refunds credited to account.\n- ATM & Cash: any ATM cash withdrawal or ATM cash deposit transaction. Key signals: 'ATM', 'CASH WITHDRAWAL', 'CASH DEPOSIT', 'ATM WITHDRAWAL'.\n- Transfers & Payments: peer-to-peer money transfers, Zelle sent, Payment ID transactions, bank transfers sent to another person. Key signals: 'Payment ID', 'Money Sent', 'Zelle', 'TRANSFER'.\n- Subscriptions: ANY recurring membership, pass, renewal, or subscription. Key signals: 'RENEWAL', 'PASS', 'MEMBERSHIP', 'SERVICES', 'SUBSCRIPTION', 'DashPass', 'Prime', 'Plus'. Phone plans (SimpleMobile, T-Mobile, AT&T), gym memberships, software tools, annual renewals all belong here.\n- Dining & Takeaway: restaurant meals, food delivery orders (DoorDash orders, UberEats, GrubHub orders) but NOT their subscription passes.\n- Food & Groceries: supermarkets, grocery stores, wholesale food purchases (Costco food runs, not Costco membership).\n- Transport & Fuel: gas stations, fuel purchases, ride-share trips, toll payments on highways.\n- Parking & Tolls: parking meters, parking lots, toll booths.\n- Shopping: retail stores, Amazon product purchases, general merchandise, department stores.\n- Entertainment: movies, concerts, events, theatres, experience venues.\n- Utilities & Bills: electricity, water, gas bills, internet, phone bills paid to providers.\n- Healthcare: pharmacies, medical offices, hospitals, clinics.\n- Education: tuition, university, college, student loans, Nelnet, Sallie Mae, Trine University.\n- Other: genuinely unrecognizable transactions only. Use this as a last resort.\n\nNever invent new categories. Never add explanation. Return raw JSON only.";
+        "You are a financial transaction categorizer. Given a transaction description and amount, return ONLY a JSON object with two fields: 'category' (string) and 'confidence' (float between 0 and 1). Choose category from this exact list only: Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Government & Fees, Other.\n\nCATEGORIZATION RULES — follow strictly, top rules take priority:\n- Income: any money received, deposits, Zelle received, direct deposits, refunds credited to account.\n- ATM & Cash: any ATM cash withdrawal or ATM cash deposit transaction. Key signals: 'ATM', 'CASH WITHDRAWAL', 'CASH DEPOSIT', 'ATM WITHDRAWAL'.\n- Transfers & Payments: peer-to-peer money transfers, Zelle sent, Payment ID transactions, bank transfers sent to another person. Key signals: 'Payment ID', 'Money Sent', 'Zelle', 'TRANSFER'.\n- Subscriptions: ANY recurring membership, pass, renewal, or subscription. Key signals: 'RENEWAL', 'PASS', 'MEMBERSHIP', 'SERVICES', 'SUBSCRIPTION', 'DashPass', 'Prime', 'Plus'. Phone plans (SimpleMobile, T-Mobile, AT&T), gym memberships, software tools, annual renewals all belong here.\n- Dining & Takeaway: restaurant meals, food delivery orders (DoorDash orders, UberEats, GrubHub orders) but NOT their subscription passes.\n- Food & Groceries: supermarkets, grocery stores, wholesale food purchases (Costco food runs, not Costco membership).\n- Transport & Fuel: gas stations, fuel purchases, ride-share trips, toll payments on highways.\n- Parking & Tolls: parking meters, parking lots, toll booths.\n- Shopping: retail stores, Amazon product purchases, general merchandise, department stores.\n- Entertainment: movies, concerts, events, theatres, experience venues.\n- Utilities & Bills: electricity, water, gas bills, internet, phone bills paid to providers.\n- Healthcare: pharmacies, medical offices, hospitals, clinics.\n- Education: tuition, university, college, student loans, Nelnet, Sallie Mae, Trine University.\n- Other: genuinely unrecognizable transactions only. Use this as a last resort.\n\nNever invent new categories. Never add explanation. Return raw JSON only.";
 
     private static readonly CategoryResult FallbackResult = new("Other", 0.0f);
 
@@ -51,6 +51,22 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
             !upperDesc.Contains("DASH PASS"))
         {
             return new CategoryResult("Dining & Takeaway", 0.95f);
+        }
+
+        if (upperDesc.Contains("USCIS") ||
+            upperDesc.Contains("DMV") ||
+            upperDesc.Contains("IRS") ||
+            upperDesc.Contains("GOVERNMENT") ||
+            upperDesc.Contains("GOVT") ||
+            upperDesc.Contains("MUNICIPALITY") ||
+            upperDesc.Contains("CITY OF") ||
+            upperDesc.Contains("STATE OF") ||
+            upperDesc.Contains("COUNTY OF") ||
+            upperDesc.Contains("COURT") ||
+            upperDesc.Contains("LICENSE FEE") ||
+            upperDesc.Contains("PERMIT FEE"))
+        {
+            return new CategoryResult("Government & Fees", 0.99f);
         }
 
         if (upperDesc.Contains("TRINE") ||
