@@ -180,6 +180,10 @@ function formatMonthDay(dateStr: string): string {
   });
 }
 
+function formatMonthYear(d: Date): string {
+  return d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+}
+
 function groupByDate(transactions: Transaction[]): [string, Transaction[]][] {
   const sorted = [...transactions].sort((a, b) =>
     b.transactionDate.localeCompare(a.transactionDate),
@@ -401,6 +405,21 @@ export default function DashboardPage() {
     activeCategoryIndex !== null
       ? (derived.categoryTotals[activeCategoryIndex] ?? null)
       : null;
+
+  const spendingByCategoryTitle = useMemo(() => {
+    const isAllTime = dateFilter.type === 'all';
+    if (!isAllTime || !statement) {
+      return 'Spending by Category';
+    }
+    const transactions = statement.transactions;
+    if (transactions.length === 0) {
+      return 'Spending by Category';
+    }
+    const dates = transactions.map((t) => new Date(t.transactionDate + 'T00:00:00'));
+    const minDate = new Date(Math.min(...dates.map((d) => d.getTime())));
+    const maxDate = new Date(Math.max(...dates.map((d) => d.getTime())));
+    return `Spending by Category (${formatMonthYear(minDate)} – ${formatMonthYear(maxDate)})`;
+  }, [dateFilter.type, statement]);
 
   const sortedFilteredTransactions = useMemo(() => {
     const txs = [...derived.filteredTransactions];
@@ -886,7 +905,7 @@ export default function DashboardPage() {
                       </div>
                     )}
                   </div>
-                  <h2 style={styles.sectionTitle}>Spending by Category</h2>
+                  <h2 style={styles.sectionTitle}>{spendingByCategoryTitle}</h2>
                   <div style={{ position: 'relative', zIndex: 1, animation: 'chartFadeIn 0.4s ease-out' }}>
                     <ResponsiveContainer width="100%" height={340}>
                       <div
