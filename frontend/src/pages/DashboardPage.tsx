@@ -1234,22 +1234,22 @@ export default function DashboardPage() {
                       </h4>
                       {[
                         {
-                          label: 'Total transactions',
+                          label: 'Total Transactions',
                           value: String(filteredSpendSummary.count),
                           isAmount: false,
                         },
                         {
-                          label: 'Largest transaction',
+                          label: 'Largest Transaction',
                           value: formatCurrency(filteredSpendSummary.largest),
                           isAmount: true,
                         },
                         {
-                          label: 'Average transaction',
+                          label: 'Average Transaction',
                           value: formatCurrency(filteredSpendSummary.average),
                           isAmount: true,
                         },
                         {
-                          label: 'Total spending',
+                          label: 'Total Spending',
                           value: formatCurrency(filteredSpendSummary.total),
                           isAmount: true,
                         },

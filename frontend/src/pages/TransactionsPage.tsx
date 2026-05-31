@@ -100,6 +100,7 @@ export default function TransactionsPage() {
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
+  const [showAnomaliesOnly, setShowAnomaliesOnly] = useState(false);
 
   const loadStatement = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -172,6 +173,10 @@ export default function TransactionsPage() {
       txs = txs.filter((t) => getCategoryName(t) === selectedCategory);
     }
 
+    if (showAnomaliesOnly) {
+      txs = txs.filter((t) => t.isAnomaly);
+    }
+
     switch (sortBy) {
       case 'highest':
         txs.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount));
@@ -196,7 +201,7 @@ export default function TransactionsPage() {
     }
 
     return txs;
-  }, [allTransactions, searchQuery, selectedCategory, sortBy]);
+  }, [allTransactions, searchQuery, selectedCategory, sortBy, showAnomaliesOnly]);
 
   const summaryStats = useMemo(() => {
     const txs = filteredTransactions;
@@ -491,28 +496,28 @@ export default function TransactionsPage() {
     noBorder?: boolean;
   }> = [
     {
-      label: 'Total transactions',
+      label: 'Total Transactions',
       value: String(summaryStats.totalTransactions),
       valueColor: '#1E293B',
     },
     {
-      label: 'Largest transaction',
+      label: 'Largest Transaction',
       value: formatCurrency(summaryStats.largestTransaction),
       valueColor: '#EF4444',
     },
     {
-      label: 'Average transaction',
+      label: 'Average Transaction',
       value: formatCurrency(summaryStats.averageTransaction),
       valueColor: '#1E293B',
     },
     {
-      label: 'Total income',
+      label: 'Total Income',
       value: formatCurrency(summaryStats.totalIncome),
       valueColor: '#10B981',
       dividerAfter: true,
     },
     {
-      label: 'Total spending',
+      label: 'Total Spending',
       value: formatCurrency(summaryStats.totalSpending),
       valueColor: '#EF4444',
       noBorder: true,
@@ -536,6 +541,10 @@ export default function TransactionsPage() {
         @keyframes anomalyDotPulse {
           0%, 100% { opacity: 0.5; transform: scale(1); }
           50% { opacity: 1; transform: scale(1.2); }
+        }
+        @keyframes anomalyPulse {
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(217,119,6,0); }
+          50% { box-shadow: inset 0 0 16px rgba(217,119,6,0.3); }
         }
         @keyframes tx-loading-pulse {
           0%, 100% { opacity: 0.45; }
@@ -690,33 +699,50 @@ export default function TransactionsPage() {
                 {summaryStats.totalTransactions === 1 ? '' : 's'}
               </span>
               {summaryStats.anomalyCount > 0 && (
-                <span
+                <button
+                  type="button"
+                  onClick={() => setShowAnomaliesOnly((prev) => !prev)}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: 8,
                     fontSize: 12,
                     fontWeight: 600,
-                    color: ANOMALY_COLOR,
-                    background: 'rgba(220,38,38,0.1)',
-                    border: '1px solid rgba(220,38,38,0.25)',
                     borderRadius: 999,
                     padding: '4px 12px',
+                    cursor: 'pointer',
+                    ...(showAnomaliesOnly
+                      ? {
+                          background: 'rgba(217,119,6,0.15)',
+                          border: '1px solid rgba(217,119,6,0.5)',
+                          color: '#D97706',
+                          animation: 'anomalyPulse 2s ease-in-out infinite',
+                        }
+                      : {
+                          color: ANOMALY_COLOR,
+                          background: 'rgba(220,38,38,0.1)',
+                          border: '1px solid rgba(220,38,38,0.25)',
+                        }),
                   }}
                 >
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: ANOMALY_COLOR,
-                      animation: 'anomalyDotPulse 1.5s ease-in-out infinite',
-                    }}
-                    aria-hidden
-                  />
-                  {summaryStats.anomalyCount} anomal
-                  {summaryStats.anomalyCount === 1 ? 'y' : 'ies'} detected
-                </span>
+                  {!showAnomaliesOnly && (
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: '50%',
+                        background: ANOMALY_COLOR,
+                        animation: 'anomalyDotPulse 1.5s ease-in-out infinite',
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                  {showAnomaliesOnly
+                    ? 'Showing Anomalies Only ✕'
+                    : `${summaryStats.anomalyCount} Anomal${
+                        summaryStats.anomalyCount === 1 ? 'y' : 'ies'
+                      } Detected`}
+                </button>
               )}
             </div>
 
@@ -795,9 +821,9 @@ export default function TransactionsPage() {
                     lineHeight: 1.5,
                   }}
                 >
-                  {'\u26a0'} {summaryStats.anomalyCount} anomal
-                  {summaryStats.anomalyCount === 1 ? 'y' : 'ies'} detected in this
-                  statement. Review highlighted transactions.
+                  {'\u26a0'} {summaryStats.anomalyCount} Anomal
+                  {summaryStats.anomalyCount === 1 ? 'y' : 'ies'} Detected In This
+                  Statement. Review Highlighted Transactions.
                 </div>
               )}
             </div>
