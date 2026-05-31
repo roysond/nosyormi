@@ -40,7 +40,7 @@ interface ChatMessage {
 }
 
 interface ChartUpdate {
-  type: 'pie' | 'bar' | 'line' | 'anomalies' | 'forecast' | 'stacked' | 'horizontal' | 'treemap' | 'topN';
+  type: 'pie' | 'bar' | 'line' | 'anomalies' | 'forecast' | 'stacked' | 'horizontal' | 'treemap' | 'topN' | 'categoryMonthly';
   category: string | null;
   highlightTransactionIds: string[] | null;
 }
@@ -463,6 +463,11 @@ export default function ChatPage() {
     if (type === 'horizontal') return 'Category Comparison';
     if (type === 'treemap') return 'Spending Map';
     if (type === 'topN') return 'Biggest Transactions';
+    if (type === 'categoryMonthly') {
+      return chartUpdate?.category
+        ? `${chartUpdate.category} — Monthly Spend`
+        : 'Monthly Spend by Category';
+    }
     return 'Spending Overview';
   };
 
@@ -477,6 +482,7 @@ export default function ChatPage() {
     if (type === 'horizontal') return 'Categories ranked by total spend';
     if (type === 'treemap') return 'Size represents total spend per category';
     if (type === 'topN') return 'Individual transactions ranked by amount';
+    if (type === 'categoryMonthly') return 'Monthly spending totals for this category';
     return 'Your spending distribution across categories';
   };
 
@@ -844,8 +850,11 @@ export default function ChatPage() {
           style={{
             animation: 'chartFadeIn 0.3s ease-out',
             width: '100%',
+            height: '100%',
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
             overflowY: 'auto',
-            maxHeight: 280,
           }}
         >
           {anomalyRows.map((tx) => (
@@ -908,10 +917,12 @@ export default function ChatPage() {
             width: '100%',
             height: '100%',
             flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={520}>
+            <ResponsiveContainer width="100%" height="100%" minHeight={480}>
               <BarChart
                 data={chartData}
                 margin={{ top: 20, right: 20, left: 0, bottom: 100 }}
@@ -932,10 +943,50 @@ export default function ChatPage() {
                   allowDecimals={false}
                   domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 50) * 50]}
                 />
-                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Tooltip
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    return (
+                      <div
+                        style={{
+                          background: 'white',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: 8,
+                          padding: '10px 14px',
+                          fontSize: 12,
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          minWidth: 180,
+                        }}
+                      >
+                        <div style={{ color: '#64748B', marginBottom: 6, fontWeight: 600 }}>
+                          {label}
+                        </div>
+                        {payload.map((entry: any) => (
+                          <div
+                            key={entry.dataKey}
+                            style={{ color: entry.color, marginBottom: 3 }}
+                          >
+                            {entry.name}: ${Number(entry.value).toFixed(2)}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  }}
+                  wrapperStyle={{ zIndex: 9999 }}
+                />
                 <Legend />
-                <Bar dataKey="actual" name="Actual Avg" shape={<JewelBar />} fill={FORECAST_ACTUAL_COLOR} />
-                <Bar dataKey="forecast" name="Forecast" shape={<JewelBar />} fill={FORECAST_PREDICTED_COLOR} />
+                <Bar
+                  dataKey="actual"
+                  name="Historical Avg"
+                  shape={<JewelBar />}
+                  fill={FORECAST_ACTUAL_COLOR}
+                />
+                <Bar
+                  dataKey="forecast"
+                  name="Next Month Forecast"
+                  shape={<JewelBar />}
+                  fill={FORECAST_PREDICTED_COLOR}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -1207,6 +1258,67 @@ export default function ChatPage() {
                 shape={(props: any) => <AnomalyBar {...props} isAnomaly={topData[props.index]?.isAnomaly} />}
                 fill="#00637C"
               />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    if (type === 'categoryMonthly') {
+      const cat = chartUpdate?.category;
+      const filtered = expenses.filter((t) => !cat || (t.category || 'Other') === cat);
+
+      const monthlyMap: Record<string, number> = {};
+      filtered.forEach((t) => {
+        const d = new Date(t.transactionDate + 'T00:00:00');
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+        monthlyMap[key] = (monthlyMap[key] ?? 0) + Math.abs(t.amount);
+      });
+
+      const monthlyData = Object.entries(monthlyMap)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, value]) => ({
+          month: new Date(key + '-01T00:00:00').toLocaleDateString('en-US', {
+            month: 'short',
+            year: 'numeric',
+          }),
+          value: Math.round(value * 100) / 100,
+        }));
+
+      return (
+        <div
+          key="categoryMonthly"
+          style={{
+            animation: 'chartFadeIn 0.3s ease-out',
+            width: '100%',
+            height: '100%',
+            flex: 1,
+          }}
+        >
+          <ResponsiveContainer width="100%" height={520}>
+            <BarChart data={monthlyData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+              <XAxis
+                dataKey="month"
+                tick={{ fill: '#64748B', fontSize: 10 }}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+                interval={0}
+              />
+              <YAxis
+                tick={{ fill: '#64748B', fontSize: 11 }}
+                stroke="#E2E8F0"
+                tickCount={5}
+                allowDecimals={false}
+                domain={[0, (dataMax: number) => Math.ceil(dataMax * 1.15 / 10) * 10]}
+              />
+              <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+              <Bar dataKey="value" shape={<JewelBar />}>
+                {monthlyData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>

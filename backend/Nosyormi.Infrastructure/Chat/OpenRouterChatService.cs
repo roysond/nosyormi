@@ -39,13 +39,13 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
-        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
           "answer": "your narrative response here",
           "chartUpdate": {
-            "type": "pie|bar|line|anomalies|forecast|stacked|horizontal|treemap|topN",
+            "type": "pie|bar|line|anomalies|forecast|stacked|horizontal|treemap|topN|categoryMonthly",
             "category": "optional category name",
             "highlightTransactionIds": ["optional", "transaction", "ids"]
           }
@@ -358,46 +358,177 @@ public class OpenRouterChatService : IChatService
 
             var chartUpdate = MapChartUpdate(parsed.ChartUpdate, validCategories);
 
-            // Force topN chart if query is about biggest/top transactions but AI didn't emit it
-            if (chartUpdate == null || chartUpdate.Type != "topN")
+            // Keyword-based chart override — ensures correct chart renders regardless of AI chartUpdate
+            var lower = userMessage.ToLowerInvariant();
+            var words = lower.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+            // Helper to find category match in message (partial keywords + full names)
+            string? FindCategoryInMessage(HashSet<string> validCategories)
             {
-                var lower = userMessage.ToLowerInvariant();
-                var isTopNQuery =
-                    lower.Contains("biggest purchase") ||
-                    lower.Contains("largest expense") ||
-                    lower.Contains("largest purchase") ||
-                    lower.Contains("most expensive") ||
-                    lower.Contains("top 7") ||
-                    lower.Contains("top 10") ||
-                    lower.Contains("top 5") ||
-                    lower.Contains("top transactions") ||
-                    lower.Contains("highest spending") ||
-                    lower.Contains("biggest expense");
+                (string keyword, string category)[] partialMatches =
+                [
+                    ("fuel", "Transport & Fuel"),
+                    ("transport", "Transport & Fuel"),
+                    ("food", "Food & Groceries"),
+                    ("groceries", "Food & Groceries"),
+                    ("dining", "Dining & Takeaway"),
+                    ("takeaway", "Dining & Takeaway"),
+                    ("subscription", "Subscriptions"),
+                    ("entertainment", "Entertainment"),
+                    ("shopping", "Shopping"),
+                    ("education", "Education"),
+                    ("atm", "ATM & Cash"),
+                    ("cash", "ATM & Cash"),
+                    ("transfer", "Transfers & Payments"),
+                    ("payment", "Transfers & Payments"),
+                    ("parking", "Parking & Tolls"),
+                    ("tolls", "Parking & Tolls"),
+                    ("utilities", "Utilities & Bills"),
+                    ("bills", "Utilities & Bills"),
+                    ("healthcare", "Healthcare"),
+                    ("government", "Government & Fees"),
+                ];
 
-                if (isTopNQuery)
+                foreach (var (keyword, category) in partialMatches)
                 {
-                    // Extract N from message
-                    int n = 10;
-                    var words = lower.Split(' ');
-                    for (int i = 0; i < words.Length - 1; i++)
-                    {
-                        if ((words[i] == "top" || words[i] == "biggest" || words[i] == "largest") &&
-                            int.TryParse(words[i + 1], out var parsed2))
-                        {
-                            n = parsed2;
-                            break;
-                        }
-                    }
+                    if (lower.Contains(keyword) && validCategories.Contains(category))
+                        return category;
+                }
 
-                    // Pick top N expense transaction IDs by absolute amount
-                    var topIds = transactions
-                        .Where(t => t.Amount < 0)
-                        .OrderByDescending(t => Math.Abs(t.Amount))
-                        .Take(n)
-                        .Select(t => t.Id.ToString())
-                        .ToArray();
+                foreach (var cat in validCategories)
+                {
+                    if (lower.Contains(cat.ToLowerInvariant()))
+                        return cat;
+                }
 
-                    chartUpdate = new ChartUpdate("topN", null, topIds);
+                return null;
+            }
+
+            // Helper to extract N from message
+            int ExtractN(int defaultN = 10)
+            {
+                for (int i = 0; i < words.Length - 1; i++)
+                {
+                    if ((words[i] == "top" || words[i] == "biggest" || words[i] == "largest" || words[i] == "top") &&
+                        int.TryParse(words[i + 1], out var n))
+                        return n;
+                }
+                return defaultN;
+            }
+
+            // FORECAST — next month, future spending, prediction
+            bool isForecast = lower.Contains("next month") || lower.Contains("next week") ||
+                lower.Contains("forecast") || lower.Contains("predict") || lower.Contains("will i spend") ||
+                lower.Contains("will spend") || lower.Contains("future");
+
+            // ANOMALIES — unusual, unexpected, flagged
+            bool isAnomalies = lower.Contains("anomal") || lower.Contains("unusual") ||
+                lower.Contains("unexpected") || lower.Contains("flagged") || lower.Contains("weird") ||
+                lower.Contains("suspicious") || lower.Contains("outlier");
+
+            // TOPN — biggest purchases, top transactions
+            bool isTopN = lower.Contains("biggest purchase") || lower.Contains("largest expense") ||
+                lower.Contains("largest purchase") || lower.Contains("most expensive") ||
+                lower.Contains("top 7") || lower.Contains("top 10") || lower.Contains("top 5") ||
+                lower.Contains("top 3") || lower.Contains("top transactions") || lower.Contains("biggest expense") ||
+                lower.Contains("highest spending") || lower.Contains("what are my top");
+
+            // CATEGORY MONTHLY / DRILL-DOWN — specific category mentioned in message
+            string? mentionedCategory = FindCategoryInMessage(validCategories);
+            bool isCategoryMonthly = mentionedCategory is not null &&
+                (lower.Contains("each month") || lower.Contains("every month") ||
+                lower.Contains("month by month") || lower.Contains("monthly") ||
+                lower.Contains("per month") || lower.Contains("month to month") ||
+                lower.Contains("over months") || lower.Contains("by month") ||
+                lower.Contains("each month") || lower.Contains("average") ||
+                lower.Contains("trend") || lower.Contains("over time"));
+            bool isCategoryDrillDown = mentionedCategory is not null && !isCategoryMonthly;
+
+            // STACKED — monthly by category, month by month, each month, over months (no specific category)
+            bool isStacked = mentionedCategory is null &&
+                (lower.Contains("each month") || lower.Contains("every month") ||
+                lower.Contains("month by month") || lower.Contains("monthly") || lower.Contains("per month") ||
+                lower.Contains("month to month") || lower.Contains("over months") || lower.Contains("by month")) &&
+                !isForecast;
+
+            // LINE — over time, trend, history, timeline (no specific category)
+            bool isLine = mentionedCategory is null &&
+                (lower.Contains("over time") || lower.Contains("trend") ||
+                lower.Contains("history") || lower.Contains("timeline") || lower.Contains("across time") ||
+                lower.Contains("time series") || lower.Contains("how has") || lower.Contains("changed over")) &&
+                !isStacked && !isForecast;
+
+            // HORIZONTAL — rank, compare, highest to lowest, which category
+            bool isHorizontal = lower.Contains("rank") || lower.Contains("ranking") ||
+                lower.Contains("compare categor") || lower.Contains("highest to lowest") ||
+                lower.Contains("lowest to highest") || lower.Contains("which category") ||
+                lower.Contains("category comparison");
+
+            // TREEMAP — map, visualize, picture, proportion
+            bool isTreemap = lower.Contains("spending map") || lower.Contains("visuali") ||
+                lower.Contains("treemap") || lower.Contains("picture of") || lower.Contains("show me where") ||
+                lower.Contains("where does my money");
+
+            // PIE — breakdown, distribution, proportion
+            bool isPie = (lower.Contains("breakdown") || lower.Contains("distribution") ||
+                lower.Contains("proportion") || lower.Contains("split") || lower.Contains("percentage")) &&
+                !isStacked && !isHorizontal && !isTreemap;
+
+            // Apply overrides in priority order
+            if (isForecast)
+            {
+                chartUpdate = new ChartUpdate("forecast", null, null);
+            }
+            else if (isAnomalies)
+            {
+                chartUpdate = new ChartUpdate("anomalies", null, null);
+            }
+            else if (isTopN)
+            {
+                var topIds = transactions
+                    .Where(t => t.Amount < 0)
+                    .OrderByDescending(t => Math.Abs(t.Amount))
+                    .Take(ExtractN())
+                    .Select(t => t.Id.ToString())
+                    .ToArray();
+                chartUpdate = new ChartUpdate("topN", null, topIds);
+            }
+            else if (isCategoryMonthly)
+            {
+                chartUpdate = new ChartUpdate("categoryMonthly", mentionedCategory, null);
+            }
+            else if (isCategoryDrillDown)
+            {
+                chartUpdate = new ChartUpdate("bar", mentionedCategory, null);
+            }
+            else if (isStacked)
+            {
+                chartUpdate = new ChartUpdate("stacked", null, null);
+            }
+            else if (isLine)
+            {
+                chartUpdate = new ChartUpdate("line", null, null);
+            }
+            else if (isHorizontal)
+            {
+                chartUpdate = new ChartUpdate("horizontal", null, null);
+            }
+            else if (isTreemap)
+            {
+                chartUpdate = new ChartUpdate("treemap", null, null);
+            }
+            else if (isPie)
+            {
+                chartUpdate = new ChartUpdate("pie", null, null);
+            }
+            else if (chartUpdate == null)
+            {
+                // If AI returned nothing and no keyword matched, use stacked as intelligent default
+                // only for questions about spending patterns
+                if (lower.Contains("pattern") || lower.Contains("habit") || lower.Contains("how do i spend") ||
+                    lower.Contains("spending look") || lower.Contains("overview"))
+                {
+                    chartUpdate = new ChartUpdate("stacked", null, null);
                 }
             }
 
