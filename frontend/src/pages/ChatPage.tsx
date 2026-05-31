@@ -841,8 +841,7 @@ export default function ChatPage() {
                 alignItems: 'center',
                 padding: '12px 10px',
                 marginBottom: 8,
-                borderLeft: '3px solid rgba(220,38,38,0.6)',
-                background: 'rgba(220,38,38,0.04)',
+                background: 'rgba(245,158,11,0.06)',
                 borderRadius: 4,
               }}
             >
@@ -1194,17 +1193,13 @@ export default function ChatPage() {
           from { opacity: 0; transform: translateY(8px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes barAnomalyGlow {
-          0%, 100% { filter: drop-shadow(0 0 4px rgba(220, 38, 38, 0.5)); }
-          50% { filter: drop-shadow(0 0 14px rgba(220, 38, 38, 0.9)); }
-        }
         @keyframes chat-dot-pulse {
           0%, 80%, 100% { opacity: 0.25; transform: scale(0.85); }
           40% { opacity: 1; transform: scale(1); }
         }
         @keyframes chat-anomaly-pulse {
-          0%, 100% { box-shadow: inset 0 0 0 0 rgba(220,38,38,0); }
-          50% { box-shadow: inset 0 0 20px rgba(220,38,38,0.12); }
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(245,158,11,0); }
+          50% { box-shadow: inset 0 0 22px rgba(245,158,11,0.22); }
         }
         @keyframes loadingBorderSpin {
           0% { background-position: 0% 50%; }

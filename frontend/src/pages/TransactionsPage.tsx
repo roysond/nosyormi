@@ -421,26 +421,27 @@ export default function TransactionsPage() {
               ? '80px 1fr 1fr 1fr'
               : '1fr 1fr 1fr',
             alignItems: 'center',
-            padding: tx.isAnomaly ? '12px 16px 12px 13px' : '12px 16px',
+            padding: '12px 16px',
             borderRadius: 8,
             borderBottom: '1px solid #F1F5F9',
-            background: isExpanded ? '#F4F7F9' : 'white',
+            background: tx.isAnomaly
+              ? 'rgba(245,158,11,0.06)'
+              : isExpanded
+                ? '#F4F7F9'
+                : 'white',
             cursor: 'pointer',
             transition: 'background 0.15s',
             ...(tx.isAnomaly
-              ? {
-                  animation: 'rowAnomalyGlow 2.5s ease-in-out infinite',
-                  borderLeft: '3px solid rgba(220, 38, 38, 0.8)',
-                }
+              ? { animation: 'chat-anomaly-pulse 2s ease-in-out infinite' }
               : {}),
           }}
           onMouseEnter={(e) => {
-            if (!isExpanded) {
+            if (!isExpanded && !tx.isAnomaly) {
               e.currentTarget.style.background = '#F4F7F9';
             }
           }}
           onMouseLeave={(e) => {
-            if (!isExpanded) {
+            if (!isExpanded && !tx.isAnomaly) {
               e.currentTarget.style.background = 'white';
             }
           }}
@@ -531,9 +532,9 @@ export default function TransactionsPage() {
       }}
     >
       <style>{`
-        @keyframes rowAnomalyGlow {
-          0%, 100% { background: rgba(220, 38, 38, 0.12); box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.35); }
-          50% { background: rgba(220, 38, 38, 0.25); box-shadow: inset 0 0 0 1px rgba(220, 38, 38, 0.6), 0 0 20px rgba(220, 38, 38, 0.15); }
+        @keyframes chat-anomaly-pulse {
+          0%, 100% { box-shadow: inset 0 0 0 0 rgba(245,158,11,0); }
+          50% { box-shadow: inset 0 0 22px rgba(245,158,11,0.22); }
         }
         @keyframes anomalyDotPulse {
           0%, 100% { opacity: 0.5; transform: scale(1); }
