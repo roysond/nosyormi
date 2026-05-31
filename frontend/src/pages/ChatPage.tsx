@@ -404,7 +404,7 @@ export default function ChatPage() {
     return 'Your spending distribution across categories';
   };
 
-  const renderChart = () => {
+  const renderedChart = useMemo(() => {
     const type = chartUpdate?.type ?? 'pie';
 
     if (type === 'pie' || !chartUpdate?.type) {
@@ -1122,7 +1122,15 @@ export default function ChatPage() {
     }
 
     return null;
-  };
+  }, [
+    chartUpdate,
+    transactions,
+    expenses,
+    categoryTotals,
+    forecastData,
+    hoveredPieIndex,
+    hoveredStackCategory,
+  ]);
 
   return (
     <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#F4F7F9' }}>
@@ -1142,34 +1150,6 @@ export default function ChatPage() {
         @keyframes chat-anomaly-pulse {
           0%, 100% { box-shadow: inset 0 0 0 0 rgba(217,119,6,0); }
           50% { box-shadow: inset 0 0 22px rgba(217,119,6,0.22); }
-        }
-        @keyframes rotateBorder {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .ai-bubble-wrapper {
-          position: relative;
-          align-self: flex-start;
-          border-radius: 18px 18px 18px 4px;
-          padding: 3px;
-          background: transparent;
-          box-shadow: 0 8px 24px rgba(52,211,153,0.15), 0 4px 10px rgba(0,0,0,0.08);
-        }
-        .ai-bubble-wrapper::before {
-          content: '';
-          position: absolute;
-          inset: -3px;
-          border-radius: 20px 20px 20px 6px;
-          background: conic-gradient(#34D399, #E8C96A, #34D399, #E8C96A, #34D399);
-          animation: rotateBorder 2s linear infinite;
-          z-index: 0;
-        }
-        .ai-bubble-wrapper > div {
-          position: relative;
-          z-index: 1;
-        }
-        .ai-bubble-wrapper.loading::before {
-          animation-duration: 0.6s;
         }
         .chat-anomaly-row {
           animation: chat-anomaly-pulse 2s ease-in-out infinite;
@@ -1293,7 +1273,17 @@ export default function ChatPage() {
                 {msg.content}
               </div>
             ) : (
-              <div key={index} className="ai-bubble-wrapper" style={{}}>
+              <div
+                key={index}
+                style={{
+                  alignSelf: 'flex-start',
+                  maxWidth: '78%',
+                  borderRadius: '18px 18px 18px 4px',
+                  padding: '2px',
+                  background: 'linear-gradient(135deg, #34D399, #E8C96A)',
+                  boxShadow: '0 8px 24px rgba(52,211,153,0.15)',
+                }}
+              >
                 <div
                   style={{
                     background: 'rgba(255,255,255,0.97)',
@@ -1315,39 +1305,58 @@ export default function ChatPage() {
           )}
 
           {loading && (
-            <div className="ai-bubble-wrapper loading" style={{ alignSelf: 'flex-start' }}>
-              <div style={{
-                background: '#F8FAFC',
-                borderRadius: '16px 16px 16px 3px',
-                padding: '14px 18px',
-              }}>
-              <span style={{
-                display: 'inline-block',
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#94A3B8',
-                animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
-                animationDelay: '0ms',
-              }} />
-              <span style={{
-                display: 'inline-block',
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#94A3B8',
-                animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
-                animationDelay: '200ms',
-              }} />
-              <span style={{
-                display: 'inline-block',
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: '#94A3B8',
-                animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
-                animationDelay: '400ms',
-              }} />
+            <div
+              style={{
+                alignSelf: 'flex-start',
+                borderRadius: '18px 18px 18px 4px',
+                padding: '2px',
+                background: 'linear-gradient(135deg, #34D399, #E8C96A)',
+                boxShadow: '0 0 12px rgba(52,211,153,0.4)',
+              }}
+            >
+              <div
+                style={{
+                  background: '#F8FAFC',
+                  borderRadius: '16px 16px 16px 3px',
+                  padding: '14px 18px',
+                  display: 'flex',
+                  gap: '4px',
+                  alignItems: 'center',
+                }}
+              >
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#94A3B8',
+                    animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
+                    animationDelay: '0ms',
+                  }}
+                />
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#94A3B8',
+                    animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
+                    animationDelay: '200ms',
+                  }}
+                />
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    background: '#94A3B8',
+                    animation: 'chat-dot-pulse 1.4s ease-in-out infinite',
+                    animationDelay: '400ms',
+                  }}
+                />
               </div>
             </div>
           )}
@@ -1466,7 +1475,7 @@ export default function ChatPage() {
             paddingTop: 12,
           }}
         >
-          {renderChart()}
+          {renderedChart}
         </div>
         <p style={{ margin: '12px 0 0', color: colors.hint, fontSize: 12 }}>
           {getChartHint()}
