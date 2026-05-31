@@ -127,10 +127,14 @@ public class CsvStatementParser : ICsvStatementParser
             return description;
 
         var payeeName = csv.GetField("Payee Name")?.Trim();
-        if (string.IsNullOrWhiteSpace(payeeName))
+        var memo = csv.GetField("Memo")?.Trim();
+
+        if (string.IsNullOrWhiteSpace(payeeName) && string.IsNullOrWhiteSpace(memo))
             return string.Empty;
 
-        var memo = csv.GetField("Memo")?.Trim();
+        if (string.IsNullOrWhiteSpace(payeeName))
+            return memo!;
+
         if (string.IsNullOrWhiteSpace(memo))
             return payeeName;
 
