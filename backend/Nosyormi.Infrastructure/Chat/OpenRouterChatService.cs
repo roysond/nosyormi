@@ -39,7 +39,7 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
-        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
@@ -52,6 +52,8 @@ public class OpenRouterChatService : IChatService
         }
 
         CHART SELECTION RULES:
+        - SPECIFIC TRANSACTION RULE (highest priority): When the user asks about a specific merchant, service, store, or transaction type (e.g. "Costco purchases", "DoorDash orders", "Amazon transactions", "parking meter charges", "Shell fuel purchases"), ALWAYS use type="bar" with category set to the matching category name AND populate highlightTransactionIds with the IDs of ALL transactions whose description contains that merchant/keyword. Scan every transaction line in the data, find matching descriptions, and include their [ID:uuid] values. This ensures the chart shows exactly the transactions the user asked about — not the whole category.
+        - MONTHLY SPECIFIC RULE: When the user asks about a specific merchant or type "each month" or "every month" or "monthly", use type="categoryMonthly" with category set to the matching category AND populate highlightTransactionIds with matching transaction IDs so the frontend knows which transactions to aggregate monthly.
         - "pie" → when the user asks about spending breakdown or distribution across categories
         - "bar" → when the user asks to compare categories or amounts across ALL categories. Use category=null for this.
         - "bar" with a specific category → when the user asks about spending WITHIN a specific category (e.g. 'show me my subscriptions breakdown', 'what are my individual food purchases', 'break down my dining spending'). Set category to the category name. This signals the frontend to show individual transactions within that category as separate bars, not the aggregated category total.
@@ -324,7 +326,7 @@ public class OpenRouterChatService : IChatService
             Model = model,
             Messages = messages,
             MaxTokens = 1500,
-            Temperature = 0.7f,
+            Temperature = 0.3f,
             Stream = true
         };
 

@@ -661,9 +661,18 @@ export default function ChatPage() {
       const isDrillDown =
         chartUpdate?.category !== null && chartUpdate?.category !== undefined;
 
+      const highlightIds = chartUpdate?.highlightTransactionIds
+        ? new Set(chartUpdate.highlightTransactionIds)
+        : null;
+
       const drillDownData = isDrillDown
         ? expenses
-            .filter((t) => (t.category || 'Other') === chartUpdate.category)
+            .filter((t) => {
+              if (highlightIds && highlightIds.size > 0) {
+                return highlightIds.has(t.id);
+              }
+              return (t.category || 'Other') === chartUpdate.category;
+            })
             .map((t) => ({
               id: t.id,
               name:
@@ -1266,7 +1275,16 @@ export default function ChatPage() {
 
     if (type === 'categoryMonthly') {
       const cat = chartUpdate?.category;
-      const filtered = expenses.filter((t) => !cat || (t.category || 'Other') === cat);
+      const highlightIds = chartUpdate?.highlightTransactionIds
+        ? new Set(chartUpdate.highlightTransactionIds)
+        : null;
+
+      const filtered = expenses.filter((t) => {
+        if (highlightIds && highlightIds.size > 0) {
+          return highlightIds.has(t.id);
+        }
+        return !cat || (t.category || 'Other') === cat;
+      });
 
       const monthlyMap: Record<string, number> = {};
       filtered.forEach((t) => {
