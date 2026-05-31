@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ANOMALY_COLOR } from '../constants/palette';
+import {
+  getSelectedStatementId,
+  selectStatement,
+  STATEMENT_FILENAME_KEY,
+  STATEMENT_ID_KEY,
+  subscribeStatementSwitched,
+} from '../statementSelection';
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
 interface StatementSummary {
@@ -166,6 +173,22 @@ const styles = {
     fontWeight: 600,
     cursor: 'pointer',
   },
+  reflectBtn: {
+    background: 'transparent',
+    color: '#00637C',
+    border: '1px solid rgba(0, 99, 124, 0.4)',
+    borderRadius: 8,
+    padding: '7px 16px',
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    flexShrink: 0,
+  },
+  cardActive: {
+    background: 'rgba(0, 99, 124, 0.12)',
+    border: '1px solid rgba(0, 99, 124, 0.4)',
+    borderRadius: 8,
+  },
 };
 
 function formatUploadedDate(isoDate: string): string {
@@ -192,6 +215,15 @@ export default function StatementsPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [activeStatementId, setActiveStatementId] = useState<string | null>(
+    () => getSelectedStatementId(),
+  );
+
+  useEffect(() => {
+    return subscribeStatementSwitched(() => {
+      setActiveStatementId(getSelectedStatementId());
+    });
+  }, []);
 
   const loadStatements = useCallback(async () => {
     setLoading(true);
@@ -242,8 +274,9 @@ export default function StatementsPage() {
       setStatements((prev) => prev.filter((s) => s.id !== confirmDelete.id));
       sessionStorage.removeItem('nosyormi-chat-messages');
       sessionStorage.removeItem('nosyormi-chat-chart-update');
-      sessionStorage.removeItem('nosyormi-chat-statement-id');
-      sessionStorage.removeItem('nosyormi-chat-statement-filename');
+      sessionStorage.removeItem(STATEMENT_ID_KEY);
+      sessionStorage.removeItem(STATEMENT_FILENAME_KEY);
+      setActiveStatementId(null);
       window.dispatchEvent(new CustomEvent('nosyormi-statement-deleted'));
       setConfirmDelete(null);
       setDeleteError(null);
@@ -368,8 +401,16 @@ export default function StatementsPage() {
 
       {!loading && !error && statements.length > 0 && (
         <div style={styles.list}>
-          {statements.map((statement) => (
-            <div key={statement.id} style={styles.card}>
+          {statements.map((statement) => {
+            const isActive = activeStatementId === statement.id;
+            return (
+            <div
+              key={statement.id}
+              style={{
+                ...styles.card,
+                ...(isActive ? styles.cardActive : {}),
+              }}
+            >
               <div style={styles.cardMain}>
                 <p style={styles.fileName}>{statement.fileName}</p>
                 <p style={styles.uploadedAt}>
@@ -380,6 +421,16 @@ export default function StatementsPage() {
                 {statement.transactionCount} transaction
                 {statement.transactionCount === 1 ? '' : 's'}
               </span>
+              <button
+                type="button"
+                style={styles.reflectBtn}
+                onClick={() => {
+                  selectStatement(statement.id, statement.fileName);
+                  setActiveStatementId(statement.id);
+                }}
+              >
+                {isActive ? 'Reflected ✓' : 'Reflect'}
+              </button>
               <button
                 type="button"
                 style={{
@@ -399,7 +450,8 @@ export default function StatementsPage() {
                 Delete
               </button>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

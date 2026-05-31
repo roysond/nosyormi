@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ANOMALY_COLOR } from '../constants/palette';
+import {
+  fetchActiveStatement,
+  subscribeStatementSwitched,
+} from '../statementSelection';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
@@ -10,13 +14,6 @@ interface Transaction {
   amount: number;
   isAnomaly: boolean;
   category?: string;
-}
-
-interface StatementSummary {
-  id: string;
-  fileName: string;
-  uploadedAt: string;
-  transactionCount: number;
 }
 
 interface Statement {
@@ -104,32 +101,32 @@ export default function TransactionsPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const listRes = await fetch(`${API_BASE}/api/statements`);
-        if (!listRes.ok) {
-          throw new Error(`Failed to load statements (HTTP ${listRes.status}).`);
-        }
-        const summaries: StatementSummary[] = await listRes.json();
-        if (summaries.length === 0) {
-          setError('No statements uploaded yet. Upload a CSV from the Statements page.');
-          setLoading(false);
-          return;
-        }
-        const detailRes = await fetch(`${API_BASE}/api/statements/${summaries[0].id}`);
-        if (!detailRes.ok) {
-          throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
-        }
-        const data: Statement = await detailRes.json();
-        setStatement(data);
-        setLoading(false);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load statement.');
-        setLoading(false);
-      }
-    })();
+  const loadStatement = useCallback(async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+      setError(null);
+    }
+    const result = await fetchActiveStatement<Statement>(API_BASE);
+    if (result.kind === 'empty') {
+      setStatement(null);
+      setError('No statements uploaded yet. Upload a CSV from the Statements page.');
+    } else if (result.kind === 'ok') {
+      setStatement(result.statement);
+      setError(null);
+      setExpandedRowId(null);
+    } else {
+      setStatement(null);
+      setError(result.message);
+    }
+    if (showLoading) setLoading(false);
   }, []);
+
+  useEffect(() => {
+    void loadStatement(true);
+    return subscribeStatementSwitched(() => {
+      void loadStatement(false);
+    });
+  }, [loadStatement]);
 
   useEffect(() => {
     const mainEl = document.querySelector('main');

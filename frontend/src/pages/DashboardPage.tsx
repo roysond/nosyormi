@@ -8,6 +8,10 @@ import {
 } from 'recharts';
 import { APP_COLORS, ANOMALY_COLOR } from '../constants/palette';
 import { JewelSlice, UniversalTooltip } from '../components/chartEffects';
+import {
+  fetchActiveStatement,
+  subscribeStatementSwitched,
+} from '../statementSelection';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = APP_COLORS;
@@ -19,13 +23,6 @@ interface Transaction {
   amount: number;
   isAnomaly: boolean;
   category?: string;
-}
-
-interface StatementSummary {
-  id: string;
-  fileName: string;
-  uploadedAt: string;
-  transactionCount: number;
 }
 
 interface Statement {
@@ -276,38 +273,27 @@ export default function DashboardPage() {
       setError(null);
       setHasNoStatements(false);
     }
-    try {
-      const listRes = await fetch(`${API_BASE}/api/statements`);
-      if (!listRes.ok) {
-        throw new Error(`Failed to load statements (HTTP ${listRes.status}).`);
-      }
-      const summaries: StatementSummary[] = await listRes.json();
-
-      if (summaries.length === 0) {
-        setStatement(null);
-        setHasNoStatements(true);
-        return;
-      }
-
-      const newest = summaries[0];
-      const detailRes = await fetch(`${API_BASE}/api/statements/${newest.id}`);
-      if (!detailRes.ok) {
-        throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
-      }
-      const data: Statement = await detailRes.json();
-      setStatement(data);
+    const result = await fetchActiveStatement<Statement>(API_BASE);
+    if (result.kind === 'empty') {
+      setStatement(null);
+      setHasNoStatements(true);
+    } else if (result.kind === 'ok') {
+      setStatement(result.statement);
       setHasNoStatements(false);
-    } catch (err: unknown) {
+      setActiveCategoryIndex(null);
+    } else {
       setStatement(null);
       setHasNoStatements(false);
-      setError(err instanceof Error ? err.message : 'Failed to load statement.');
-    } finally {
-      if (showLoading) setLoading(false);
+      setError(result.message);
     }
+    if (showLoading) setLoading(false);
   }, []);
 
   useEffect(() => {
-    loadStatement(true);
+    void loadStatement(true);
+    return subscribeStatementSwitched(() => {
+      void loadStatement(false);
+    });
   }, [loadStatement]);
 
   const availablePeriods = useMemo(() => {

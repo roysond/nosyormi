@@ -24,6 +24,12 @@ import {
   LINE_FILL_COLOR,
 } from '../constants/palette';
 import { JewelBar, AnomalyBar, JewelSlice, UniversalTooltip } from '../components/chartEffects';
+import {
+  fetchActiveStatement,
+  STATEMENT_FILENAME_KEY,
+  STATEMENT_ID_KEY,
+  subscribeStatementSwitched,
+} from '../statementSelection';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 const COLORS = APP_COLORS;
@@ -39,11 +45,11 @@ interface ChartUpdate {
   highlightTransactionIds: string[] | null;
 }
 
-interface StatementSummary {
+interface Statement {
   id: string;
   fileName: string;
   uploadedAt: string;
-  transactionCount: number;
+  transactions: Transaction[];
 }
 
 interface Transaction {
@@ -224,6 +230,26 @@ export default function ChatPage() {
     [expenses],
   );
 
+  const loadActiveStatement = useCallback(async () => {
+    const result = await fetchActiveStatement<Statement>(API_BASE);
+    if (result.kind === 'empty') {
+      setStatementId(null);
+      setTransactions([]);
+      setError('No statements uploaded yet. Upload a CSV from the Statements page.');
+      return;
+    }
+    if (result.kind === 'error') {
+      setStatementId(null);
+      setTransactions([]);
+      setError(result.message);
+      return;
+    }
+    setStatementId(result.statement.id);
+    setStatementFileName(result.statement.fileName);
+    setTransactions(result.statement.transactions ?? []);
+    setError(null);
+  }, []);
+
   useEffect(() => {
     const savedMessages = sessionStorage.getItem('nosyormi-chat-messages');
     if (savedMessages) {
@@ -237,8 +263,7 @@ export default function ChatPage() {
       }
     }
 
-    const savedStatementId = sessionStorage.getItem('nosyormi-chat-statement-id');
-    const savedStatementFileName = sessionStorage.getItem('nosyormi-chat-statement-filename');
+    const savedStatementFileName = sessionStorage.getItem(STATEMENT_FILENAME_KEY);
     if (savedStatementFileName) {
       setStatementFileName(savedStatementFileName);
     }
@@ -253,36 +278,22 @@ export default function ChatPage() {
       }
     }
 
-    (async () => {
-      try {
-        const listRes = await fetch(`${API_BASE}/api/statements`);
-        if (!listRes.ok) {
-          throw new Error(`Failed to load statements (HTTP ${listRes.status}).`);
-        }
-        const summaries: StatementSummary[] = await listRes.json();
-        if (summaries.length === 0) {
-          setError('No statements uploaded yet. Upload a CSV from the Statements page.');
-          return;
-        }
-        const persistedSummary =
-          savedStatementId != null
-            ? summaries.find((s) => s.id === savedStatementId)
-            : undefined;
-        const summary = persistedSummary ?? summaries[0];
-        const id = summary.id;
-        setStatementId(id);
-        setStatementFileName(summary.fileName);
-        const detailRes = await fetch(`${API_BASE}/api/statements/${id}`);
-        if (!detailRes.ok) {
-          throw new Error(`Failed to load statement (HTTP ${detailRes.status}).`);
-        }
-        const data = await detailRes.json();
-        setTransactions(data.transactions ?? []);
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : 'Failed to load statement.');
+    void loadActiveStatement();
+  }, [loadActiveStatement]);
+
+  useEffect(() => {
+    return subscribeStatementSwitched(() => {
+      setMessages([]);
+      setChartUpdate(null);
+      sessionStorage.removeItem('nosyormi-chat-messages');
+      sessionStorage.removeItem('nosyormi-chat-chart-update');
+      const savedFileName = sessionStorage.getItem(STATEMENT_FILENAME_KEY);
+      if (savedFileName) {
+        setStatementFileName(savedFileName);
       }
-    })();
-  }, []);
+      void loadActiveStatement();
+    });
+  }, [loadActiveStatement]);
 
   useEffect(() => {
     if (chartUpdate?.type !== 'forecast' || statementId === null) return;
@@ -312,12 +323,12 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (statementId !== null) {
-      sessionStorage.setItem('nosyormi-chat-statement-id', statementId);
+      sessionStorage.setItem(STATEMENT_ID_KEY, statementId);
     }
   }, [statementId]);
 
   useEffect(() => {
-    sessionStorage.setItem('nosyormi-chat-statement-filename', statementFileName);
+    sessionStorage.setItem(STATEMENT_FILENAME_KEY, statementFileName);
   }, [statementFileName]);
 
   useEffect(() => {
@@ -331,8 +342,8 @@ export default function ChatPage() {
   const clearChat = () => {
     sessionStorage.removeItem('nosyormi-chat-messages');
     sessionStorage.removeItem('nosyormi-chat-chart-update');
-    sessionStorage.removeItem('nosyormi-chat-statement-id');
-    sessionStorage.removeItem('nosyormi-chat-statement-filename');
+    sessionStorage.removeItem(STATEMENT_ID_KEY);
+    sessionStorage.removeItem(STATEMENT_FILENAME_KEY);
     setMessages([]);
     setChartUpdate(null);
   };
