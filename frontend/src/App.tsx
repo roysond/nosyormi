@@ -12,7 +12,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
 import StatementPill from './components/StatementPill';
-import { BRAND_TEAL_BASE, BRAND_TEAL_EDGE, BRAND_SIDEBAR_GRADIENT } from './constants/palette';
+import { BRAND_TEAL_BASE, BRAND_TEAL_EDGE } from './constants/palette';
 
 const styles = {
   app: {
@@ -20,36 +20,38 @@ const styles = {
     height: '100vh',
     width: '100vw',
     overflow: 'hidden',
-    background: '#F4F7F9',
+    background: '#ECEEF1',
   },
   sidebar: {
-    height: '100vh',
-    background: BRAND_SIDEBAR_GRADIENT,
-    borderRight: '1px solid rgba(255,255,255,0.07)',
+    height: 'calc(100vh - 20px)',
+    margin: '10px',
+    background: '#FFFFFF',
+    border: '0.5px solid #E6E6E6',
+    borderRadius: '16px',
     display: 'flex',
     flexDirection: 'column' as const,
-    padding: '24px 12px',
+    padding: '20px 12px',
     boxSizing: 'border-box' as const,
     flexShrink: 0,
     transition: 'width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease',
     overflow: 'visible',
     position: 'relative' as const,
+    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
   },
   brand: {
-    padding: '0 12px 28px',
-    borderBottom: '1px solid rgba(255,255,255,0.07)',
-    marginBottom: '16px',
+    padding: '0 8px 20px',
+    marginBottom: '8px',
   },
   brandName: {
     fontSize: '15px',
-    fontWeight: 700,
-    color: '#E8C96A',
-    letterSpacing: '-0.02em',
+    fontWeight: 800,
+    color: '#124346',
+    letterSpacing: '0.02em',
     whiteSpace: 'nowrap' as const,
   },
   brandTagline: {
-    fontSize: '11px',
-    color: 'rgba(255,255,255,0.3)',
+    fontSize: '10px',
+    color: '#B8B8B8',
     fontStyle: 'italic' as const,
     marginTop: '2px',
     whiteSpace: 'nowrap' as const,
@@ -69,8 +71,8 @@ const styles = {
   },
   version: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-    fontSize: '10px',
-    color: 'rgba(255,255,255,0.18)',
+    fontSize: '9px',
+    color: '#CDCDCD',
     padding: '0 12px',
     marginTop: 'auto',
   },
@@ -86,28 +88,15 @@ function navItemStyle(isActive: boolean, isHovered: boolean): CSSProperties {
     cursor: 'pointer',
     textDecoration: 'none',
     fontSize: '13.5px',
-    fontWeight: isActive ? 600 : 500,
-    color: isActive ? '#E8C96A' : 'rgba(255,255,255,0.38)',
-    border: '1px solid transparent',
+    fontWeight: isActive ? 700 : 400,
+    color: isActive ? '#111111' : '#B0B0B0',
+    border: 'none',
     transition: 'all 0.15s ease',
-    textShadow: isActive
-      ? '0 0 10px rgba(232,201,106,0.55), 0 0 22px rgba(232,201,106,0.15)'
-      : 'none',
+    position: 'relative' as const,
   };
 
-  if (isActive) {
-    return {
-      ...base,
-      background: 'linear-gradient(90deg, rgba(0,99,124,0.45) 0%, rgba(201,168,76,0.07) 100%)',
-    };
-  }
-
-  if (isHovered) {
-    return {
-      ...base,
-      background: 'rgba(255,255,255,0.05)',
-      color: 'rgba(255,255,255,0.65)',
-    };
+  if (isHovered && !isActive) {
+    return { ...base, color: '#555555', background: 'rgba(0,0,0,0.03)' };
   }
 
   return base;
@@ -142,15 +131,25 @@ function NavItem({
     >
       {({ isActive }) => (
         <>
+          {isActive && !collapsed && (
+            <span style={{
+              position: 'absolute',
+              left: -12,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: 3,
+              height: 18,
+              borderRadius: '0 3px 3px 0',
+              background: 'linear-gradient(180deg, #1A5E5A, #124346)',
+            }} aria-hidden />
+          )}
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
-              color: isActive ? '#E8C96A' : 'rgba(255,255,255,0.38)',
-              filter: isActive
-                ? 'drop-shadow(0 0 5px rgba(232,201,106,0.8)) drop-shadow(0 0 12px rgba(232,201,106,0.35))'
-                : 'none',
+              color: isActive ? '#124346' : '#CACACA',
+              filter: 'none',
               transition: 'color 0.15s ease, filter 0.15s ease',
             }}
             aria-hidden
@@ -212,7 +211,7 @@ export default function App() {
             height: '32px',
             borderRadius: '50%',
             background: BRAND_TEAL_BASE,
-            border: '2px solid #F4F7F9',
+            border: '2px solid #ECEEF1',
             color: 'rgba(255,255,255,0.85)',
             display: 'flex',
             alignItems: 'center',
