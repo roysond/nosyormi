@@ -180,14 +180,14 @@ export default function ChatPage() {
       let b: number;
       if (t < 0.5) {
         const p = t * 2;
-        r2 = Math.round(52 + (232 - 52) * p);
-        g = Math.round(211 + (201 - 211) * p);
-        b = Math.round(153 + (106 - 153) * p);
+        r2 = Math.round(26 + (212 - 26) * p);
+        g = Math.round(94 + (168 - 94) * p);
+        b = Math.round(90 + (67 - 90) * p);
       } else {
         const p = (t - 0.5) * 2;
-        r2 = Math.round(232 + (52 - 232) * p);
-        g = Math.round(201 + (211 - 201) * p);
-        b = Math.round(106 + (153 - 106) * p);
+        r2 = Math.round(212 + (26 - 212) * p);
+        g = Math.round(168 + (94 - 168) * p);
+        b = Math.round(67 + (90 - 67) * p);
       }
       ctx.beginPath();
       ctx.moveTo(cx, cy);
@@ -949,7 +949,7 @@ export default function ChatPage() {
               >
                 {formatShortDate(tx.transactionDate)}
               </span>
-              <span style={{ color: colors.text, fontSize: 13 }}>{tx.description}</span>
+              <span style={{ color: colors.text, fontSize: 15 }}>{tx.description}</span>
               <span
                 style={{
                   fontFamily: 'monospace',
@@ -1478,7 +1478,7 @@ export default function ChatPage() {
           }}
         >
           <div>
-            <h2 style={{ margin: 0, color: '#1E293B', fontSize: '1.35rem', fontWeight: 600 }}>
+            <h2 style={{ margin: 0, color: '#1E293B', fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em' }}>
               Ask NOSYOR.M.I
             </h2>
             <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: 13 }}>
@@ -1542,13 +1542,13 @@ export default function ChatPage() {
                 key={index}
                 style={{
                   alignSelf: 'flex-end',
-                  background: 'rgba(7,26,30,0.88)',
+                  background: 'linear-gradient(135deg, #1A5E5A 0%, #124346 100%)',
                   backdropFilter: 'blur(12px)',
                   WebkitBackdropFilter: 'blur(12px)',
-                  color: '#E8EDEE',
+                  color: '#ffffff',
                   padding: '11px 17px',
                   borderRadius: '18px 18px 4px 18px',
-                  fontSize: '13px',
+                  fontSize: '16px',
                   lineHeight: '1.6',
                   maxWidth: '72%',
                   wordBreak: 'break-word',
@@ -1610,7 +1610,7 @@ export default function ChatPage() {
                     background: 'rgba(255,255,255,0.97)',
                     borderRadius: '16px 16px 16px 3px',
                     padding: '11px 17px',
-                    fontSize: '13px',
+                    fontSize: '16px',
                     lineHeight: '1.6',
                     color: '#1E293B',
                     margin: '0',
@@ -1632,11 +1632,11 @@ export default function ChatPage() {
                 position: 'relative',
                 borderRadius: '18px 18px 18px 4px',
                 padding: '2px',
-                background: 'linear-gradient(135deg, #34D399, #E8C96A, #34D399)',
+                background: 'linear-gradient(135deg, #1A5E5A, #D4A843, #1A5E5A)',
                 backgroundSize: '200% 200%',
                 animation: 'loadingBorderSpin 0.5s linear infinite',
                 boxShadow:
-                  '0 0 20px rgba(52,211,153,0.8), 0 0 40px rgba(232,201,106,0.6), 0 0 60px rgba(52,211,153,0.3)',
+                  '0 0 20px rgba(26,94,90,0.6), 0 0 40px rgba(212,168,67,0.4), 0 0 60px rgba(26,94,90,0.2)',
               }}
             >
               <div
@@ -1780,7 +1780,7 @@ export default function ChatPage() {
           style={{
             margin: '0 0 16px',
             color: '#1E293B',
-            fontSize: 15,
+            fontSize: 20,
             fontWeight: 700,
           }}
         >

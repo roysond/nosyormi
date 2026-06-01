@@ -33,8 +33,9 @@ const styles = {
     background: '#F4F7F9',
   },
   headerTitle: {
-    fontSize: '20px',
-    fontWeight: 700,
+    fontSize: '26px',
+    fontWeight: 800,
+    letterSpacing: '-0.02em',
     color: '#1E293B',
     margin: 0,
   },

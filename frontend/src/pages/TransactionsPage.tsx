@@ -354,7 +354,7 @@ export default function TransactionsPage() {
         >
           DATE
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#1E293B' }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#1E293B' }}>
           {formatFullDate(tx.transactionDate)}
         </div>
       </div>
@@ -371,7 +371,7 @@ export default function TransactionsPage() {
         >
           CATEGORY
         </div>
-        <div style={{ fontSize: 13, fontWeight: 600, color: '#071A1E' }}>
+        <div style={{ fontSize: 15, fontWeight: 600, color: '#071A1E' }}>
           {getCategoryName(tx)}
         </div>
       </div>
@@ -568,7 +568,7 @@ export default function TransactionsPage() {
       >
         <h1
           style={{
-            fontSize: scrolled ? 15 : 20,
+            fontSize: scrolled ? 16 : 26,
             fontWeight: 700,
             color: '#1E293B',
             margin: 0,

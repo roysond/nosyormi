@@ -53,8 +53,9 @@ const styles = {
     background: '#F4F7F9',
   },
   headerTitle: {
-    fontSize: '20px',
-    fontWeight: 700,
+    fontSize: '26px',
+    fontWeight: 800,
+    letterSpacing: '-0.02em',
     color: '#1E293B',
     margin: 0,
   },
@@ -679,7 +680,7 @@ export default function DashboardPage() {
           <div style={styles.statsRow}>
             <div style={styles.statCardHero}>
               <p style={styles.statLabelHero}>Total Income</p>
-              <p style={styles.statValue('#D4A843')}>
+              <p style={{ ...styles.statValue('#D4A843'), fontSize: 28, fontWeight: 800 }}>
                 {formatCurrency(animatedIncome)}
               </p>
             </div>
