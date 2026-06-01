@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ANOMALY_COLOR } from '../constants/palette';
+import { IconArrowUp } from '@tabler/icons-react';
+import { ANOMALY_COLOR, MACOS_GLASS_TEAL, MACOS_GLASS_GRAIN } from '../constants/palette';
 import {
   dispatchStatementSwitched,
   getSelectedStatementId,
@@ -515,7 +516,7 @@ export default function StatementsPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.3)',
+            background: 'rgba(10,40,42,0.32)',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
@@ -526,18 +527,33 @@ export default function StatementsPage() {
         >
           <div
             style={{
-              background: 'white',
-              borderRadius: 16,
-              padding: 32,
+              ...MACOS_GLASS_TEAL,
               width: 480,
               maxWidth: '90vw',
-              boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+              padding: '28px 28px 28px',
+              boxSizing: 'border-box' as const,
+              position: 'relative' as const,
+              overflow: 'hidden',
             }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
             aria-labelledby="upload-modal-title"
           >
+            <div
+              aria-hidden
+              style={{
+                position: 'absolute',
+                inset: 0,
+                backgroundImage: MACOS_GLASS_GRAIN,
+                opacity: 0.5,
+                mixBlendMode: 'overlay' as const,
+                pointerEvents: 'none',
+                zIndex: 0,
+                borderRadius: 'inherit',
+              }}
+            />
+            <div style={{ position: 'relative', zIndex: 1 }}>
             <div
               style={{
                 display: 'flex',
@@ -552,7 +568,7 @@ export default function StatementsPage() {
                   margin: 0,
                   fontSize: 18,
                   fontWeight: 700,
-                  color: '#1E293B',
+                  color: '#ffffff',
                 }}
               >
                 Upload Statement
@@ -564,7 +580,7 @@ export default function StatementsPage() {
                   border: 'none',
                   background: 'transparent',
                   fontSize: 20,
-                  color: '#94A3B8',
+                  color: 'rgba(255,255,255,0.65)',
                   cursor: 'pointer',
                   lineHeight: 1,
                 }}
@@ -596,10 +612,11 @@ export default function StatementsPage() {
                   role="button"
                   tabIndex={0}
                   style={{
-                    border: `2px dashed ${dragOver ? '#C9911A' : 'rgba(201,145,26,0.3)'}`,
+                    border: `2px dashed ${dragOver ? '#D4A843' : 'rgba(212,168,67,0.55)'}`,
                     background: dragOver
-                      ? 'rgba(201,145,26,0.08)'
-                      : 'rgba(201,145,26,0.03)',
+                      ? 'rgba(212,168,67,0.12)'
+                      : 'rgba(255,255,255,0.07)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.12)',
                     borderRadius: 12,
                     padding: 40,
                     textAlign: 'center',
@@ -639,29 +656,25 @@ export default function StatementsPage() {
                         padding: '20px 0',
                       }}
                     >
-                      <div style={{ color: '#C9911A', fontSize: 14, fontWeight: 500 }}>
+                      <div style={{ color: '#F2D177', fontSize: 14, fontWeight: 500 }}>
                         Reflecting on your data...
                       </div>
                     </div>
                   ) : (
                     <>
-                      <span
-                        style={{
-                          fontSize: 36,
-                          display: 'block',
-                          marginBottom: 12,
-                        }}
+                      <IconArrowUp
+                        size={36}
+                        color="#ffffff"
+                        style={{ display: 'block', margin: '0 auto 12px' }}
                         aria-hidden
-                      >
-                        ⬆
-                      </span>
+                      />
                       {uploadFile ? (
                         <p
                           style={{
                             margin: 0,
                             fontSize: 14,
                             fontWeight: 600,
-                            color: '#C9911A',
+                            color: '#D4A843',
                             wordBreak: 'break-word',
                           }}
                         >
@@ -674,12 +687,12 @@ export default function StatementsPage() {
                               margin: '0 0 6px',
                               fontSize: 15,
                               fontWeight: 500,
-                              color: '#1E293B',
+                              color: '#ffffff',
                             }}
                           >
                             Drop your CSV here
                           </p>
-                          <p style={{ margin: 0, fontSize: 13, color: '#64748B' }}>
+                          <p style={{ margin: 0, fontSize: 13, color: 'rgba(255,255,255,0.72)' }}>
                             or click to browse
                           </p>
                         </>
@@ -688,7 +701,7 @@ export default function StatementsPage() {
                         style={{
                           margin: '12px 0 0',
                           fontSize: 11,
-                          color: '#94A3B8',
+                          color: 'rgba(255,255,255,0.55)',
                         }}
                       >
                         Accepts .csv files from any bank
@@ -727,8 +740,9 @@ export default function StatementsPage() {
                       padding: '12px 24px',
                       border: 'none',
                       borderRadius: 8,
-                      background: '#C9911A',
-                      color: 'white',
+                      background: uploading ? 'rgba(212,168,67,0.7)' : 'linear-gradient(180deg, #DCAE47, #C8952A)',
+                      color: '#3a2a08',
+                      boxShadow: '0 4px 14px rgba(200,149,42,0.3), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.15)',
                       fontSize: 14,
                       fontWeight: 600,
                       cursor: uploading ? 'not-allowed' : 'pointer',
@@ -740,6 +754,7 @@ export default function StatementsPage() {
                 )}
               </>
             )}
+            </div>
           </div>
         </div>
       )}
