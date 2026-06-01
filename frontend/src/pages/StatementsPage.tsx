@@ -365,14 +365,16 @@ export default function StatementsPage() {
         <button
           type="button"
           style={{
-            background: '#071A1E',
-            color: 'white',
+            background: 'radial-gradient(ellipse at 78% 12%, #1A5E5A 0%, #124346 55%, #0E3638 100%)',
+            color: '#D4A843',
             border: 'none',
             borderRadius: 8,
             padding: '9px 18px',
             fontSize: 13,
-            fontWeight: 600,
+            fontWeight: 700,
             cursor: 'pointer',
+            boxShadow: '0 4px 14px rgba(18,67,70,0.3)',
+            letterSpacing: '0.01em',
           }}
           onClick={() => setShowUploadModal(true)}
         >
