@@ -12,6 +12,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
 import StatementPill from './components/StatementPill';
+import NosyormiLogo from './components/NosyormiLogo';
 import { BRAND_TEAL_BASE, BRAND_TEAL_EDGE } from './constants/palette';
 
 const styles = {
@@ -30,7 +31,7 @@ const styles = {
     borderRadius: '16px',
     display: 'flex',
     flexDirection: 'column' as const,
-    padding: '20px 12px',
+    padding: '28px 12px',
     boxSizing: 'border-box' as const,
     flexShrink: 0,
     transition: 'width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease',
@@ -39,8 +40,8 @@ const styles = {
     boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
   },
   brand: {
-    padding: '0 8px 20px',
-    marginBottom: '8px',
+    padding: '0 8px 24px',
+    marginBottom: '32px',
   },
   brandName: {
     fontSize: '15px',
@@ -205,7 +206,7 @@ export default function App() {
           onClick={() => setCollapsed((c) => !c)}
           style={{
             position: 'absolute',
-            top: '28px',
+            top: '72px',
             right: '-16px',
             width: '32px',
             height: '32px',
@@ -226,23 +227,15 @@ export default function App() {
           {collapsed ? '›' : '‹'}
         </button>
 
-        {collapsed ? (
-          <div style={{ ...styles.brand, visibility: 'hidden' }} aria-hidden>
-            <div style={styles.brandName}>NOSYOR.M.I</div>
-            <div style={styles.brandTagline}>Your money, reflected.</div>
-          </div>
-        ) : (
-          <div style={styles.brand}>
-            <div style={styles.brandName}>NOSYOR.M.I</div>
-            <div style={styles.brandTagline}>Your money, reflected.</div>
-          </div>
-        )}
+        <div style={{ ...styles.brand, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start' }}>
+          <NosyormiLogo size={32} showWordmark={!collapsed} />
+        </div>
 
         <nav style={styles.nav}>
           <NavItem to="/" icon={<IconLayoutDashboard size={18} />} label="Dashboard" collapsed={collapsed} />
           <NavItem to="/transactions" icon={<IconArrowsExchange size={18} />} label="Transactions" collapsed={collapsed} />
           <NavItem to="/statements" icon={<IconFileText size={18} />} label="Statements" collapsed={collapsed} />
-          <NavItem to="/chat" icon={<IconMessageCircle size={18} />} label="NOSYOR.M.I Chat" collapsed={collapsed} />
+          <NavItem to="/chat" icon={<IconMessageCircle size={18} />} label="Let's Reflect" collapsed={collapsed} />
         </nav>
 
         {!collapsed && <StatementPill />}
