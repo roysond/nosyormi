@@ -70,6 +70,20 @@ const styles = {
     borderRadius: 12,
     padding: '16px 20px',
   },
+  statCardHero: {
+    background: 'radial-gradient(ellipse at 78% 12%, #1A5E5A 0%, #124346 55%, #0E3638 100%)',
+    boxShadow: '0 4px 16px rgba(18,67,70,0.25)',
+    borderRadius: 12,
+    padding: '16px 20px',
+  },
+  statLabelHero: {
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase' as const,
+    color: 'rgba(212,168,67,0.65)',
+    margin: 0,
+  },
   statLabel: {
     fontSize: 11,
     fontWeight: 600,
@@ -663,9 +677,9 @@ export default function DashboardPage() {
       {!loading && !error && !hasNoStatements && statement && (
         <>
           <div style={styles.statsRow}>
-            <div style={styles.statCard}>
-              <p style={styles.statLabel}>Total Income</p>
-              <p style={styles.statValue('#10B981')}>
+            <div style={styles.statCardHero}>
+              <p style={styles.statLabelHero}>Total Income</p>
+              <p style={styles.statValue('#D4A843')}>
                 {formatCurrency(animatedIncome)}
               </p>
             </div>
