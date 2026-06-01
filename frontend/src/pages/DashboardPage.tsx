@@ -67,7 +67,25 @@ const styles = {
   },
   statCard: {
     background: 'white',
-    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+    borderRadius: 12,
+    padding: '16px 20px',
+  },
+  statCardExpenses: {
+    background: 'radial-gradient(ellipse at 82% 10%, rgba(239,68,68,0.07) 0%, white 60%)',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+    borderRadius: 12,
+    padding: '16px 20px',
+  },
+  statCardNet: {
+    background: 'radial-gradient(ellipse at 82% 10%, rgba(59,130,246,0.07) 0%, white 60%)',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
+    borderRadius: 12,
+    padding: '16px 20px',
+  },
+  statCardAnomalies: {
+    background: 'radial-gradient(ellipse at 82% 10%, rgba(212,168,67,0.07) 0%, white 60%)',
+    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
     borderRadius: 12,
     padding: '16px 20px',
   },
@@ -684,24 +702,22 @@ export default function DashboardPage() {
                 {formatCurrency(animatedIncome)}
               </p>
             </div>
-            <div style={styles.statCard}>
+            <div style={styles.statCardExpenses}>
               <p style={styles.statLabel}>Total Expenses</p>
               <p style={styles.statValue('#EF4444')}>
                 {formatCurrency(animatedExpenses)}
               </p>
             </div>
-            <div style={styles.statCard}>
+            <div style={styles.statCardNet}>
               <p style={styles.statLabel}>Net</p>
               <p
-                style={styles.statValue(
-                  derived.net >= 0 ? '#10B981' : '#EF4444',
-                )}
+                style={styles.statValue('#3B82F6')}
               >
                 {derived.net >= 0 ? '' : '-'}
                 {formatCurrency(animatedNet)}
               </p>
             </div>
-            <div style={styles.statCard}>
+            <div style={styles.statCardAnomalies}>
               <p style={styles.statLabel}>Anomalies</p>
               <p
                 style={styles.statValue(

@@ -88,7 +88,7 @@ function navItemStyle(isActive: boolean, isHovered: boolean): CSSProperties {
     borderRadius: 10,
     cursor: 'pointer',
     textDecoration: 'none',
-    fontSize: '14.5px',
+    fontSize: '16px',
     fontWeight: isActive ? 700 : 500,
     color: isActive ? '#111111' : '#B0B0B0',
     border: 'none',
