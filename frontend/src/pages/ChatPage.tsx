@@ -451,10 +451,31 @@ export default function ChatPage() {
     const type = chartUpdate?.type;
     if (!type || type === 'pie') return 'Spending Overview';
     if (type === 'bar') {
-      if (chartUpdate?.category !== null && chartUpdate?.category !== undefined) {
-        return `${chartUpdate.category} Breakdown`;
+      if (chartUpdate?.highlightTransactionIds && chartUpdate.highlightTransactionIds.length > 0 && expenses.length > 0) {
+        const highlightSet = new Set(chartUpdate.highlightTransactionIds);
+        const highlightedExpenses = expenses.filter(t => highlightSet.has(t.id));
+        if (highlightedExpenses.length > 0) {
+          const stopWords = new Set(['the','a','an','and','or','of','at','in','for','to','from','by','with','&','#','inc','llc','co','corp','purchase','purchases','payment','payments','pos','debit','credit','transaction','transactions','market','markets','store','stores','shop','save','supermarket']);
+          const wordCounts: Record<string, number> = {};
+          highlightedExpenses.forEach(t => {
+            t.description.split(/[\s\+\*\/\\]+/).forEach(w => {
+              const clean = w.replace(/[^a-zA-Z]/g, '').toLowerCase();
+              if (clean.length >= 3 && !stopWords.has(clean) && !/^\d+$/.test(clean)) {
+                wordCounts[clean] = (wordCounts[clean] || 0) + 1;
+              }
+            });
+          });
+          const sorted = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]);
+          const topWord = sorted[0]?.[0];
+          // Only use word-derived title if one word clearly dominates (appears in >50% of transactions)
+          if (topWord && wordCounts[topWord] > highlightedExpenses.length * 0.4) {
+            return topWord.charAt(0).toUpperCase() + topWord.slice(1) + ' Purchases';
+          }
+          // Otherwise fall back to category name — avoids "Purchase Purchases" type errors
+          return chartUpdate?.category ? `${chartUpdate.category} — Selected Transactions` : 'Selected Transactions';
+        }
       }
-      return 'Category Breakdown';
+      return chartUpdate?.category ? `${chartUpdate.category} Breakdown` : 'Category Breakdown';
     }
     if (type === 'line') return 'Spending Over Time';
     if (type === 'anomalies') return 'Anomalies Detected';
@@ -470,6 +491,41 @@ export default function ChatPage() {
     }
     return 'Spending Overview';
   };
+
+  function renderAnomalyLegend() {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '20px',
+        justifyContent: 'center',
+        marginTop: '12px',
+        padding: '8px 16px',
+        background: 'rgba(0,0,0,0.04)',
+        borderRadius: '8px',
+        border: '1px solid rgba(0,0,0,0.07)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <div style={{
+            width: '12px', height: '12px', borderRadius: '3px',
+            background: 'rgba(0,99,124,0.45)'
+          }} />
+          <span style={{ fontSize: '12px', color: '#7a8aaa', fontFamily: 'inherit' }}>
+            Normal transaction
+          </span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+          <div style={{
+            width: '12px', height: '12px', borderRadius: '3px',
+            background: '#f97316'
+          }} />
+          <span style={{ fontSize: '12px', color: '#7a8aaa', fontFamily: 'inherit' }}>
+            Anomaly flagged
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const getChartHint = (): string => {
     const type = chartUpdate?.type;
@@ -714,58 +770,61 @@ export default function ChatPage() {
           style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={isDrillDown ? 520 : 280}>
-              <BarChart
-                data={barData}
-                margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="#E2E8F0"
-                />
-                {isDrillDown ? (
-                  <XAxis
-                    dataKey="id"
-                    tick={<DrillDownTick />}
-                    height={90}
-                    interval={0}
+            <>
+              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : 280}>
+                <BarChart
+                  data={barData}
+                  margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 3"
+                    stroke="#E2E8F0"
                   />
-                ) : (
-                  <XAxis
-                    dataKey="name"
-                    tick={{ fill: '#64748B', fontSize: 10 }}
-                    angle={-45}
-                    textAnchor="end"
-                    height={80}
-                    interval={0}
+                  {isDrillDown ? (
+                    <XAxis
+                      dataKey="id"
+                      tick={<DrillDownTick />}
+                      height={90}
+                      interval={0}
+                    />
+                  ) : (
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: '#64748B', fontSize: 10 }}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                      interval={0}
+                    />
+                  )}
+                  <YAxis
+                    tick={{ fill: '#64748B', fontSize: 11 }}
+                    stroke="#E2E8F0"
+                    tickCount={5}
+                    allowDecimals={false}
+                    domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.2) / 10) * 10]}
                   />
-                )}
-                <YAxis
-                  tick={{ fill: '#64748B', fontSize: 11 }}
-                  stroke="#E2E8F0"
-                  tickCount={5}
-                  allowDecimals={false}
-                  domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.2) / 10) * 10]}
-                />
-                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
-                {isDrillDown ? (
-                  <Bar
-                    dataKey="value"
-                    shape={(props: any) => <AnomalyBar {...props} isAnomaly={(barData as any[])[props.index]?.isAnomaly} />}
-                    fill={COLORS[0]}
-                  />
-                ) : (
-                  <Bar dataKey="value" shape={<JewelBar />}>
-                    {barData.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
-                    ))}
-                  </Bar>
-                )}
-              </BarChart>
-            </ResponsiveContainer>
+                  <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                  {isDrillDown ? (
+                    <Bar
+                      dataKey="value"
+                      shape={(props: any) => <AnomalyBar {...props} isAnomaly={(barData as any[])[props.index]?.isAnomaly} />}
+                      fill={COLORS[0]}
+                    />
+                  ) : (
+                    <Bar dataKey="value" shape={<JewelBar />}>
+                      {barData.map((_, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                        />
+                      ))}
+                    </Bar>
+                  )}
+                </BarChart>
+              </ResponsiveContainer>
+              {isDrillDown && renderAnomalyLegend()}
+            </>
           </div>
         </div>
       );
@@ -1250,25 +1309,28 @@ export default function ChatPage() {
 
       return (
         <div key="topN" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
-          <ResponsiveContainer width="100%" height={560}>
-            <BarChart data={topData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
-              <XAxis dataKey="id" tick={<TopNTick />} height={90} interval={0} />
-              <YAxis
-                tick={{ fill: '#64748B', fontSize: 11 }}
-                stroke="#E2E8F0"
-                tickCount={5}
-                allowDecimals={false}
-                domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.2) / 10) * 10]}
-              />
-              <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
-              <Bar
-                dataKey="value"
-                shape={(props: any) => <AnomalyBar {...props} isAnomaly={topData[props.index]?.isAnomaly} />}
-                fill="#00637C"
-              />
-            </BarChart>
-          </ResponsiveContainer>
+          <>
+            <ResponsiveContainer width="100%" height={560}>
+              <BarChart data={topData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
+                <XAxis dataKey="id" tick={<TopNTick />} height={90} interval={0} />
+                <YAxis
+                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  stroke="#E2E8F0"
+                  tickCount={5}
+                  allowDecimals={false}
+                  domain={[0, (dataMax: number) => Math.ceil((dataMax * 1.2) / 10) * 10]}
+                />
+                <Tooltip content={<UniversalTooltip />} wrapperStyle={{ zIndex: 9999 }} />
+                <Bar
+                  dataKey="value"
+                  shape={(props: any) => <AnomalyBar {...props} isAnomaly={topData[props.index]?.isAnomaly} />}
+                  fill="#00637C"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+            {renderAnomalyLegend()}
+          </>
         </div>
       );
     }

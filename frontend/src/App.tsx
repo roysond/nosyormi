@@ -12,6 +12,7 @@ import TransactionsPage from './pages/TransactionsPage';
 import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
 import StatementPill from './components/StatementPill';
+import { BRAND_TEAL_BASE, BRAND_TEAL_EDGE, BRAND_SIDEBAR_GRADIENT } from './constants/palette';
 
 const styles = {
   app: {
@@ -23,7 +24,7 @@ const styles = {
   },
   sidebar: {
     height: '100vh',
-    background: '#071A1E',
+    background: BRAND_SIDEBAR_GRADIENT,
     borderRight: '1px solid rgba(255,255,255,0.07)',
     display: 'flex',
     flexDirection: 'column' as const,
@@ -164,7 +165,7 @@ function NavItem({
               style={{
                 position: 'fixed',
                 left: '76px',
-                background: '#0F2D33',
+                background: BRAND_TEAL_EDGE,
                 color: 'rgba(255,255,255,0.85)',
                 fontSize: '12px',
                 fontWeight: 500,
@@ -210,7 +211,7 @@ export default function App() {
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            background: '#0F2D33',
+            background: BRAND_TEAL_BASE,
             border: '2px solid #F4F7F9',
             color: 'rgba(255,255,255,0.85)',
             display: 'flex',

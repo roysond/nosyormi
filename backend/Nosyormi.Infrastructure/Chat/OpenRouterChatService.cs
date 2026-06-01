@@ -418,6 +418,56 @@ public class OpenRouterChatService : IChatService
                 return defaultN;
             }
 
+            (DateOnly? From, DateOnly? To) DetectTimePeriod()
+            {
+                // Use the most recent transaction date as the reference point
+                var maxDate = transactions.Any() ? transactions.Max(t => t.TransactionDate) : DateOnly.FromDateTime(DateTime.UtcNow);
+                var refMonth = new DateOnly(maxDate.Year, maxDate.Month, 1);
+
+                if (lower.Contains("last month"))
+                {
+                    // "last month" = the most recent month in the data
+                    return (refMonth, refMonth.AddMonths(1).AddDays(-1));
+                }
+                if (lower.Contains("this month") || lower.Contains("current month"))
+                {
+                    return (refMonth, refMonth.AddMonths(1).AddDays(-1));
+                }
+                if (lower.Contains("last year"))
+                {
+                    return (new DateOnly(maxDate.Year - 1, 1, 1), new DateOnly(maxDate.Year - 1, 12, 31));
+                }
+                if (lower.Contains("this year"))
+                {
+                    return (new DateOnly(maxDate.Year, 1, 1), new DateOnly(maxDate.Year, 12, 31));
+                }
+
+                // Check for named month (e.g. "in March", "in January 2026")
+                var monthNames = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["january"] = 1, ["february"] = 2, ["march"] = 3, ["april"] = 4,
+                    ["may"] = 5, ["june"] = 6, ["july"] = 7, ["august"] = 8,
+                    ["september"] = 9, ["october"] = 10, ["november"] = 11, ["december"] = 12
+                };
+                foreach (var (monthName, monthNum) in monthNames)
+                {
+                    if (!lower.Contains(monthName)) continue;
+
+                    // Try to find year e.g. "march 2026"
+                    var match = System.Text.RegularExpressions.Regex.Match(lower, monthName + @"\s+(\d{4})");
+                    int year = match.Success ? int.Parse(match.Groups[1].Value) : maxDate.Year;
+
+                    // If that month/year combo is in the future relative to data, try previous year
+                    var candidate = new DateOnly(year, monthNum, 1);
+                    if (candidate > maxDate)
+                        candidate = candidate.AddYears(-1);
+
+                    return (candidate, candidate.AddMonths(1).AddDays(-1));
+                }
+
+                return (null, null);
+            }
+
             // FORECAST — next month, future spending, prediction
             bool isForecast = lower.Contains("next month") || lower.Contains("next week") ||
                 lower.Contains("forecast") || lower.Contains("predict") || lower.Contains("will i spend") ||
@@ -501,7 +551,23 @@ public class OpenRouterChatService : IChatService
             }
             else if (isCategoryDrillDown)
             {
-                chartUpdate = new ChartUpdate("bar", mentionedCategory, null);
+                var (fromDate, toDate) = DetectTimePeriod();
+                string[]? drillIds = null;
+
+                if (fromDate != null)
+                {
+                    // Time period detected — filter category transactions to that period
+                    drillIds = transactions
+                        .Where(t => (t.Category?.Name ?? "Other") == mentionedCategory)
+                        .Where(t => t.Amount < 0)
+                        .Where(t => t.TransactionDate >= fromDate.Value)
+                        .Where(t => toDate == null || t.TransactionDate <= toDate.Value)
+                        .Select(t => t.Id.ToString())
+                        .ToArray();
+                    if (drillIds.Length == 0) drillIds = null;
+                }
+
+                chartUpdate = new ChartUpdate("bar", mentionedCategory, drillIds);
             }
             else if (isStacked)
             {
@@ -531,6 +597,47 @@ public class OpenRouterChatService : IChatService
                     lower.Contains("spending look") || lower.Contains("overview"))
                 {
                     chartUpdate = new ChartUpdate("stacked", null, null);
+                }
+            }
+
+            // Merchant detection: if the chart has a category but no highlight IDs,
+            // search transaction descriptions for specific merchant terms in the message.
+            // This handles queries like "Show me my Costco purchases" where "Costco"
+            // is not a category keyword but is a merchant name in the data.
+            if (chartUpdate?.Type == "bar" && chartUpdate.Category != null)
+            {
+                var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    "show", "me", "all", "my", "the", "a", "an", "i", "what", "how", "much",
+                    "did", "spend", "on", "in", "for", "at", "from", "to", "by", "and", "or",
+                    "with", "last", "this", "each", "every", "month", "week", "year", "purchases",
+                    "transactions", "orders", "spending", "breakdown", "where", "when", "which",
+                    "about", "can", "you", "tell", "give", "list", "see", "view", "get", "find",
+                    "have", "has", "had", "were", "was", "is", "are", "do", "does", "did",
+                    "food", "groceries", "grocery", "fuel", "transport", "dining", "takeaway",
+                    "subscription", "subscriptions", "entertainment", "shopping", "education",
+                    "atm", "cash", "transfer", "transfers", "payment", "payments", "parking",
+                    "tolls", "utilities", "bills", "healthcare", "government", "income", "other"
+                };
+
+                var merchantTerms = words
+                    .Where(w => w.Length >= 3 && !stopWords.Contains(w))
+                    .Distinct()
+                    .ToArray();
+
+                if (merchantTerms.Length > 0)
+                {
+                    var matchingIds = transactions
+                        .Where(t => merchantTerms.Any(term =>
+                            t.Description.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                        .Select(t => t.Id.ToString())
+                        .ToArray();
+
+                    // Only apply if we found specific matches (not the entire dataset)
+                    if (matchingIds.Length > 0 && matchingIds.Length < transactions.Count)
+                    {
+                        chartUpdate = new ChartUpdate(chartUpdate.Type, chartUpdate.Category, matchingIds);
+                    }
                 }
             }
 
