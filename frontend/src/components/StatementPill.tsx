@@ -30,7 +30,7 @@ export default function StatementPill() {
         setFileName(null);
         return;
       }
-      setFileName(readStoredFileName() ?? summaries[0].fileName);
+      setFileName(readStoredFileName());
     } catch {
       setFileName(null);
     }
@@ -86,8 +86,8 @@ export default function StatementPill() {
       <div
         title={fileName}
         style={{
-          background: 'rgba(52,211,153,0.08)',
-          color: '#34D399',
+          background: 'rgba(18,67,70,0.08)',
+          color: '#124346',
           fontSize: 12,
           padding: '6px 10px',
           borderRadius: 999,
