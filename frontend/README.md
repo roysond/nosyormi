@@ -10,10 +10,20 @@ React 19 + TypeScript single-page app built with Vite. Talks to the .NET API ove
 
 | Route | Component | Purpose |
 |---|---|---|
-| `/` | `DashboardPage` | Stat cards, donut chart, spending/income tabs, date-range filter |
-| `/transactions` | `TransactionsPage` | Search, category filter, sort, expandable rows, anomaly badges |
-| `/statements` | `StatementsPage` | Upload CSV, list statements, delete with confirmation |
-| `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types) |
+| `/` | `DashboardPage` | Stat cards (teal hero + gradients), donut chart, spending/income tabs, date-range filter |
+| `/transactions` | `TransactionsPage` | Search, category filter, anomaly pill toggle, sort, expandable rows |
+| `/statements` | `StatementsPage` | Upload CSV (macOS glass modal), list statements, **Reflect** to switch active statement, delete |
+| `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types); “Let's Reflect” in sidebar nav |
+
+---
+
+## Brand & layout (Design v1.1)
+
+- **Font:** Urbanist (global)
+- **Shell:** `#ECEEF1` background; floating white sidebar (`App.tsx`)
+- **Logo:** `src/components/NosyormiLogo.tsx` — inline SVG (teal circle, gold N, coloured arcs) + wordmark; no separate logo file in repo
+- **Brand tokens:** `BRAND_TEAL_BASE`, `BRAND_TEAL_EDGE`, `BRAND_GOLD` in `palette.ts`
+- **Glass modal:** `MACOS_GLASS_TEXTURE` + `macosGlass(rgb, opacity)` on Statements upload overlay
 
 ---
 
@@ -52,7 +62,22 @@ Supported `chartUpdate.type` values:
 
 `pie` · `bar` · `line` · `anomalies` · `forecast` · `stacked` · `horizontal` · `treemap` · `topN`
 
-Optional fields: `category` (scopes bar drilldown), `highlightTransactionIds` (for `topN` and anomaly highlights).
+Optional fields:
+
+- `category` — scopes bar drilldown to one category’s transactions
+- `highlightTransactionIds` — for `topN`, anomaly highlights, **and month-specific category breakdowns** (`category` null + IDs = filter before totals)
+
+### Bar chart behaviour (`ChatPage`)
+
+| Mode | When | Data |
+|---|---|---|
+| Category drill-down | `chartUpdate.category` set | Up to 20 transactions in that category (optionally filtered by highlight IDs) |
+| Month-specific | `category` null + `highlightTransactionIds` | Category totals built from highlighted transactions only |
+| Default | Neither | All expense category totals |
+
+Non-drill-down bar height: `Math.max(320, barData.length * 56)`.
+
+Chart titles: month-aware when user message contains a month name (e.g. “March — Spending Breakdown”).
 
 Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffects.tsx`, `chartEffects.css`.
 
@@ -60,21 +85,22 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 ## State persistence
 
-- **Chat:** `sessionStorage` keys for messages, chart state, and active statement — survives in-tab navigation, cleared on tab close.
+- **Chat:** `sessionStorage` keys for messages, chart state, and active statement — survives in-tab navigation; preserved on remount when stored data exists.
+- **Statement selection:** Reflect button on Statements page; sidebar `StatementPill` shows explicitly selected statement.
 - **Statement delete:** `nosyormi-statement-deleted` custom event clears chat when a statement is removed.
 
 ---
 
-## Theme (current)
+## Theme (Design v1.1)
 
-- Content background: `#F4F7F9` · Cards: `#FFFFFF` with soft shadow
-- Sidebar: `#071A1E` · Active nav: `#E8C96A`
-- UI chrome accent: `#071A1E` · Line chart stroke: `#C9911A`
-- Anomaly highlight: `#D97706` (`ANOMALY_COLOR`) — inner-glow row pulse; expense amounts stay `#EF4444`
+- App shell: `#ECEEF1` · Content: `#F4F7F9` · Cards: `#FFFFFF` with soft shadow
+- Sidebar: floating white card, teal active marker `#124346`
+- Line chart stroke: `#00897B` · Anomaly highlight: `#D97706` (`ANOMALY_COLOR`)
+- Chart palette: 15 colours in `APP_COLORS` (15 categories including Education, Government & Fees)
 
 ---
 
-*Last updated: 30 May 2026*
+*Last updated: 1 June 2026*
 
 ## Related docs
 

@@ -187,8 +187,9 @@ handle the kind of work they are best suited for.
   RAG becomes necessary. Not enforced in code — documented design limit.
 
 **Completed (continued):**
-- ✅ Categorization rule bypass expanded: subscriptions, ATM & Cash, transfers,
-  Square TST*/SQ*, DoorDash food vs DashPass; taxonomy → 13 categories
+- ✅ Rule-based categorization bypass expanded: subscriptions, ATM & Cash, transfers,
+  Square TST*/SQ*, DoorDash food vs DashPass; taxonomy → 15 categories (Education,
+  Government & Fees added 31 May)
 - ✅ Chat: pre-computed monthly totals in context; AI reasoning accuracy rules;
   transfer/month comparison prompt fixes
 - ✅ Chart UI: draggable chat/chart divider, height/sort polish
@@ -208,6 +209,29 @@ handle the kind of work they are best suited for.
 **Submission still pending:**
 - ⏳ PowerPoint deck (story #60)
 - ⏳ Product demo video / Animaker (story #63)
+
+---
+
+### Week 7 (May 31–Jun 1) — Design v1.1, Statement Switching & Month-Specific Chat
+
+**Completed:**
+- ✅ **Design v1.1 visual system** — global font switched to **Urbanist**; floating white sidebar with teal active marker; brand tokens in `palette.ts` (`BRAND_TEAL_*`, `BRAND_GOLD`, `BRAND_SIDEBAR_GRADIENT`); app shell background `#ECEEF1`
+- ✅ **`NosyormiLogo` component** — inline SVG (teal circle, gold “N” bars, Google-coloured arc segments) + wordmark in sidebar; nav label **“Let's Reflect”** for Chat
+- ✅ **macOS glass upload modal** — reusable `MACOS_GLASS_TEXTURE` + `macosGlass()` tint builder in `palette.ts`
+- ✅ **Dashboard polish** — teal hero stat card, per-card colour gradients, blue net-worth card; statement date range beside “Spending by Category” when All Time is active
+- ✅ **Chat UI Layer 5** — font hierarchy, bubble colour refinement, teal-gold gradient border on chat bubbles (CSS conic-gradient — no RAF lag)
+- ✅ **Statement switching (“Reflect”)** — Reflect button on Statements page; explicit statement selection in sessionStorage; sidebar pill shows **only** the user-selected statement (not implicit latest); sync across Dashboard, Transactions, and Chat
+- ✅ **Category taxonomy → 15** — added **Education** and **Government & Fees** (USCIS, DMV, IRS); classifier rule bypass expanded; direction-aware wire transfer / Zelle / Axis Bank income rules
+- ✅ **CSV parser** — case-insensitive header matching (Wells Fargo `DATE`/`DESCRIPTION`/`AMOUNT` and similar)
+- ✅ **Chat performance** — `renderChart` memoized; chat history preserved on navigation (skip sessionStorage overwrite when messages empty on remount)
+- ✅ **Month-specific chat routing (backend)** — `DetectTimePeriod()` called once at keyword-detection start; `isMonthSpecific` fires when a month name is detected with no category → `bar` chart with `highlightTransactionIds` filtered to that month's expenses (not all-month stacked)
+- ✅ **Assistant history fix** — assistant turns in `BuildMessages` serialize `"chartUpdate": {}` instead of `null` so multi-turn chart context is preserved
+- ✅ **Month-specific bar chart (frontend)** — when `category` is null but `highlightTransactionIds` is set, category totals are built from highlighted transactions only; dynamic bar height `Math.max(320, barData.length * 56)` for non-drill-down mode
+- ✅ **Chart title polish** — month-aware titles (e.g. “March — Spending Breakdown”); merchant word-dominance threshold 0.7; drill-down capped at 20 transactions; fallback titles “Breakdown” / “Spending Breakdown”
+- ✅ **Anomaly filter pill** on Transactions page; unified anomaly legend in chat drill-down bar chart
+
+**Uncommitted at doc time (local working tree):**
+- Backend + frontend month-specific changes above are implemented and build-clean but may not yet be on `main` — verify with `git status` before submission tagging.
 
 ---
 
@@ -376,7 +400,7 @@ The prompt includes:
 2. Pre-computed monthly category totals (model must cite these figures exactly)
 3. Full transaction list for the active statement (each line prefixed with
    `[ID:uuid]`, INCOME/EXPENSE direction, category, amount, anomaly flag)
-4. Full conversation history (multi-turn coherence; assistant turns serialized as JSON)
+4. Full conversation history (multi-turn coherence; assistant turns serialized as JSON with `"chartUpdate": {}` placeholder — not `null`)
 5. User message
 
 > **Note:** Embeddings are stored in pgvector at upload, but chat does not yet
@@ -556,6 +580,7 @@ runtime, never from hardcoded values.
 | 12 | ~750 transaction ceiling (architectural) | By design | Full context reliable ≤ ~750 txns; RAG required beyond; not enforced in code |
 | 13 | Chat streaming model | By design | OpenRouter streams to API; client receives parsed answer word-by-word via SSE (not raw JSON tokens) |
 | 14 | Early docs labelled chat as "RAG" | Corrected 29 May | Upload-half done; retrieval-half not implemented; diagrams updated |
+| 15 | Logo not a standalone asset file | Known | Brand mark is inline SVG in `NosyormiLogo.tsx`; `favicon.svg` is a separate icon |
 
 ---
 
@@ -568,22 +593,28 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
   → reasoning) rather than a single LLM handling everything
 - Chat-to-visualization bridge: AI returns structured `chartUpdate`
   JSON that drives live chart rendering — the chat IS the dashboard
+- Server-side keyword routing (`isMonthSpecific`, `topN` fallback) when
+  the model picks the wrong chart for time-period or ranked-expense queries
 
 **UX That Surprises (+Medium)**
-- Deep forest sidebar with emerald glow on active icons, honey amber
-  accents, collapsible with animated tooltips
+- Design v1.1: floating white sidebar, Urbanist typography, teal-gold brand
+  system, `NosyormiLogo` with hidden I.M.ROYSON wordmark
+- macOS glass upload modal; teal-gold animated chat bubble borders
 - NOSYOR.M.I brand identity with hidden name reversal (I.M.ROYSON)
+- **Reflect** workflow — switch active statement across the whole app with one click
 
 **Feature Expansion (+Medium)**
-- Multi-bank CSV support (Standard, Huntington, Bank of America)
+- Multi-bank CSV support (Standard, Huntington, Bank of America, Wells Fargo-style headers)
   with automatic format detection — no user configuration required
 - Nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies,
   forecast, stacked, horizontal, treemap, topN) driven by the `chartUpdate`
-  contract, including `highlightTransactionIds` for ranked expenses
+  contract, including `highlightTransactionIds` for ranked expenses **and**
+  month-scoped category breakdowns (null category + highlight IDs)
 - Dashboard date-range filter (All Time / per-month / custom) scoping all
   stats, anomalies, and category totals to the chosen period
 - Custom chart visual system (`JewelBar`, `JewelSlice`, unified
   `UniversalTooltip`) centralised in `palette.ts` + `chartEffects.tsx`
+- 15-category taxonomy including Education and Government & Fees
 
 **Production-Grade Engineering (+Medium)**
 - SHA-256 deduplication enforced at DB level with unique index
@@ -598,4 +629,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 30 May 2026 — SSE streaming, unified anomaly styling (#D97706), CSV memo fallback, QA 47/47, submission status.*
+*Last updated: 1 June 2026 — Design v1.1, 15-category taxonomy, Reflect statement switching, month-specific chat routing, bar highlight filtering, assistant history chart context.*

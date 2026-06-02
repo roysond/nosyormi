@@ -302,7 +302,7 @@ public class OpenRouterChatService : IChatService
         foreach (var message in history)
         {
             var content = message.Role == "assistant"
-                ? $"{{\"answer\": {JsonSerializer.Serialize(message.Content)}, \"chartUpdate\": null}}"
+                ? $"{{\"answer\": {JsonSerializer.Serialize(message.Content)}, \"chartUpdate\": {{}}}}"
                 : message.Content;
 
             messages.Add(new ChatRequestMessage
@@ -468,6 +468,8 @@ public class OpenRouterChatService : IChatService
                 return (null, null);
             }
 
+            var (fromDate, toDate) = DetectTimePeriod();
+
             // FORECAST — next month, future spending, prediction
             bool isForecast = lower.Contains("next month") || lower.Contains("next week") ||
                 lower.Contains("forecast") || lower.Contains("predict") || lower.Contains("will i spend") ||
@@ -504,6 +506,7 @@ public class OpenRouterChatService : IChatService
                 !isForecast;
 
             // LINE — over time, trend, history, timeline (no specific category)
+            bool isMonthSpecific = mentionedCategory is null && !isForecast && !isAnomalies && !isTopN && fromDate != null;
             bool isLine = mentionedCategory is null &&
                 (lower.Contains("over time") || lower.Contains("trend") ||
                 lower.Contains("history") || lower.Contains("timeline") || lower.Contains("across time") ||
@@ -551,7 +554,6 @@ public class OpenRouterChatService : IChatService
             }
             else if (isCategoryDrillDown)
             {
-                var (fromDate, toDate) = DetectTimePeriod();
                 string[]? drillIds = null;
 
                 if (fromDate != null)
@@ -568,6 +570,16 @@ public class OpenRouterChatService : IChatService
                 }
 
                 chartUpdate = new ChartUpdate("bar", mentionedCategory, drillIds);
+            }
+            else if (isMonthSpecific)
+            {
+                var monthIds = transactions
+                    .Where(t => t.Amount < 0)
+                    .Where(t => t.TransactionDate >= fromDate!.Value)
+                    .Where(t => t.TransactionDate <= fromDate!.Value.AddMonths(1).AddDays(-1))
+                    .Select(t => t.Id.ToString())
+                    .ToArray();
+                chartUpdate = new ChartUpdate("bar", null, monthIds.Length > 0 ? monthIds : null);
             }
             else if (isStacked)
             {

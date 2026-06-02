@@ -118,4 +118,25 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 30 May 2026 — SSE streaming, anomaly styling, CSV memo fallback, docs aligned*
+## Week 7 Decisions (31 May – 1 Jun 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Design v1.1 | Urbanist + floating white sidebar + brand teal/gold | Submission polish; logo colours drive UI tokens |
+| Brand logo | `NosyormiLogo.tsx` inline SVG | No separate asset pipeline; scales cleanly in sidebar |
+| macOS glass modal | `MACOS_GLASS_TEXTURE` in `palette.ts` | Reusable material; tint decoupled from texture |
+| Statement switching | Reflect button + sessionStorage selection | Multi-statement users need explicit active context |
+| Statement pill | Show selected statement only | Avoid misleading “latest upload” when user chose another |
+| Categories | Education + Government & Fees (15 total) | Real statements had tuition and fee payments |
+| CSV headers | Case-insensitive column matching | Wells Fargo and similar exports use uppercase headers |
+| Month queries | `isMonthSpecific` → bar + highlight IDs | “March spending” = category breakdown for that month only |
+| DetectTimePeriod | Single call at keyword-detection top | Avoid duplicate month parsing; shared by drill-down + month-specific |
+| Assistant history | `"chartUpdate": {}` not `null` | Preserve chart context across multi-turn chat |
+| Bar chart (null category) | Filter expenses by `highlightTransactionIds` before totals | Backend sends month IDs; frontend must honour them |
+| Bar chart height | `Math.max(320, barData.length * 56)` non-drill-down | Scale with category count; avoid clipped labels |
+| Drill-down cap | `.slice(0, 20)` | Readability on dense merchant drill-downs |
+| Chat perf | Memoized `renderChart`; CSS bubble border | Eliminate stacked-chart typing lag; drop RAF canvas border |
+
+---
+
+*Last updated: 1 June 2026 — Design v1.1, month-specific routing, Reflect switching, 15 categories*

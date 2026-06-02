@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Friday, 30 May 2026 — SSE streaming, unified anomaly (#D97706), CSV memo fallback, QA 47/47, docs sync
+> Last updated: Sunday, 1 June 2026 — Design v1.1, 15 categories, Reflect switching, month-specific chat routing, bar highlight filtering
 
 ---
 
@@ -84,6 +84,8 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 4. Accumulate OpenRouter SSE deltas → `ParseChatResponse` → `answer` + optional `chartUpdate`
 5. Emit SSE to browser: `text` (answer word-by-word), `chart`, `done` (camelCase via `JsonOptions`)
 6. If user asked for top/biggest expenses but model omitted `topN`, server computes top-N expense IDs and forces `chartUpdate.type = "topN"`
+7. **Keyword routing in `ParseChatResponse`:** `DetectTimePeriod()` runs once before bool flags; `isMonthSpecific` (month name + no category + not forecast/anomalies/topN) → `bar` with `highlightTransactionIds` for that month's expenses; category drill-down reuses same `fromDate`/`toDate`
+8. **Multi-turn history:** assistant turns serialized as JSON with `"chartUpdate": {}` (not `null`) in `BuildMessages` to preserve chart context
 
 > **Not RAG today:** embeddings are written at upload into pgvector, but chat never embeds the user's question or runs similarity search. Query-time retrieval (Epic 6 story 26) is deferred.
 
@@ -100,7 +102,9 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 - `treemap` — spending map by proportion (new May 28)
 - `topN` — biggest expense transactions ranked; uses `highlightTransactionIds` (new May 29)
 
-**ChartUpdate fields:** `type`, optional `category` (bar drilldown within category), optional `highlightTransactionIds` (topN / highlights)
+**ChartUpdate fields:** `type`, optional `category` (bar drilldown within category), optional `highlightTransactionIds` (topN / month-specific / highlights)
+
+**Month-specific queries:** User asks e.g. "spending in March" → backend sets `type: "bar"`, `category: null`, `highlightTransactionIds: [ids in March]` → frontend filters expenses to those IDs before `buildCategoryTotals` → category breakdown for that month only. Chart title uses month name from last user message ("March — Spending Breakdown").
 
 **4 conceptual layers:**
 - Layer 1: Deterministic — CSV parsing, HTTP, persistence
@@ -124,10 +128,10 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 3. `AddEmbeddingToTransaction`
 4. `20260521031445_AddFileHashToStatement`
 
-**Category taxonomy (13 categories as of May 29):**
-Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Other
+**Category taxonomy (15 categories as of 31 May):**
+Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Government & Fees, Other
 
-**Rule-based categorization bypass (before MODEL_LIGHT):** Square terminal (`TST*`, `SQ *`) → Dining & Takeaway; DoorDash food orders (not DashPass) → Dining & Takeaway; subscription keywords → Subscriptions; ATM/cash keywords → ATM & Cash; Zelle/Payment ID → Transfers & Payments.
+**Rule-based categorization bypass (before MODEL_LIGHT):** Square terminal (`TST*`, `SQ *`) → Dining & Takeaway; DoorDash food orders (not DashPass) → Dining & Takeaway; subscription keywords → Subscriptions; ATM/cash keywords → ATM & Cash; Zelle/Payment ID → Transfers & Payments; education keywords → Education; government/USCIS/DMV/IRS → Government & Fees; direction-aware wire transfer rules (Axis Bank income vs transfer split).
 
 ---
 
@@ -153,23 +157,34 @@ GET    /health                       — health check
 | Dashboard | `/` | ✅ Done — stat cards, donut chart, spending/income tabs, transaction list, **date-range filter (All Time / month pills / custom range)** |
 | Transactions | `/transactions` | ✅ Done — search, filter, sort, expand rows, anomaly badge |
 | Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation |
-| Chat | `/chat` | ✅ Done — chat + 9 chart types: pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN |
+| Chat | `/chat` | ✅ Done — chat + 9 chart types; SSE streaming; month-aware titles; bar highlight filtering; draggable divider |
 
 > **REMOVED (28 May 2026):** `StatementDetailPage` and its `/dashboard/:id` route were deleted from the app entirely, along with the "View Details →" link on the Statements page. There are now **4 frontend pages**.
 
-**Theme tokens (current — light content + deep forest sidebar):**
-- Page/content bg: `#F4F7F9` · Card surfaces: `#FFFFFF` (no hard border — soft `boxShadow: 0 4px 6px -1px rgba(0,0,0,0.05)`) · Inner muted surface: `#F8FAFC` · Hairline border (where used): `#E2E8F0`
-- Sidebar bg: `#071A1E` (deep forest) · Active nav text + icon: `#E8C96A` (gold glow)
-- Primary text: `#1E293B` · Muted: `#64748B` · Hint: `#94A3B8`
-- UI accent (buttons, pills, active tabs, send button): `#071A1E` (deep forest) — replaced the earlier honey amber `#C9911A` for most UI chrome
-- Line chart stroke: `#C9911A` (amber, retained) · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#D97706` (`ANOMALY_COLOR`)
-- Data/chart palette: `APP_COLORS` (11 colours) from `palette.ts`
+**Brand / logo:**
+- `frontend/src/components/NosyormiLogo.tsx` — inline SVG (teal `#124346` circle, gold `#D4A843` N bars, Google-coloured arc segments) + optional wordmark **NOSYOR.M.I**
+- No standalone logo PNG/SVG in repo; `frontend/public/favicon.svg` is a separate purple icon (not the brand mark)
+
+**Theme tokens (Design v1.1 — current):**
+- App shell: `#ECEEF1` · Page/content bg: `#F4F7F9`
+- **Floating sidebar:** white `#FFFFFF`, `borderRadius: 16px`, soft shadow; collapsible 220px ↔ 64px
+- Brand teal: `BRAND_TEAL_BASE` `#124346`, `BRAND_TEAL_EDGE` `#0A2E30`, `BRAND_GOLD` `#D4A843`
+- Active nav: teal marker + `#124346` text (Urbanist 800 for logo wordmark)
+- Typography: **Urbanist** (global, via `index.css`) — replaced Inter
+- Card surfaces: `#FFFFFF` with soft shadow · Primary text: `#1E293B` · Muted: `#64748B`
+- Line chart stroke: `#00897B` (teal) · Income green: `#10B981` · Expense red: `#EF4444` · Anomaly amber: `#D97706`
+- Data/chart palette: `APP_COLORS` (15 colours) from `palette.ts`
+- macOS glass: `MACOS_GLASS_TEXTURE` + `macosGlass(rgb, opacity)` for upload modal overlay
 
 **Key frontend decisions:**
-- Upload modal: Statements page only
-- All pages: dynamic statement lookup via `GET /api/statements` → take `summaries[0]`
+- Upload modal: Statements page only — macOS glass texture
+- **Reflect / statement switching:** Statements page **Reflect** button sets active statement in sessionStorage; sidebar `StatementPill` shows **explicitly selected** statement only (not auto-latest); syncs Dashboard, Transactions, Chat
+- All pages: load active statement from sessionStorage selection or `GET /api/statements` fallback
 - Dashboard date-range filter: pure `availablePeriods` (derives `YYYY-MM` periods) + pure `filterTransactionsByDate` callback; all derived stats (expenses, income, anomalyCount, category totals) computed from the date-filtered set. Custom range stages in local `customFrom`/`customTo` state and only commits on "Apply". Click-outside closes the picker (`[data-datepicker]`).
-- Chat: sessionStorage persistence for `messages`, `chartUpdate`, `statementId`, `statementFileName`
+- Chat: sessionStorage persistence for `messages`, `chartUpdate`, `statementId`, `statementFileName`, **selected statement**
+- Chat: preserve history on navigation — do not overwrite sessionStorage when remounting with empty messages if stored data exists
+- Chat bar chart: when `category` null + `highlightTransactionIds` → filter expenses to highlights before category totals; non-drill-down height `Math.max(320, barData.length * 56)`; drill-down capped at 20 rows
+- Chat: `getChartTitle()` month-aware from last user message; merchant word threshold 0.7 for auto-titles
 - Chat: custom event `nosyormi-statement-deleted` triggers auto-clear when statement deleted
 - Clear chat button in chat header (shown when messages.length > 0)
 - Click anywhere on page resets selected donut slice (document mousedown handler)
@@ -263,12 +278,17 @@ dotnet ef database update --project Nosyormi.Infrastructure --startup-project No
 ### `frontend/src/constants/palette.ts`
 Single source of truth for all colours. Change colours here ONLY.
 ```
-APP_COLORS[]              — 13-colour palette for pie/bar charts (13 categories)
+APP_COLORS[]              — 15-colour palette for pie/bar charts (15 categories)
 FORECAST_ACTUAL_COLOR     — #00637C (teal)
 FORECAST_PREDICTED_COLOR  — #f4a623 (amber)
-LINE_STROKE_COLOR         — #C9911A
-LINE_FILL_COLOR           — rgba(0,99,124,0.28)
+LINE_STROKE_COLOR         — #00897B (teal)
+LINE_FILL_COLOR           — rgba(0,137,123,0.08)
 ANOMALY_COLOR             — #D97706
+BRAND_TEAL_BASE           — #124346
+BRAND_TEAL_EDGE           — #0A2E30
+BRAND_GOLD                — #D4A843
+MACOS_GLASS_TEXTURE       — reusable glass material for modals
+macosGlass(rgb, opacity)  — tint builder for glass overlays
 ```
 
 ### `frontend/src/components/chartEffects.tsx`
@@ -354,6 +374,16 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - All **6 architectural diagrams** in `docs/diagrams/` regenerated to match current codebase (React 19, upload order, full-context chat, API shapes, deployment tags)
 - Documented **~750 transaction ceiling** — full context works below this; RAG required beyond it
 
+**May 30 — Jun 1 — Design v1.1 + chat polish:**
+- Urbanist font globally; floating white sidebar; brand teal/gold tokens; `NosyormiLogo` in sidebar; Chat nav → "Let's Reflect"
+- macOS glass upload modal; Dashboard hero teal card + stat gradients; chat bubble teal-gold border (CSS, no RAF)
+- Reflect button + explicit statement selection across pages; pill shows selected statement only
+- Education + Government & Fees categories (15 total); case-insensitive CSV headers; direction-aware transfer rules
+- Chat: `renderChart` memoized; history preserved on navigation; anomaly filter pill on Transactions
+- Month-specific routing: `isMonthSpecific` → bar + highlight IDs; frontend bar filters by highlights; month chart titles
+- Assistant history: `"chartUpdate": {}` in BuildMessages; single `DetectTimePeriod()` call in ParseChatResponse
+- Bar drill-down `.slice(0, 20)`; merchant title threshold 0.7; dynamic non-drill-down bar height
+
 ---
 
 ## 15. KNOWN LIMITATIONS (documented for submission)
@@ -372,10 +402,11 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 12. **~750 transaction ceiling (architectural, not enforced)** — Full context injection is reliable for typical single-statement CSVs (~750 transactions or fewer). Beyond that, prompt size, latency, cost, and answer quality degrade; query-time RAG (story 26) becomes necessary. No upload or chat rejection at 750 — this is a documented design limit, not runtime validation.
 13. **Chat streaming** — SSE implemented: server buffers OpenRouter stream, parses JSON, streams parsed answer word-by-word (not raw model tokens).
 14. **Misleading “RAG” labelling in early docs/diagrams** — Corrected 29 May 2026. Upload half of RAG (embed + store) is done; retrieval half is not.
+15. **Logo asset** — Brand SVG only in `NosyormiLogo.tsx`; no downloadable logo file in repo. `favicon.svg` is unrelated.
 
 ---
 
-## 16. PENDING WORK (as of 30 May 2026)
+## 16. PENDING WORK (as of 1 June 2026)
 
 **SUBMISSION CRITICAL:**
 - [ ] PowerPoint deck (8+ slides, real screenshots) — story #60
@@ -387,6 +418,9 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - [x] QA suite documented — 47/47 pass (`QA-TEST-CASES.md`, last run 30 May)
 - [x] Docker + Minikube deployment
 - [x] Core FinSight features + nine chart types
+
+**LOCAL (may be uncommitted):**
+- [ ] Commit month-specific chat routing + bar highlight filtering + assistant history fix (verify `git status`)
 
 **OPTIONAL / DEFERRED:**
 - [ ] Query-time RAG in chat (story #26 — partial; embeddings at upload only)
@@ -401,21 +435,21 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 ## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
+design: font size bump, stat card color gradients, blue net card
+fix(statements): pill only shows explicitly selected statement, brand teal pill colors
+design(v1.1): teal gradient on Upload Statement button
+design(v1.1): NosyormiLogo component, logo in sidebar, Let's Reflect nav label, sidebar spacing
+design(v1.1): Layer 5 polish — font hierarchy, bubble colors, teal-gold chat border
+design(v1.1): macOS glass texture on upload modal
+design(v1.1): teal hero stat card on dashboard
+design(v1.1): floating light sidebar with teal active marker
+design(v1.1): switch global font to Urbanist
+fix(chat): merchant detection, time-period filtering, anomaly legend; brand teal tokens + macosGlass
+feat(categorization): Education, Government & Fees categories; direction-aware wire rules
+feat(statements): Reflect button for statement switching — sessionStorage sync
 docs: update all 6 architectural diagrams to match current application state
-feat(categorization): pre-classify Square TST*/SQ* as Dining, DoorDash food vs DashPass split
-feat(chat): fix AI reasoning accuracy rule, transfer summary month identification
-feat(categorization): subscriptions, ATM & Cash, Transfers & Payments; 13-category taxonomy
-feat(chat): topN chart type, highlightTransactionIds, server-side topN fallback, expanded system prompt
-chore(cleanup): remove StatementDetailPage + /dashboard/:id route + View Details link
-feat(dashboard): date-range filter (All Time / month / custom) + useCountUp zero-snap fix
-refactor(charts): remove CrystalPieCell, unify Treemap onto UniversalTooltip, donut tooltip transparency
-feat(ui): JewelSlice on all donuts, UniversalTooltip unified, new chart types, animation fixes
-feat(charts): add treemap, stacked bar, horizontal bar — palette.ts and chartEffects.tsx architecture
-refactor(ui): clean architecture for charts — palette.ts, chartEffects.tsx, JewelBar on all charts
-feat(ui): crystal colors on all pie charts, parking & tolls category, click-outside reset, tooltip fix
-fix(chat): fix duplicate message in history and wrap assistant turns as JSON for context
-feat(ui): Glass Slice donuts, Pill Green bars, Jewel bars, chart effects complete
-[earlier commits unchanged from previous session]
+feat(chat): topN chart type, highlightTransactionIds, server-side topN fallback
+[earlier commits unchanged]
 ```
 
 ---

@@ -6,12 +6,13 @@
 > Postgres: localhost:5432 (Postgres.app, `pgvector` enabled)
 >
 > **Last full manual run:** 29 May 2026  
-> **Last regression check:** 30 May 2026 (Postgres online — 47/47 automated + API spot checks; manual TC-01–TC-19 unchanged)
+> **Last regression check:** 1 June 2026 (builds pass; month-specific chat routing + Design v1.1 documented; manual TC-01–TC-19 unchanged)
 >
 > **Revision notes:**
 > - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
 > - **29 May 2026:** TC-19 added for `topN` chart / server fallback; documentation aligned (full-context chat, not query-time RAG).
 > - **30 May 2026:** Re-verified automated suite; E2E TC-E2E-04 locator scoped to statement list `<p>` in `main`. Docs synced for SSE streaming, anomaly `#D97706`, CSV memo fallback.
+> - **1 June 2026:** Documented Design v1.1, Reflect statement switching, 15-category taxonomy, month-specific bar chart routing. **Suggested manual follow-up (not yet formal TC-20):** ask chat “How did I spend in March?” → expect `bar` chart with month-scoped category totals and title “March — Spending Breakdown”.
 
 ---
 

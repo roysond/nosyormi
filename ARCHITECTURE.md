@@ -135,7 +135,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 30 May 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. The feature rows below marked "narration tier" describe intended design, not shipping code.
+> **Implementation status (as of 1 June 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context. The feature rows below marked "narration tier" describe intended design, not shipping code.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -208,7 +208,7 @@ backend/
 │       └── Category.cs
 ├── Nosyormi.Application/        # Layer 1-4 business logic & contracts
 │   ├── Analysis/                # IAnomalyDetector, IForecastingService, ITimeSeriesService
-│   ├── Categorization/          # ICategoryClassifier, CategoryTaxonomy (13 categories)
+│   ├── Categorization/          # ICategoryClassifier, CategoryTaxonomy (15 categories)
 │   ├── Chat/                    # IChatService, ChatResponse, ChartUpdate
 │   ├── Csv/                     # ICsvStatementParser, ParsedTransactionRow
 │   ├── Embeddings/              # IEmbeddingService
@@ -260,9 +260,10 @@ frontend/
 │   │   └── ChatPage.tsx             # "/chat"        — chat + 9 chart types (incl. topN)
 │   ├── components/
 │   │   ├── chartEffects.tsx         # JewelBar, JewelSlice, AnomalyBar, UniversalTooltip
+│   │   ├── NosyormiLogo.tsx         # Brand SVG logo + wordmark (inline, no separate asset file)
 │   │   └── StatementPill.tsx        # Active-statement pill in the sidebar
 │   ├── constants/
-│   │   └── palette.ts               # APP_COLORS + chart colour constants (single source of truth)
+│   │   └── palette.ts               # APP_COLORS (15) + brand teal/gold + macOS glass helpers
 │   └── assets/                  # Static assets bundled by Vite
 ├── e2e/                         # Playwright end-to-end specs
 ├── public/                      # Static files served at root path
@@ -558,9 +559,38 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Not enforced:** No code rejects uploads or chat requests at 750 — this is a documented architectural limit, not runtime validation.
 - **When RAG is required:** Epic 6 story 26 — embed user question → pgvector cosine similarity → top-K transactions → LLM. Storage layer exists; retrieval in `OpenRouterChatService` does not.
 
+### 2026-05-31 — Design v1.1 (Urbanist + Floating Sidebar + Brand Teal)
+
+- **Decision:** Major visual refresh — global **Urbanist** font; floating white sidebar (`borderRadius: 16px`, `#ECEEF1` app shell); brand tokens `BRAND_TEAL_*` / `BRAND_GOLD` in `palette.ts`; **`NosyormiLogo`** inline SVG in sidebar; Chat nav label **“Let's Reflect”**.
+- **macOS glass:** `MACOS_GLASS_TEXTURE` + `macosGlass()` for upload modal — reusable vibrancy material, tint passed at call site.
+- **Rationale:** Submission polish — cohesive teal/gold identity tied to logo colours; lighter sidebar improves contrast with dense financial tables.
+
+### 2026-05-31 — Statement Reflect Switching
+
+- **Decision:** Statements page **Reflect** button sets the active statement in sessionStorage; `StatementPill` shows **only** the explicitly selected statement (not implicit latest upload); Dashboard, Transactions, and Chat honour the selection.
+- **Rationale:** Multi-statement users need deliberate context switching without re-uploading or hardcoded “most recent” behaviour.
+
+### 2026-05-31 — Category Taxonomy: Education + Government & Fees
+
+- **Decision:** Taxonomy expanded to **15 categories**; classifier prompt and `CategoryTaxonomy.All` updated; rule bypass for education and government fee keywords (USCIS, DMV, IRS, etc.).
+- **Rationale:** Real bank statements contained tuition and government payments misclassified as Other.
+
+### 2026-06-01 — Month-Specific Chat Chart Routing
+
+- **Decision:** `OpenRouterChatService.ParseChatResponse` calls `DetectTimePeriod()` once at keyword-detection start. When a month name is detected with no category (and not forecast/anomalies/topN), `isMonthSpecific` forces `chartUpdate.type = "bar"`, `category = null`, `highlightTransactionIds` = expense IDs in that calendar month.
+- **Frontend:** `ChatPage` bar chart filters expenses to `highlightTransactionIds` before `buildCategoryTotals` when category is null; chart title prefixes month name from last user message.
+- **Assistant history:** `BuildMessages` serializes assistant turns with `"chartUpdate": {}` instead of `null` so follow-up turns retain chart context.
+- **Rationale:** “Spending in March” should show March category breakdown, not all-month stacked chart or unfiltered totals.
+
+### 2026-06-01 — Bar Chart UX Refinements
+
+- **Drill-down cap:** Max 20 transactions in category drill-down bar chart.
+- **Dynamic height:** Non-drill-down bar `ResponsiveContainer` height `Math.max(320, barData.length * 56)` scales with category count.
+- **Title threshold:** Merchant word-derived title requires >70% dominance (was 40%).
+
 ---
 
-## Sections Still To Be Added
+*Last updated: Sunday, 1 June 2026 — Design v1.1, 15 categories, Reflect switching, month-specific chat routing.*
 
 As the corresponding parts of the system are built, the following sections will be written:
 
@@ -572,4 +602,4 @@ As the corresponding parts of the system are built, the following sections will 
 
 ---
 
-*Last updated: Friday, 29 May 2026 — diagram audit, 750-txn ceiling, categorization rules, RAG scope clarified, full-context chat documented.*
+## Sections Still To Be Added

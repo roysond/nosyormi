@@ -14,10 +14,11 @@ It doesn't shame you. It doesn't moralize. It reflects.
 ## What it does
 
 - **CSV & bank statement ingestion** — drop in a file; the app parses Standard, Huntington, and Bank of America export formats automatically.
-- **Automatic categorization** — every transaction sorted into 13 meaningful buckets (rule-based bypass + AI fallback) without manual tagging.
+- **Automatic categorization** — every transaction sorted into 15 meaningful buckets (rule-based bypass + AI fallback) without manual tagging.
 - **Anomaly detection** — Z-score analysis flags unusual spends at upload time.
 - **Next-month forecasting** — weighted moving average projects spending by category.
-- **Conversational chat interface** — ask questions in plain English; the AI answers from your full statement context, streams the reply word-by-word (SSE), and updates live visualizations to match.
+- **Conversational chat interface** — ask questions in plain English (including month-specific queries like *"Where did I overspend in March?"*); the AI answers from your full statement context, streams the reply word-by-word (SSE), and updates live visualizations to match.
+- **Multi-statement switching** — upload several statements and **Reflect** on any one; the active statement syncs across Dashboard, Transactions, and Chat via sessionStorage.
 - **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
 - **Date-range analysis** — scope the Dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 
@@ -38,7 +39,7 @@ NOSYOR.M.I exists for the moment after the shock — when you want clarity, not 
 | Layer | Technology |
 |---|---|
 | Backend | .NET 10 Web API (Clean Architecture — 4 projects) |
-| Frontend | React 19 + TypeScript (Vite) + Recharts |
+| Frontend | React 19 + TypeScript (Vite) + Recharts + Urbanist |
 | Database | PostgreSQL 16 + pgvector |
 | AI Layer | OpenRouter (3-tier model routing) |
 | Containers | Docker + Docker Compose |
@@ -128,6 +129,7 @@ Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
 | [DECISIONS.md](./DECISIONS.md) | Key product and technical decisions |
 | [QA-TEST-CASES.md](./QA-TEST-CASES.md) | Manual test cases and results |
 | [PROJECT-MEMORY.md](./PROJECT-MEMORY.md) | Session context anchor for development |
+| [frontend/src/components/NosyormiLogo.tsx](./frontend/src/components/NosyormiLogo.tsx) | Brand logo (inline SVG — teal circle, gold N, coloured arcs) |
 | [docs/diagrams/](./docs/diagrams/) | Six architectural PNG diagrams (system, AI flow, schema, API, deployment, user flow) |
 
 ---
@@ -151,6 +153,7 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 
 **Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
 **Target completion:** before 4 June 2026  
+**Latest:** Design v1.1 (Urbanist, floating sidebar, brand teal/gold, `NosyormiLogo`); month-specific chat chart routing; statement Reflect switching  
 **Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.

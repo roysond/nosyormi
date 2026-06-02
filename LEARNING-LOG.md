@@ -377,6 +377,47 @@ necessarily streaming the model’s raw bytes.
 
 ---
 
+## Week 6 — Design v1.1 & Statement Switching (May 31 – Jun 1)
+
+### Why the sidebar went from dark forest to floating white
+
+The deep-forest sidebar looked premium but fought the light content area.
+Design v1.1 moved to a **floating white card** sidebar on a grey shell
+(`#ECEEF1`) with teal active markers that match the logo (`#124346`).
+The logo itself became a real component (`NosyormiLogo.tsx`) — teal circle,
+gold “N” bars, coloured arcs — so the brand mark and UI tokens share the
+same palette.
+
+### Reflect is not just branding — it is state management
+
+When I added multiple statements, “always show the latest upload” was wrong
+for anyone comparing months across files. The **Reflect** button writes the
+chosen statement ID to sessionStorage; every page reads that selection.
+The sidebar pill now shows **only** what the user explicitly selected —
+not an implicit default that changes under them.
+
+### Month questions need server *and* client agreement
+
+“Asking about March” used to show a stacked chart of **all months** or
+unfiltered category totals. The fix was two-sided:
+
+1. **Backend:** detect the month once (`DetectTimePeriod`), set
+   `isMonthSpecific`, return `bar` with `highlightTransactionIds` for
+   that month’s expenses only.
+2. **Frontend:** when `category` is null but highlight IDs exist, filter
+   expenses before `buildCategoryTotals`.
+
+Neither layer alone is enough — the contract has to match on both sides.
+
+### Assistant history lost chart context because of `null`
+
+Multi-turn chat rebuilt assistant messages as JSON with
+`"chartUpdate": null`. The model treated that as “no chart ever happened.”
+Replacing `null` with `{}` preserves structure without re-sending the
+full chart payload. Small string change; big coherence improvement.
+
+---
+
 ## The Most Important Thing I Learned
 
 **Working software is built incrementally, not all at once.**
@@ -400,4 +441,4 @@ learning came first. The speed came after.
 
 ---
 
-*Last updated: 30 May 2026 — SSE streaming, anomaly styling, CSV memo fallback.*
+*Last updated: 1 June 2026 — Design v1.1, Reflect switching, month-specific chat routing.*

@@ -447,6 +447,7 @@ export default function ChatPage() {
     }
   };
 
+  const lastUserMessage = messages.filter(m => m.role === 'user').slice(-1)[0]?.content ?? '';
   const getChartTitle = (): string => {
     const type = chartUpdate?.type;
     if (!type || type === 'pie') return 'Spending Overview';
@@ -468,11 +469,15 @@ export default function ChatPage() {
           const sorted = Object.entries(wordCounts).sort((a, b) => b[1] - a[1]);
           const topWord = sorted[0]?.[0];
           // Only use word-derived title if one word clearly dominates (appears in >50% of transactions)
-          if (topWord && wordCounts[topWord] > highlightedExpenses.length * 0.4) {
+          if (topWord && wordCounts[topWord] > highlightedExpenses.length * 0.7) {
             return topWord.charAt(0).toUpperCase() + topWord.slice(1) + ' Purchases';
           }
           // Otherwise fall back to category name — avoids "Purchase Purchases" type errors
-          return chartUpdate?.category ? `${chartUpdate.category} — Selected Transactions` : 'Selected Transactions';
+          const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+          const monthMatch = ['january','february','march','april','may','june','july','august','september','october','november','december']
+            .findIndex(m => lastUserMessage?.toLowerCase().includes(m));
+          const monthLabel = monthMatch >= 0 ? `${monthNames[monthMatch]} — ` : '';
+          return chartUpdate?.category ? `${chartUpdate.category} — Breakdown` : `${monthLabel}Spending Breakdown`;
         }
       }
       return chartUpdate?.category ? `${chartUpdate.category} Breakdown` : 'Category Breakdown';
@@ -729,6 +734,7 @@ export default function ChatPage() {
               }
               return (t.category || 'Other') === chartUpdate.category;
             })
+            .slice(0, 20)
             .map((t) => ({
               id: t.id,
               name:
@@ -742,7 +748,11 @@ export default function ChatPage() {
             }))
         : [];
 
-      const barData = isDrillDown ? drillDownData : buildCategoryTotals(expenses);
+      const filteredExpenses =
+        !isDrillDown && highlightIds && highlightIds.size > 0
+          ? expenses.filter(t => highlightIds.has(t.id))
+          : expenses;
+      const barData = isDrillDown ? drillDownData : buildCategoryTotals(filteredExpenses);
 
       const DrillDownTick = ({ x, y, payload }: any) => {
         const entry = drillDownData.find((d: { id: string }) => d.id === payload.value);
@@ -771,7 +781,7 @@ export default function ChatPage() {
         >
           <div style={{ width: '100%' }}>
             <>
-              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : 280}>
+              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : Math.max(320, barData.length * 56)}>
                 <BarChart
                   data={barData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
