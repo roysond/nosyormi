@@ -570,7 +570,7 @@ export default function ChatPage() {
         >
           <div style={{ position: 'relative', zIndex: 1, width: '100%' }}>
             <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={340}>
+            <ResponsiveContainer width="100%" height={340} minHeight={1}>
               <PieChart>
               <Pie
                 data={pieData}
@@ -781,7 +781,7 @@ export default function ChatPage() {
         >
           <div style={{ width: '100%' }}>
             <>
-              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : Math.max(320, barData.length * 56)}>
+              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : Math.max(320, barData.length * 56)} minHeight={1}>
                 <BarChart
                   data={barData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
@@ -858,7 +858,7 @@ export default function ChatPage() {
           style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={580}>
+            <ResponsiveContainer width="100%" height={580} minHeight={1}>
               <LineChart data={lineData}>
                 <defs>
                   <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1104,7 +1104,7 @@ export default function ChatPage() {
       return (
         <div key="stacked" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={620}>
+            <ResponsiveContainer width="100%" height={620} minHeight={1}>
               <BarChart data={stackedData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid
                   strokeDasharray="3 3"
@@ -1191,7 +1191,7 @@ export default function ChatPage() {
       return (
         <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={Math.max(520, hData.length * 80)}>
+            <ResponsiveContainer width="100%" height={Math.max(520, hData.length * 80)} minHeight={1}>
               <BarChart data={hData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
                 <XAxis
@@ -1269,7 +1269,7 @@ export default function ChatPage() {
           key="treemap"
           style={{ animation: 'chartFadeIn 0.4s ease-out', width: '100%', background: 'transparent' }}
         >
-          <ResponsiveContainer width="100%" height={420} style={{ background: 'transparent' }}>
+          <ResponsiveContainer width="100%" height={420} minHeight={1} style={{ background: 'transparent' }}>
             <Treemap
               data={tData}
               dataKey="size"
@@ -1320,7 +1320,7 @@ export default function ChatPage() {
       return (
         <div key="topN" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
           <>
-            <ResponsiveContainer width="100%" height={560}>
+            <ResponsiveContainer width="100%" height={560} minHeight={1}>
               <BarChart data={topData} margin={{ top: 10, right: 10, left: 0, bottom: 80 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
                 <XAxis dataKey="id" tick={<TopNTick />} height={90} interval={0} />
@@ -1385,7 +1385,7 @@ export default function ChatPage() {
             flex: 1,
           }}
         >
-          <ResponsiveContainer width="100%" height={520}>
+          <ResponsiveContainer width="100%" height={520} minHeight={1}>
             <BarChart data={monthlyData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis

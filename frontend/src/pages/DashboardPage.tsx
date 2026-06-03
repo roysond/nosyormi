@@ -938,7 +938,7 @@ export default function DashboardPage() {
                   </div>
                   <h2 style={styles.sectionTitle}>{spendingByCategoryTitle}</h2>
                   <div style={{ position: 'relative', zIndex: 1, animation: 'chartFadeIn 0.4s ease-out' }}>
-                    <ResponsiveContainer width="100%" height={340}>
+                    <ResponsiveContainer width="100%" height={340} minHeight={1}>
                       <div
                         style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
                       >
