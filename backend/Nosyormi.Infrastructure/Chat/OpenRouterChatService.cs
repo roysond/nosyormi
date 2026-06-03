@@ -411,7 +411,7 @@ public class OpenRouterChatService : IChatService
             {
                 for (int i = 0; i < words.Length - 1; i++)
                 {
-                    if ((words[i] == "top" || words[i] == "biggest" || words[i] == "largest" || words[i] == "top") &&
+                    if ((words[i] == "top" || words[i] == "biggest" || words[i] == "largest") &&
                         int.TryParse(words[i + 1], out var n))
                         return n;
                 }
@@ -494,7 +494,7 @@ public class OpenRouterChatService : IChatService
                 lower.Contains("month by month") || lower.Contains("monthly") ||
                 lower.Contains("per month") || lower.Contains("month to month") ||
                 lower.Contains("over months") || lower.Contains("by month") ||
-                lower.Contains("each month") || lower.Contains("average") ||
+                lower.Contains("average") ||
                 lower.Contains("trend") || lower.Contains("over time"));
             bool isCategoryDrillDown = mentionedCategory is not null && !isCategoryMonthly;
 
