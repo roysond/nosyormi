@@ -26,6 +26,8 @@ services:
     container_name: nosyormi-api
     ports:
       - "5034:8080"
+    env_file:
+      - .env.docker
     environment:
       DATABASE_CONNECTION_STRING: "Host=postgres;Port=5432;Database=nosyormi;Username=nosyormi;Password=nosyormi_password"
       FRONTEND_ORIGIN: "http://localhost:5173"

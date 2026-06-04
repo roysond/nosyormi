@@ -84,6 +84,17 @@ Wait ~30 seconds for Postgres health checks, then open **http://localhost:5173**
 
 Copy your real values into `.env.docker` (same keys as `.env`). Never commit `.env` or `.env.docker`.
 
+**Secrets checklist**
+
+| File | Purpose | On GitHub? |
+|---|---|---|
+| `.env` | Local API / EF | Never |
+| `.env.docker` | Docker Compose API keys | Never |
+| `k8s/secrets.yaml` | Your real K8s secret (local only) | Never |
+| `.env.example`, `k8s/secrets.yaml.example` | Placeholders | Yes (safe) |
+
+Before every push: `./scripts/check-secrets.sh`
+
 ### 3. Local development (without Docker for API/frontend)
 
 **Database** — Postgres on port 5432 (Postgres.app) or 5433 (Docker postgres only):
