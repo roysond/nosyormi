@@ -20,12 +20,13 @@ export const APP_COLORS = [
   '#BAB0AC', // Other
 ];
 
-export const FORECAST_ACTUAL_COLOR = '#00637C';
+export const FORECAST_ACTUAL_COLOR = '#124346';
 export const FORECAST_PREDICTED_COLOR = '#f4a623';
-export const LINE_STROKE_COLOR = '#00897B';
-export const LINE_FILL_COLOR = 'rgba(0,137,123,0.08)';
+export const LINE_STROKE_COLOR = '#124346';
+export const LINE_FILL_COLOR = 'rgba(18,67,70,0.22)';
 export const ANOMALY_COLOR = '#D97706';
 
+export const BRAND_TEAL = '#124346';
 export const BRAND_TEAL_BASE = '#124346';
 export const BRAND_TEAL_CENTRE = '#1A5E5A';
 export const BRAND_TEAL_EDGE = '#0A2E30';

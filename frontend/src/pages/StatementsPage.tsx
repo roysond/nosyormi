@@ -179,8 +179,8 @@ const styles = {
   },
   reflectBtn: {
     background: 'transparent',
-    color: '#00637C',
-    border: '1px solid rgba(0, 99, 124, 0.4)',
+    color: '#124346',
+    border: '1px solid rgba(18,67,70,0.4)',
     borderRadius: 8,
     padding: '7px 16px',
     fontSize: 13,
@@ -189,8 +189,8 @@ const styles = {
     flexShrink: 0,
   },
   cardActive: {
-    background: 'rgba(0, 99, 124, 0.12)',
-    border: '1px solid rgba(0, 99, 124, 0.4)',
+    background: 'rgba(18,67,70,0.12)',
+    border: '1px solid rgba(18,67,70,0.4)',
     borderRadius: 8,
   },
 };

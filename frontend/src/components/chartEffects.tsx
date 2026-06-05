@@ -1,11 +1,12 @@
 import './chartEffects.css';
 import { Cell, Sector } from 'recharts';
 import { APP_COLORS, ANOMALY_COLOR } from '../constants/palette';
+import { BRAND_TEAL } from '../constants/palette';
 
 export const JewelBar = (props: any) => {
   const { x, y, width, height, fill } = props;
   if (!height || height <= 0) return null;
-  const color = fill ?? '#00637C';
+  const color = fill ?? BRAND_TEAL;
   const id = `jwl${Math.round(x)}${Math.round(y)}`;
   return (
     <g>
@@ -111,10 +112,10 @@ export const UniversalTooltip = ({ active, payload }: any) => {
         background: 'rgba(255, 255, 255, 0.75)',
         backdropFilter: 'blur(20px)',
         WebkitBackdropFilter: 'blur(20px)',
-        border: '1px solid rgba(0, 99, 124, 0.3)',
+        border: '1px solid rgba(18,67,70,0.3)',
         borderRadius: '12px',
         padding: '10px 14px',
-        boxShadow: '0 8px 32px rgba(0, 99, 124, 0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
+        boxShadow: '0 8px 32px rgba(18,67,70,0.2), inset 0 1px 0 rgba(255,255,255,0.9)',
         minWidth: '140px',
         animation: 'tooltipFadeIn 0.15s ease-out',
         zIndex: 9999,
@@ -125,7 +126,7 @@ export const UniversalTooltip = ({ active, payload }: any) => {
         style={{
           fontSize: '11px',
           fontWeight: 600,
-          color: '#00637C',
+          color: BRAND_TEAL,
           marginBottom: '4px',
           letterSpacing: '0.04em',
           textTransform: 'uppercase' as const,

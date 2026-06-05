@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   Legend,
   Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -515,7 +515,7 @@ export default function ChatPage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
           <div style={{
             width: '12px', height: '12px', borderRadius: '3px',
-            background: 'rgba(0,99,124,0.45)'
+            background: 'rgba(18,67,70,0.45)'
           }} />
           <span style={{ fontSize: '12px', color: '#7a8aaa', fontFamily: 'inherit' }}>
             Normal transaction
@@ -922,7 +922,7 @@ export default function ChatPage() {
         >
           <div style={{ width: '100%' }}>
             <ResponsiveContainer width="100%" height={580} minHeight={1}>
-              <LineChart data={lineData}>
+              <AreaChart data={lineData}>
                 <defs>
                   <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor={LINE_FILL_COLOR} />
@@ -958,7 +958,7 @@ export default function ChatPage() {
                   strokeWidth={2.5}
                   dot={false}
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -1255,9 +1255,9 @@ export default function ChatPage() {
         .map((c) => ({ name: c.name, value: c.value }));
       return (
         <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
-          <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height={Math.max(520, hData.length * 80)} minHeight={1}>
-              <BarChart data={hData} layout="vertical" margin={{ top: 5, right: 20, left: 80, bottom: 5 }}>
+          <div style={{ width: '100%', paddingTop: 8, overflow: 'visible' }}>
+            <ResponsiveContainer width="100%" height={Math.max(520, hData.length * 80)} minHeight={1} style={{ overflow: 'visible' }}>
+              <BarChart data={hData} layout="vertical" margin={{ top: 20, right: 20, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
                 <XAxis
                   type="number"
@@ -1400,7 +1400,7 @@ export default function ChatPage() {
                 <Bar
                   dataKey="value"
                   shape={(props: any) => <AnomalyBar {...props} isAnomaly={topData[props.index]?.isAnomaly} />}
-                  fill="#00637C"
+                  fill="#124346"
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -1833,7 +1833,7 @@ export default function ChatPage() {
             background: '#CBD5E1',
             transition: 'background 0.2s',
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = '#00637C')}
+          onMouseEnter={(e) => (e.currentTarget.style.background = '#124346')}
           onMouseLeave={(e) => (e.currentTarget.style.background = '#CBD5E1')}
         />
       </div>
