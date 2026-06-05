@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconArrowUp } from '@tabler/icons-react';
 import { ANOMALY_COLOR, MACOS_GLASS_TEAL, MACOS_GLASS_GRAIN } from '../constants/palette';
 import {
+  clearStatement,
   dispatchStatementSwitched,
   getSelectedStatementId,
   selectStatement,
@@ -211,6 +212,7 @@ export default function StatementsPage() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleteHoverId, setDeleteHoverId] = useState<string | null>(null);
+  const [hoveringActiveId, setHoveringActiveId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
@@ -408,6 +410,7 @@ export default function StatementsPage() {
         <div style={styles.list}>
           {statements.map((statement) => {
             const isActive = activeStatementId === statement.id;
+            const isHoveringActive = isActive && hoveringActiveId === statement.id;
             return (
             <div
               key={statement.id}
@@ -428,14 +431,30 @@ export default function StatementsPage() {
               </span>
               <button
                 type="button"
-                style={styles.reflectBtn}
+                style={{
+                  ...styles.reflectBtn,
+                  ...(isHoveringActive ? { color: '#E57373' } : {}),
+                }}
                 onClick={() => {
+                  if (isActive) {
+                    clearStatement();
+                    setActiveStatementId(null);
+                    return;
+                  }
                   selectStatement(statement.id, statement.fileName);
                   dispatchStatementSwitched(statement.fileName);
                   setActiveStatementId(statement.id);
                 }}
+                onMouseEnter={() => {
+                  if (isActive) setHoveringActiveId(statement.id);
+                }}
+                onMouseLeave={() => setHoveringActiveId(null)}
               >
-                {isActive ? 'Reflected ✓' : 'Reflect'}
+                {isActive
+                  ? isHoveringActive
+                    ? 'Stop Reflecting'
+                    : 'Reflected ✓'
+                  : 'Reflect'}
               </button>
               <button
                 type="button"

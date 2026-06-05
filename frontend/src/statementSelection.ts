@@ -13,6 +13,12 @@ export function selectStatement(id: string, fileName: string): void {
   sessionStorage.setItem(STATEMENT_FILENAME_KEY, fileName);
 }
 
+export function clearStatement(): void {
+  sessionStorage.removeItem(STATEMENT_ID_KEY);
+  sessionStorage.removeItem(STATEMENT_FILENAME_KEY);
+  window.dispatchEvent(new CustomEvent(STATEMENT_SWITCHED_EVENT, { detail: { fileName: null } }));
+}
+
 export function dispatchStatementSwitched(fileName: string): void {
   window.dispatchEvent(
     new CustomEvent<StatementSwitchedDetail>(STATEMENT_SWITCHED_EVENT, {
@@ -52,10 +58,9 @@ export async function fetchActiveStatement<T>(
     }
 
     const preferredId = getSelectedStatementId();
-    const summary =
-      preferredId != null
-        ? summaries.find((s) => s.id === preferredId) ?? summaries[0]
-        : summaries[0];
+    if (preferredId === null) return { kind: 'empty' };
+    const summary = summaries.find((s) => s.id === preferredId);
+    if (!summary) return { kind: 'empty' };
 
     const detailRes = await fetch(`${apiBase}/api/statements/${summary.id}`);
     if (!detailRes.ok) {

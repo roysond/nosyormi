@@ -119,7 +119,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null);
   const [forecastData, setForecastData] = useState<ForecastItem[]>([]);
   const [statementId, setStatementId] = useState<string | null>(null);
-  const [statementFileName, setStatementFileName] = useState<string>('your statement');
+  const [statementFileName, setStatementFileName] = useState<string>('No Statement');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const angleRef = useRef(0);
@@ -335,8 +335,10 @@ export default function ChatPage() {
   }, [statementId]);
 
   useEffect(() => {
-    sessionStorage.setItem(STATEMENT_FILENAME_KEY, statementFileName);
-  }, [statementFileName]);
+    if (statementId !== null && statementFileName !== 'No Statement') {
+      sessionStorage.setItem(STATEMENT_FILENAME_KEY, statementFileName);
+    }
+  }, [statementId, statementFileName]);
 
   useEffect(() => {
     if (chartUpdate === null) {

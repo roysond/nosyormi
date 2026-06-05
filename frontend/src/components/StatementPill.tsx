@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
+  getSelectedStatementId,
   STATEMENT_FILENAME_KEY,
   STATEMENT_SWITCHED_EVENT,
   type StatementSwitchedDetail,
@@ -45,13 +46,19 @@ export default function StatementPill() {
     }
 
     const intervalId = window.setInterval(() => {
-      void fetchStatement();
+      if (getSelectedStatementId()) {
+        void fetchStatement();
+      } else {
+        setFileName(null);
+      }
     }, 30_000);
 
     const handleStatementSwitched = (e: Event) => {
       const detail = (e as CustomEvent<StatementSwitchedDetail>).detail;
       if (detail?.fileName) {
         setFileName(detail.fileName);
+      } else {
+        setFileName(null);
       }
     };
 
@@ -76,18 +83,18 @@ export default function StatementPill() {
     };
   }, [fetchStatement]);
 
-  if (!fileName) {
-    return null;
-  }
+  const pillText = fileName ?? 'No Statement';
+  const pillColor = fileName ? '#124346' : '#94A3B8';
 
   return (
     <div style={{ margin: '0 12px', marginBottom: 16 }}>
       <div style={{ fontSize: 10, color: '#94A3B8', marginBottom: 4 }}>Reflecting on:</div>
       <div
-        title={fileName}
+        title={pillText}
         style={{
           background: 'rgba(18,67,70,0.08)',
-          color: '#124346',
+          color: pillColor,
+          textAlign: 'center',
           fontSize: 12,
           padding: '6px 10px',
           borderRadius: 999,
@@ -97,7 +104,7 @@ export default function StatementPill() {
           whiteSpace: 'nowrap',
         }}
       >
-        {fileName}
+        {pillText}
       </div>
     </div>
   );
