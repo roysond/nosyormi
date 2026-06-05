@@ -39,7 +39,7 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
-        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds. For all-time or overall spending questions, use the ALL-TIME CATEGORY TOTALS section. For month-specific questions, use the PRE-COMPUTED MONTHLY CATEGORY TOTALS section. Never add up monthly figures yourself — use the pre-computed all-time totals directly.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
@@ -271,6 +271,21 @@ public class OpenRouterChatService : IChatService
             }
         }
         builder.AppendLine("=== END OF SUMMARY ===");
+
+        // All-time category totals
+        var allTimeTotals = transactions
+            .Where(t => t.Amount < 0)
+            .GroupBy(t => t.Category?.Name ?? "Other")
+            .Select(g => new { Category = g.Key, Total = g.Sum(t => Math.Abs(t.Amount)) })
+            .OrderByDescending(x => x.Total)
+            .ToList();
+
+        builder.AppendLine("=== ALL-TIME CATEGORY TOTALS (use these for overall spending questions) ===");
+        foreach (var item in allTimeTotals)
+        {
+            builder.AppendLine($"  {item.Category}: ${item.Total:F2}");
+        }
+        builder.AppendLine("=== END OF ALL-TIME TOTALS ===");
         builder.AppendLine();
 
         // Individual transaction lines
