@@ -843,15 +843,76 @@ export default function ChatPage() {
     }
 
     if (type === 'line') {
-      const lineData = [...expenses]
-        .sort(
-          (a, b) =>
-            new Date(a.transactionDate + 'T00:00:00').getTime() -
-            new Date(b.transactionDate + 'T00:00:00').getTime(),
-        )
-        .map((t) => ({
-          date: formatShortDate(t.transactionDate),
-          amount: Math.abs(t.amount),
+      type LineBucket = { sortKey: string; label: string; amount: number };
+
+      let granularity: 'daily' | 'weekly' | 'monthly' | 'quarterly' = 'daily';
+      if (expenses.length > 0) {
+        const dates = expenses.map((t) => t.transactionDate).sort();
+        const earliest = dates[0];
+        const latest = dates[dates.length - 1];
+        const spanDays =
+          (new Date(latest + 'T00:00:00').getTime() -
+            new Date(earliest + 'T00:00:00').getTime()) /
+          (1000 * 60 * 60 * 24);
+
+        if (spanDays < 28) granularity = 'daily';
+        else if (spanDays <= 60) granularity = 'weekly';
+        else if (spanDays <= 548) granularity = 'monthly';
+        else granularity = 'quarterly';
+      }
+
+      const getBucket = (dateStr: string): { sortKey: string; label: string } => {
+        const date = new Date(dateStr + 'T00:00:00');
+
+        if (granularity === 'daily') {
+          return {
+            sortKey: dateStr,
+            label: date.toLocaleDateString('en-US', { day: 'numeric', month: 'short' }),
+          };
+        }
+
+        if (granularity === 'weekly') {
+          const day = date.getDay();
+          const monday = new Date(date);
+          monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+          const sortKey = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(monday.getDate()).padStart(2, '0')}`;
+          return {
+            sortKey,
+            label: `Week of ${monday.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}`,
+          };
+        }
+
+        if (granularity === 'monthly') {
+          const sortKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+          return {
+            sortKey,
+            label: date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          };
+        }
+
+        const quarter = Math.floor(date.getMonth() / 3) + 1;
+        return {
+          sortKey: `${date.getFullYear()}-Q${quarter}`,
+          label: `Q${quarter} ${date.getFullYear()}`,
+        };
+      };
+
+      const buckets = new Map<string, LineBucket>();
+      for (const t of expenses) {
+        const { sortKey, label } = getBucket(t.transactionDate);
+        const existing = buckets.get(sortKey);
+        if (existing) {
+          existing.amount += Math.abs(t.amount);
+        } else {
+          buckets.set(sortKey, { sortKey, label, amount: Math.abs(t.amount) });
+        }
+      }
+
+      const lineData = [...buckets.values()]
+        .sort((a, b) => a.sortKey.localeCompare(b.sortKey))
+        .map((b) => ({
+          date: b.label,
+          amount: Math.round(b.amount * 100) / 100,
         }));
 
       return (
@@ -874,8 +935,10 @@ export default function ChatPage() {
                 />
                 <XAxis
                   dataKey="date"
-                  tick={{ fill: '#64748B', fontSize: 11 }}
+                  tick={{ fill: '#64748B', fontSize: 11, angle: -35, textAnchor: 'end' }}
                   stroke="#E2E8F0"
+                  height={60}
+                  interval={lineData.length <= 12 ? 0 : 'preserveStartEnd'}
                 />
                 <YAxis
                   tick={{ fill: '#64748B', fontSize: 11 }}
@@ -1783,7 +1846,8 @@ export default function ChatPage() {
           display: 'flex',
           flexDirection: 'column',
           padding: '24px',
-          overflow: 'hidden',
+          overflowX: 'hidden',
+          overflowY: 'hidden',
           background: '#F4F7F9',
           borderLeft: '1px solid #E2E8F0',
         }}
@@ -1794,6 +1858,7 @@ export default function ChatPage() {
             color: '#1E293B',
             fontSize: 20,
             fontWeight: 700,
+            textAlign: 'center',
           }}
         >
           {getChartTitle()}
@@ -1806,12 +1871,14 @@ export default function ChatPage() {
             overflowY: 'auto',
             display: 'flex',
             flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
             paddingTop: 12,
           }}
         >
           {renderedChart}
         </div>
-        <p style={{ margin: '12px 0 0', color: colors.hint, fontSize: 12 }}>
+        <p style={{ margin: '12px 0 0', color: colors.hint, fontSize: 12, textAlign: 'center' }}>
           {getChartHint()}
         </p>
       </div>
