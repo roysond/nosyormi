@@ -71,15 +71,21 @@ export default function StatementPill() {
       }
     };
 
+    const handlePillUpdate = () => {
+      setFileName(readStoredFileName());
+    };
+
     window.addEventListener(STATEMENT_SWITCHED_EVENT, handleStatementSwitched);
     window.addEventListener('nosyormi-statement-deleted', handleStatementsChanged);
     window.addEventListener('nosyormi-statement-uploaded', handleStatementsChanged);
+    window.addEventListener('nosyormi-pill-update', handlePillUpdate);
 
     return () => {
       window.clearInterval(intervalId);
       window.removeEventListener(STATEMENT_SWITCHED_EVENT, handleStatementSwitched);
       window.removeEventListener('nosyormi-statement-deleted', handleStatementsChanged);
       window.removeEventListener('nosyormi-statement-uploaded', handleStatementsChanged);
+      window.removeEventListener('nosyormi-pill-update', handlePillUpdate);
     };
   }, [fetchStatement]);
 

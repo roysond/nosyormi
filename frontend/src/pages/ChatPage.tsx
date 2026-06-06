@@ -27,7 +27,6 @@ import {
   fetchActiveStatement,
   STATEMENT_FILENAME_KEY,
   STATEMENT_ID_KEY,
-  dispatchStatementSwitched,
   subscribeStatementSwitched,
 } from '../statementSelection';
 
@@ -240,9 +239,11 @@ export default function ChatPage() {
       setError(result.message);
       return;
     }
+    sessionStorage.setItem(STATEMENT_ID_KEY, result.statement.id);
+    sessionStorage.setItem(STATEMENT_FILENAME_KEY, result.statement.fileName);
+    window.dispatchEvent(new CustomEvent('nosyormi-pill-update'));
     setStatementId(result.statement.id);
     setStatementFileName(result.statement.fileName);
-    dispatchStatementSwitched(result.statement.fileName);
     setTransactions(result.statement.transactions ?? []);
     setError(null);
   }, []);
@@ -282,7 +283,7 @@ export default function ChatPage() {
     const handleStatementSwitched = () => {
       const newId = sessionStorage.getItem(STATEMENT_ID_KEY);
       const savedFileName = sessionStorage.getItem(STATEMENT_FILENAME_KEY);
-      if (newId !== statementId) {
+      if (newId !== null && statementId !== null && newId !== statementId) {
         clearChat();
         if (newId) {
           sessionStorage.setItem(STATEMENT_ID_KEY, newId);
@@ -294,7 +295,9 @@ export default function ChatPage() {
       if (savedFileName) {
         setStatementFileName(savedFileName);
       }
-      void loadActiveStatement();
+      if (newId && newId !== statementId) {
+        void loadActiveStatement();
+      }
     };
 
     return subscribeStatementSwitched(handleStatementSwitched);
@@ -353,8 +356,6 @@ export default function ChatPage() {
   const clearChat = () => {
     sessionStorage.removeItem('nosyormi-chat-messages');
     sessionStorage.removeItem('nosyormi-chat-chart-update');
-    sessionStorage.removeItem(STATEMENT_ID_KEY);
-    sessionStorage.removeItem(STATEMENT_FILENAME_KEY);
     setMessages([]);
     setChartUpdate(null);
   };
@@ -1060,14 +1061,11 @@ export default function ChatPage() {
           style={{
             animation: 'chartFadeIn 0.3s ease-out',
             width: '100%',
-            height: '100%',
-            flex: 1,
-            display: 'flex',
             flexDirection: 'column',
           }}
         >
           <div style={{ width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%" minHeight={480}>
+            <ResponsiveContainer width="100%" height={620} minHeight={1}>
               <BarChart
                 data={chartData}
                 margin={{ top: 20, right: 20, left: 0, bottom: 100 }}
