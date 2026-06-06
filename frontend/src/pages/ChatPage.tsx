@@ -21,7 +21,6 @@ import {
   FORECAST_ACTUAL_COLOR,
   FORECAST_PREDICTED_COLOR,
   LINE_STROKE_COLOR,
-  LINE_FILL_COLOR,
 } from '../constants/palette';
 import { JewelBar, AnomalyBar, JewelSlice, UniversalTooltip } from '../components/chartEffects';
 import {
@@ -925,8 +924,8 @@ export default function ChatPage() {
               <AreaChart data={lineData}>
                 <defs>
                   <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={LINE_FILL_COLOR} />
-                    <stop offset="100%" stopColor={LINE_FILL_COLOR} />
+                    <stop offset="0%" stopColor={LINE_STROKE_COLOR} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={LINE_STROKE_COLOR} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid
@@ -1255,9 +1254,9 @@ export default function ChatPage() {
         .map((c) => ({ name: c.name, value: c.value }));
       return (
         <div key="horizontal" style={{ animation: 'chartFadeIn 0.3s ease-out', width: '100%' }}>
-          <div style={{ width: '100%', paddingTop: 8, overflow: 'visible' }}>
+          <div style={{ width: '100%', paddingTop: 16, boxSizing: 'border-box' }}>
             <ResponsiveContainer width="100%" height={Math.max(520, hData.length * 80)} minHeight={1} style={{ overflow: 'visible' }}>
-              <BarChart data={hData} layout="vertical" margin={{ top: 20, right: 20, left: 80, bottom: 5 }}>
+              <BarChart data={hData} layout="vertical" margin={{ top: 60, right: 20, left: 80, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
                 <XAxis
                   type="number"
