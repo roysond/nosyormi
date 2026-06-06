@@ -27,6 +27,7 @@ import {
   fetchActiveStatement,
   STATEMENT_FILENAME_KEY,
   STATEMENT_ID_KEY,
+  dispatchStatementSwitched,
   subscribeStatementSwitched,
 } from '../statementSelection';
 
@@ -88,6 +89,7 @@ function formatShortDate(dateStr: string): string {
   return new Date(dateStr + 'T00:00:00').toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
+    year: 'numeric',
   });
 }
 
@@ -240,6 +242,7 @@ export default function ChatPage() {
     }
     setStatementId(result.statement.id);
     setStatementFileName(result.statement.fileName);
+    dispatchStatementSwitched(result.statement.fileName);
     setTransactions(result.statement.transactions ?? []);
     setError(null);
   }, []);
