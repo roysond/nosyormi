@@ -1446,11 +1446,9 @@ export default function ChatPage() {
           style={{
             animation: 'chartFadeIn 0.3s ease-out',
             width: '100%',
-            height: '100%',
-            flex: 1,
           }}
         >
-          <ResponsiveContainer width="100%" height={520} minHeight={1}>
+          <ResponsiveContainer width="100%" height={580} minHeight={1}>
             <BarChart data={monthlyData} margin={{ top: 20, right: 20, left: 0, bottom: 80 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" />
               <XAxis
