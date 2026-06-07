@@ -39,7 +39,7 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
-        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds. For all-time or overall spending questions, use the ALL-TIME CATEGORY TOTALS section. For month-specific questions, use the PRE-COMPUTED MONTHLY CATEGORY TOTALS section. Never add up monthly figures yourself — use the pre-computed all-time totals directly. ANOMALY RULE: When answering questions about unusual, flagged, or anomalous transactions, you MUST read each individual transaction line marked [ANOMALY] carefully. For each anomaly you mention, cite the EXACT amount from that specific transaction line — never approximate, never confuse one transaction's amount with another's description. Match each merchant name to its own exact dollar amount from the same transaction line. Do not invent transactions that are not marked [ANOMALY] in the data.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds. For all-time or overall spending questions, use the ALL-TIME CATEGORY TOTALS section. For month-specific questions, use the PRE-COMPUTED MONTHLY CATEGORY TOTALS section. Never add up monthly figures yourself — use the pre-computed all-time totals directly. ANOMALY RULE: When answering questions about unusual, flagged, or anomalous transactions, you MUST read each individual transaction line marked [ANOMALY] carefully. For each anomaly you mention, cite the EXACT amount from that specific transaction line — never approximate, never confuse one transaction's amount with another's description. Match each merchant name to its own exact dollar amount from the same transaction line. Do not invent transactions that are not marked [ANOMALY] in the data. INCOME vs EXPENSE RULE: Transactions marked [INCOME] in the data are money received into the account — they are NOT purchases or expenses. When answering about biggest purchases, top expenses, or spending, ONLY reference transactions marked [EXPENSE]. Never describe an [INCOME] transaction as a purchase, expense, or spending. If the user asks about their top purchases, list only [EXPENSE] transactions ordered by absolute amount descending. Note: Zelle payments sent TO other people are [EXPENSE] transactions and must be included when listing top purchases or expenses. Only Zelle payments received FROM others are [INCOME] and should be excluded from expense lists. TOP N RULE: When the user asks for biggest purchases, top expenses, or largest transactions, ALWAYS read the TOP 10 BIGGEST EXPENSES section and cite figures from that list only. Never compute top expenses yourself from individual transaction lines. The pre-computed list already excludes income transactions — trust it exactly as written.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
@@ -286,6 +286,22 @@ public class OpenRouterChatService : IChatService
             builder.AppendLine($"  {item.Category}: ${item.Total:F2}");
         }
         builder.AppendLine("=== END OF ALL-TIME TOTALS ===");
+        builder.AppendLine();
+
+        var top10Expenses = transactions
+            .Where(t => t.Amount < 0)
+            .OrderByDescending(t => Math.Abs(t.Amount))
+            .Take(10)
+            .ToList();
+
+        builder.AppendLine("=== TOP 10 BIGGEST EXPENSES (use these exact figures for top purchase questions) ===");
+        for (int i = 0; i < top10Expenses.Count; i++)
+        {
+            var t = top10Expenses[i];
+            var cat = t.Category?.Name ?? "Other";
+            builder.AppendLine($"{i + 1}. [ID:{t.Id}] [{t.TransactionDate:yyyy-MM-dd}] {t.Description} ({cat}): ${Math.Abs(t.Amount):F2}");
+        }
+        builder.AppendLine("=== END OF TOP 10 EXPENSES ===");
         builder.AppendLine();
 
         // Individual transaction lines
