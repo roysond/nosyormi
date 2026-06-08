@@ -786,7 +786,7 @@ export default function ChatPage() {
         >
           <div style={{ width: '100%' }}>
             <>
-              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : Math.max(320, barData.length * 56)} minHeight={1}>
+              <ResponsiveContainer width="100%" height={isDrillDown ? 520 : Math.max(520, barData.length * 80)} minHeight={1}>
                 <BarChart
                   data={barData}
                   margin={{ top: 10, right: 10, left: 0, bottom: 60 }}
