@@ -39,7 +39,7 @@ public class OpenRouterChatService : IChatService
 
         TRANSACTION DATA FORMAT:
         - Each transaction line starts with [ID:uuid] — use these IDs when populating highlightTransactionIds.
-        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds. For all-time or overall spending questions, use the ALL-TIME CATEGORY TOTALS section. For month-specific questions, use the PRE-COMPUTED MONTHLY CATEGORY TOTALS section. Never add up monthly figures yourself — use the pre-computed all-time totals directly. ANOMALY RULE: When answering questions about unusual, flagged, or anomalous transactions, you MUST read each individual transaction line marked [ANOMALY] carefully. For each anomaly you mention, cite the EXACT amount from that specific transaction line — never approximate, never confuse one transaction's amount with another's description. Match each merchant name to its own exact dollar amount from the same transaction line. Do not invent transactions that are not marked [ANOMALY] in the data. INCOME vs EXPENSE RULE: Transactions marked [INCOME] in the data are money received into the account — they are NOT purchases or expenses. When answering about biggest purchases, top expenses, or spending, ONLY reference transactions marked [EXPENSE]. Never describe an [INCOME] transaction as a purchase, expense, or spending. If the user asks about their top purchases, list only [EXPENSE] transactions ordered by absolute amount descending. Note: Zelle payments sent TO other people are [EXPENSE] transactions and must be included when listing top purchases or expenses. Only Zelle payments received FROM others are [INCOME] and should be excluded from expense lists. TOP N RULE: When the user asks for biggest purchases, top expenses, or largest transactions, ALWAYS read the TOP 10 BIGGEST EXPENSES section and cite figures from that list only. Never compute top expenses yourself from individual transaction lines. The pre-computed list already excludes income transactions — trust it exactly as written. CATEGORY MONTHLY RULE: When the user asks about a specific category's spending each month, use ONLY the PRE-COMPUTED MONTHLY CATEGORY TOTALS section to find figures for that category per month. Never invent months that have zero spending — if a month does not appear in the summary for that category, it means zero spending that month. Do not reference months or years that have no data for the requested category.
+        - ACCURACY RULE: A pre-computed monthly summary table is provided at the top of each message. When citing category totals or monthly totals, ALWAYS use the exact figures from that summary table. Never compute sums yourself from individual transaction lines. When comparing amounts, always verify your conclusion against the numbers you cite — if you state that month A had $341 and month B had $430, you must conclude that month B is higher. Never contradict your own cited figures. When listing dates, months, or time periods in your answer, always present them in chronological order (oldest first) unless the user explicitly asks for a different order. When answering about specific merchants or transaction types, scan ALL transaction lines carefully, identify every matching transaction by description, cite the exact amounts and dates, and include their IDs in highlightTransactionIds. For all-time or overall spending questions, use the ALL-TIME CATEGORY TOTALS section. For month-specific questions, use the PRE-COMPUTED MONTHLY CATEGORY TOTALS section. Never add up monthly figures yourself — use the pre-computed all-time totals directly. ANOMALY RULE: When answering questions about unusual, flagged, or anomalous transactions, you MUST read each individual transaction line marked [ANOMALY] carefully. For each anomaly you mention, cite the EXACT amount from that specific transaction line — never approximate, never confuse one transaction's amount with another's description. Match each merchant name to its own exact dollar amount from the same transaction line. Do not invent transactions that are not marked [ANOMALY] in the data. INCOME vs EXPENSE RULE: Transactions marked [INCOME] in the data are money received into the account — they are NOT purchases or expenses. When answering about biggest purchases, top expenses, or spending, ONLY reference transactions marked [EXPENSE]. Never describe an [INCOME] transaction as a purchase, expense, or spending. If the user asks about their top purchases, list only [EXPENSE] transactions ordered by absolute amount descending. Note: Zelle payments sent TO other people are [EXPENSE] transactions and must be included when listing top purchases or expenses. Only Zelle payments received FROM others are [INCOME] and should be excluded from expense lists. TOP N RULE: When the user asks for biggest purchases, top expenses, or largest transactions, ALWAYS read the TOP 10 BIGGEST EXPENSES section and cite figures from that list only. Never compute top expenses yourself from individual transaction lines. The pre-computed list already excludes income transactions — trust it exactly as written. CATEGORY MONTHLY RULE: When the user asks about a specific category's spending each month, use ONLY the PRE-COMPUTED MONTHLY CATEGORY TOTALS section to find figures for that category per month. Never invent months that have zero spending — if a month does not appear in the summary for that category, it means zero spending that month. Do not reference months or years that have no data for the requested category. MERCHANT COUNT RULE: When answering questions about a specific merchant, service, or transaction type, you MUST count and sum ONLY the transactions whose IDs appear in highlightTransactionIds. These are the exact matching transactions — do not use category totals, all-time totals, or any pre-computed summary to answer merchant-specific questions. The total amount is the sum of those specific highlighted transaction amounts only. The count is the number of highlighted transaction IDs. If highlightTransactionIds contains 13 IDs, there are exactly 13 matching transactions — not more, not less. Always cite the exact first and last transaction dates from the highlighted set to determine the time range.
 
         RESPONSE FORMAT — you must ALWAYS return a valid JSON object with exactly this shape:
         {
@@ -62,7 +62,6 @@ public class OpenRouterChatService : IChatService
         - "anomalies" → when the user asks about unusual, unexpected, or high transactions
         - "forecast" → when the user asks about next month or future spending predictions
         - "stacked" → when the user asks how spending changed month by month across categories, or wants to see monthly trends broken down by category. Example: "show me my spending by category each month" or "how has my spending changed over months"
-        - "stacked" with a mental note → when the user asks about a specific category "on a monthly basis", "month by month", "each month", or "over months", AND the question is about transfers, payments, or any single category trend over time, still use type="stacked" — this shows all categories per month and the user can see their specific category within the stack. Do not leave chartUpdate null for these queries.
         - "horizontal" → when the user asks to rank or compare categories from highest to lowest, or wants a clear side-by-side category comparison. Example: "rank my spending categories" or "which category costs me the most"
         - "topN" → YOU MUST use this type — without exception — when the user mentions any of these: "biggest purchases", "top transactions", "largest expenses", "most expensive", "highest spending", "top N", "show me my top". Set type="topN", category=null. You MUST populate highlightTransactionIds with the IDs of the N highest-amount EXPENSE transactions (amount < 0) from the data, sorted by absolute value descending. N is the number the user specifies, or 10 if unspecified. This is a hard rule — never substitute type="bar" for these queries.
         - "treemap" → when the user wants a visual map or picture of their spending, or asks to see spending proportions visually. Example: "show me a spending map" or "visualise my budget" or "show me where my money goes as a picture"
@@ -520,7 +519,13 @@ public class OpenRouterChatService : IChatService
 
             // CATEGORY MONTHLY / DRILL-DOWN — specific category mentioned in message
             string? mentionedCategory = FindCategoryInMessage(validCategories);
-            bool isCategoryMonthly = mentionedCategory is not null &&
+            bool hasMerchantTerm = transactions.Any(t =>
+                t.Description.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                    .Any(word => word.Length >= 4 && lower.Contains(word.ToLowerInvariant()) &&
+                        !new[] { "purchase", "mobile", "from", "payment", "debit", "credit" }
+                            .Contains(word.ToLowerInvariant())));
+
+            bool isCategoryMonthly = (mentionedCategory is not null || hasMerchantTerm) &&
                 (lower.Contains("each month") || lower.Contains("every month") ||
                 lower.Contains("month by month") || lower.Contains("monthly") ||
                 lower.Contains("per month") || lower.Contains("month to month") ||
@@ -530,7 +535,7 @@ public class OpenRouterChatService : IChatService
             bool isCategoryDrillDown = mentionedCategory is not null && !isCategoryMonthly;
 
             // STACKED — monthly by category, month by month, each month, over months (no specific category)
-            bool isStacked = mentionedCategory is null &&
+            bool isStacked = mentionedCategory is null && !hasMerchantTerm &&
                 (lower.Contains("each month") || lower.Contains("every month") ||
                 lower.Contains("month by month") || lower.Contains("monthly") || lower.Contains("per month") ||
                 lower.Contains("month to month") || lower.Contains("over months") || lower.Contains("by month")) &&
@@ -647,7 +652,7 @@ public class OpenRouterChatService : IChatService
             // search transaction descriptions for specific merchant terms in the message.
             // This handles queries like "Show me my Costco purchases" where "Costco"
             // is not a category keyword but is a merchant name in the data.
-            if (chartUpdate?.Type == "bar" && chartUpdate.Category != null)
+            if (chartUpdate?.Type == "bar" || chartUpdate?.Type == "categoryMonthly")
             {
                 var stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                 {
@@ -671,8 +676,10 @@ public class OpenRouterChatService : IChatService
                 if (merchantTerms.Length > 0)
                 {
                     var matchingIds = transactions
-                        .Where(t => merchantTerms.Any(term =>
-                            t.Description.Contains(term, StringComparison.OrdinalIgnoreCase)))
+                        .Where(t =>
+                            t.Category?.Name != "Transfers & Payments" &&
+                            merchantTerms.Any(term =>
+                                t.Description.Contains(term, StringComparison.OrdinalIgnoreCase)))
                         .Select(t => t.Id.ToString())
                         .ToArray();
 
