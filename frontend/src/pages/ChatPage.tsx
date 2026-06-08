@@ -18,6 +18,7 @@ import {
 } from 'recharts';
 import {
   APP_COLORS,
+  BRAND_TEAL,
   FORECAST_ACTUAL_COLOR,
   FORECAST_PREDICTED_COLOR,
   LINE_STROKE_COLOR,
@@ -824,7 +825,7 @@ export default function ChatPage() {
                     <Bar
                       dataKey="value"
                       shape={(props: any) => <AnomalyBar {...props} isAnomaly={(barData as any[])[props.index]?.isAnomaly} />}
-                      fill={COLORS[0]}
+                      fill={BRAND_TEAL}
                     />
                   ) : (
                     <Bar dataKey="value" shape={<JewelBar />}>
