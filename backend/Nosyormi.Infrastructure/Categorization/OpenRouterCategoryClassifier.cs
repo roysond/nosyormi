@@ -71,14 +71,14 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
             upperDesc.Contains("FILLI CAFE") ||
             upperDesc.Contains("CAFE 44") ||
             upperDesc.Contains("TROPICAL SMOOTHIE") ||
-            upperDesc.Contains("CHOWBUS"))
+            upperDesc.Contains("CHOWBUS") ||
+            upperDesc.Contains("MIGHTY HALAL"))
         {
             return new CategoryResult("Dining & Takeaway", 0.99f);
         }
 
         // Known grocery and food retail merchants — explicitly Food & Groceries
         if (upperDesc.Contains("HARLEM FOODS") ||
-            upperDesc.Contains("MIGHTY HALAL") ||
             upperDesc.Contains("PITAINN") ||
             upperDesc.Contains("PITA INN") ||
             upperDesc.Contains("JERRY S FRUIT") ||
