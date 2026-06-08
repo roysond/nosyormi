@@ -260,6 +260,8 @@ function useCountUp(target: number, duration: number = 800): number {
 }
 
 export default function DashboardPage() {
+  const [narration, setNarration] = useState<string | null>(null);
+  const [narrationLoading, setNarrationLoading] = useState(false);
   const [statement, setStatement] = useState<Statement | null>(null);
   const [hasNoStatements, setHasNoStatements] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -332,6 +334,17 @@ export default function DashboardPage() {
       void loadStatement(false);
     });
   }, [loadStatement]);
+
+  useEffect(() => {
+    if (!statement?.id) return;
+    setNarration(null);
+    setNarrationLoading(true);
+    fetch(`${API_BASE}/api/narration/${statement.id}`)
+      .then(r => r.json())
+      .then(data => setNarration(data.narration ?? null))
+      .catch(() => setNarration(null))
+      .finally(() => setNarrationLoading(false));
+  }, [statement?.id]);
 
   const availablePeriods = useMemo(() => {
     if (!statement) return ['all'];
@@ -728,6 +741,45 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
+
+          {(narrationLoading || narration) && (
+            <div style={{
+              margin: '0 24px 20px',
+              padding: '16px 20px',
+              background: 'white',
+              borderRadius: 12,
+              border: '0.5px solid #E2E8F0',
+              borderLeft: '3px solid #124346',
+              boxShadow: '0 2px 8px rgba(18,67,70,0.06)',
+            }}>
+              {narrationLoading ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  color: '#94A3B8',
+                  fontSize: 13,
+                }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: '#124346',
+                    animation: 'dashboard-pulse 1.2s ease-in-out infinite',
+                  }} />
+                  Reflecting on your statement...
+                </div>
+              ) : (
+                <p style={{
+                  margin: 0,
+                  fontSize: 14,
+                  color: '#334155',
+                  lineHeight: 1.7,
+                  fontStyle: 'italic',
+                }}>
+                  {narration}
+                </p>
+              )}
+            </div>
+          )}
 
           <div style={styles.subNav}>
             <button

@@ -61,6 +61,9 @@ builder.Services.AddScoped<DbContext>(sp => sp.GetRequiredService<NosyormiDbCont
 builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier>();
 builder.Services.AddHttpClient<IEmbeddingService, OpenRouterEmbeddingService>();
 builder.Services.AddHttpClient<IChatService, OpenRouterChatService>();
+builder.Services.AddHttpClient<NarrationService>();
+builder.Configuration["OpenRouter:ApiKey"] =
+    Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
 builder.Services.AddScoped<IAnomalyDetector, ZScoreAnomalyDetector>();
 builder.Services.AddScoped<IForecastingService, MovingAverageForecastingService>();
 builder.Services.AddScoped<ITimeSeriesService, TimeSeriesService>();
