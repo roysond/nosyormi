@@ -13,6 +13,7 @@ import StatementsPage from './pages/StatementsPage';
 import ChatPage from './pages/ChatPage';
 import StatementPill from './components/StatementPill';
 import NosyormiLogo from './components/NosyormiLogo';
+import { UploadProvider } from './components/UploadContext';
 import { BRAND_TEAL_BASE, BRAND_TEAL_EDGE } from './constants/palette';
 
 const styles = {
@@ -192,6 +193,7 @@ export default function App() {
   const [collapsed, setCollapsed] = useState(false);
 
   return (
+    <UploadProvider>
     <div style={styles.app}>
       <aside
         style={{
@@ -254,5 +256,6 @@ export default function App() {
         </Routes>
       </main>
     </div>
+    </UploadProvider>
   );
 }

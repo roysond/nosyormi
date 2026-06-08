@@ -53,6 +53,45 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
             return new CategoryResult("Dining & Takeaway", 0.95f);
         }
 
+        // Known restaurant merchants — explicitly classified as Dining & Takeaway
+        if (upperDesc.Contains("NNT HYDERABAD") ||
+            upperDesc.Contains("HYDERABAD KITCHEN") ||
+            upperDesc.Contains("7 SPICES") ||
+            upperDesc.Contains("CKE*7 SPICES") ||
+            upperDesc.Contains("BABA SAJ") ||
+            upperDesc.Contains("NOON O KABAB") ||
+            upperDesc.Contains("HALAL PIZZA") ||
+            upperDesc.Contains("PIZZA BIZZA") ||
+            upperDesc.Contains("GRAND ISTANBUL") ||
+            upperDesc.Contains("ANNAPURNA") ||
+            upperDesc.Contains("THOUSAND TALES") ||
+            upperDesc.Contains("A THOUSAND T") ||
+            upperDesc.Contains("SWEET RESERVE") ||
+            upperDesc.Contains("AMAZING BREAD") ||
+            upperDesc.Contains("FILLI CAFE") ||
+            upperDesc.Contains("CAFE 44") ||
+            upperDesc.Contains("TROPICAL SMOOTHIE") ||
+            upperDesc.Contains("CHOWBUS"))
+        {
+            return new CategoryResult("Dining & Takeaway", 0.99f);
+        }
+
+        // Known grocery and food retail merchants — explicitly Food & Groceries
+        if (upperDesc.Contains("HARLEM FOODS") ||
+            upperDesc.Contains("MIGHTY HALAL") ||
+            upperDesc.Contains("PITAINN") ||
+            upperDesc.Contains("PITA INN") ||
+            upperDesc.Contains("JERRY S FRUIT") ||
+            upperDesc.Contains("OASIS BAKERY") ||
+            upperDesc.Contains("JEWEL OSCO") ||
+            upperDesc.Contains("7455 W ARCHER") ||
+            upperDesc.Contains("TOUHY RIVER") ||
+            upperDesc.Contains("CASEYS") ||
+            upperDesc.Contains("FOOD SERVICE PREP"))
+        {
+            return new CategoryResult("Food & Groceries", 0.99f);
+        }
+
         if (upperDesc.Contains("USCIS") ||
             upperDesc.Contains("DMV") ||
             upperDesc.Contains("IRS") ||

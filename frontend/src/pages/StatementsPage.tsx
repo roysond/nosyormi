@@ -1,13 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconArrowUp } from '@tabler/icons-react';
+import { useUpload } from '../components/UploadContext';
 import { ANOMALY_COLOR, MACOS_GLASS_TEAL, MACOS_GLASS_GRAIN } from '../constants/palette';
 import {
   clearStatement,
   dispatchStatementSwitched,
   getSelectedStatementId,
   selectStatement,
-  STATEMENT_FILENAME_KEY,
-  STATEMENT_ID_KEY,
   subscribeStatementSwitched,
 } from '../statementSelection';
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
@@ -205,6 +204,17 @@ function formatUploadedDate(isoDate: string): string {
 }
 
 export default function StatementsPage() {
+  const {
+    isUploading,
+    uploadFileName,
+    uploadError,
+    uploadSuccess,
+    showUploadModal,
+    openUploadModal,
+    closeUploadModal,
+    handleUpload,
+  } = useUpload();
+
   const [statements, setStatements] = useState<StatementSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,12 +224,9 @@ export default function StatementsPage() {
   const [deleteHoverId, setDeleteHoverId] = useState<string | null>(null);
   const [hoveringActiveId, setHoveringActiveId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [showUploadModal, setShowUploadModal] = useState(false);
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [uploadSuccess, setUploadSuccess] = useState(false);
   const [activeStatementId, setActiveStatementId] = useState<string | null>(
     () => getSelectedStatementId(),
   );
@@ -251,6 +258,15 @@ export default function StatementsPage() {
     loadStatements();
   }, [loadStatements]);
 
+  useEffect(() => {
+    if (uploadSuccess) {
+      void loadStatements();
+      setSelectedFile(null);
+      setSelectionError(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  }, [uploadSuccess, loadStatements]);
+
   const closeDeleteModal = () => {
     if (deleting) return;
     setConfirmDelete(null);
@@ -277,11 +293,15 @@ export default function StatementsPage() {
       }
 
       setStatements((prev) => prev.filter((s) => s.id !== confirmDelete.id));
-      sessionStorage.removeItem('nosyormi-chat-messages');
-      sessionStorage.removeItem('nosyormi-chat-chart-update');
-      sessionStorage.removeItem(STATEMENT_ID_KEY);
-      sessionStorage.removeItem(STATEMENT_FILENAME_KEY);
-      setActiveStatementId(null);
+
+      const deletedIsActive = confirmDelete.id === getSelectedStatementId();
+      if (deletedIsActive) {
+        sessionStorage.removeItem('nosyormi-chat-messages');
+        sessionStorage.removeItem('nosyormi-chat-chart-update');
+        clearStatement();
+        setActiveStatementId(null);
+      }
+
       window.dispatchEvent(new CustomEvent('nosyormi-statement-deleted'));
       setConfirmDelete(null);
       setDeleteError(null);
@@ -298,55 +318,23 @@ export default function StatementsPage() {
     return file.name.toLowerCase().endsWith('.csv');
   }
 
-  const closeUploadModal = () => {
-    setShowUploadModal(false);
-    setUploadFile(null);
-    setUploadError(null);
+  const handleCloseUploadModal = () => {
+    closeUploadModal();
+    setSelectedFile(null);
+    setSelectionError(null);
     setDragOver(false);
-    setUploadSuccess(false);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const selectUploadFile = (candidate: File | undefined) => {
     if (!candidate) return;
     if (!isCsvFile(candidate)) {
-      setUploadError('Only .csv files are supported.');
-      setUploadFile(null);
+      setSelectionError('Only .csv files are supported.');
+      setSelectedFile(null);
       return;
     }
-    setUploadError(null);
-    setUploadFile(candidate);
-  };
-
-  const handleUpload = async () => {
-    if (!uploadFile || uploading) return;
-    setUploading(true);
-    setUploadError(null);
-    const formData = new FormData();
-    formData.append('file', uploadFile);
-    try {
-      const response = await fetch(`${API_BASE}/api/statements/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        const message = body?.error ?? `Upload failed with status ${response.status}.`;
-        throw new Error(message);
-      }
-      setUploadSuccess(true);
-      window.dispatchEvent(new CustomEvent('nosyormi-statement-uploaded'));
-      await loadStatements();
-      setTimeout(() => {
-        closeUploadModal();
-      }, 1500);
-    } catch (err: unknown) {
-      setUploadError(
-        err instanceof Error ? err.message : 'Upload failed. Please try again.',
-      );
-    } finally {
-      setUploading(false);
-    }
+    setSelectionError(null);
+    setSelectedFile(candidate);
   };
 
   return (
@@ -378,7 +366,7 @@ export default function StatementsPage() {
             boxShadow: '0 4px 14px rgba(18,67,70,0.3)',
             letterSpacing: '0.01em',
           }}
-          onClick={() => setShowUploadModal(true)}
+          onClick={openUploadModal}
         >
           + Upload Statement
         </button>
@@ -538,13 +526,14 @@ export default function StatementsPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(10,40,42,0.32)',
+            background: isUploading ? 'rgba(10,40,42,0.15)' : 'rgba(10,40,42,0.32)',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            pointerEvents: isUploading ? 'none' : 'auto',
           }}
-          onClick={closeUploadModal}
+          onClick={handleCloseUploadModal}
           role="presentation"
         >
           <div
@@ -556,6 +545,7 @@ export default function StatementsPage() {
               boxSizing: 'border-box' as const,
               position: 'relative' as const,
               overflow: 'hidden',
+              pointerEvents: 'auto' as const,
             }}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
@@ -597,7 +587,7 @@ export default function StatementsPage() {
               </h2>
               <button
                 type="button"
-                onClick={closeUploadModal}
+                onClick={handleCloseUploadModal}
                 style={{
                   border: 'none',
                   background: 'transparent',
@@ -670,7 +660,7 @@ export default function StatementsPage() {
                     selectUploadFile(e.dataTransfer.files[0]);
                   }}
                 >
-                  {uploading ? (
+                  {isUploading ? (
                     <div
                       style={{
                         animation: 'nosyormi-upload-pulse 1.8s ease-in-out infinite',
@@ -690,7 +680,7 @@ export default function StatementsPage() {
                         style={{ display: 'block', margin: '0 auto 12px' }}
                         aria-hidden
                       />
-                      {uploadFile ? (
+                      {selectedFile || uploadFileName ? (
                         <p
                           style={{
                             margin: 0,
@@ -700,7 +690,7 @@ export default function StatementsPage() {
                             wordBreak: 'break-word',
                           }}
                         >
-                          {uploadFile.name}
+                          {selectedFile?.name ?? uploadFileName}
                         </p>
                       ) : (
                         <>
@@ -740,7 +730,7 @@ export default function StatementsPage() {
                   onChange={(e) => selectUploadFile(e.target.files?.[0])}
                 />
 
-                {uploadError && (
+                {(selectionError || uploadError) && (
                   <p
                     style={{
                       margin: '0 0 12px',
@@ -748,30 +738,30 @@ export default function StatementsPage() {
                       color: ANOMALY_COLOR,
                     }}
                   >
-                    {uploadError}
+                    {selectionError ?? uploadError}
                   </p>
                 )}
 
-                {uploadFile && (
+                {(selectedFile || isUploading) && (
                   <button
                     type="button"
-                    onClick={handleUpload}
-                    disabled={uploading}
+                    onClick={() => { if (selectedFile) void handleUpload(selectedFile); }}
+                    disabled={isUploading}
                     style={{
                       width: '100%',
                       padding: '12px 24px',
                       border: 'none',
                       borderRadius: 8,
-                      background: uploading ? 'rgba(212,168,67,0.7)' : 'linear-gradient(180deg, #DCAE47, #C8952A)',
+                      background: isUploading ? 'rgba(212,168,67,0.7)' : 'linear-gradient(180deg, #DCAE47, #C8952A)',
                       color: '#3a2a08',
                       boxShadow: '0 4px 14px rgba(200,149,42,0.3), inset 0 1px 0 rgba(255,255,255,0.3), inset 0 -1px 0 rgba(0,0,0,0.15)',
                       fontSize: 14,
                       fontWeight: 600,
-                      cursor: uploading ? 'not-allowed' : 'pointer',
-                      opacity: uploading ? 0.7 : 1,
+                      cursor: isUploading ? 'not-allowed' : 'pointer',
+                      opacity: isUploading ? 0.7 : 1,
                     }}
                   >
-                    {uploading ? 'Uploading...' : 'Reflect on this statement'}
+                    {isUploading ? 'Uploading...' : 'Reflect on this statement'}
                   </button>
                 )}
               </>
