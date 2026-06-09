@@ -119,25 +119,32 @@ const styles = {
     color,
   }),
   subNav: {
-    padding: '0 32px',
-    borderBottom: '1px solid #E2E8F0',
     display: 'flex',
-    gap: 0,
-    background: 'white',
+    alignItems: 'flex-end',
+    gap: 3,
   },
-  tab: (active: boolean) => ({
-    padding: '12px 20px',
-    fontSize: 13,
-    fontWeight: active ? 600 : 500,
+  tab: (active: boolean, _tabName: 'spending' | 'income', hover: boolean) => ({
+    padding: active ? '10px 28px 12px' : '10px 28px',
+    fontSize: 14,
+    fontWeight: active ? 500 : 400,
     cursor: 'pointer',
-    border: 'none',
-    background: 'transparent',
-    borderBottom: `2px solid ${active ? '#071A1E' : 'transparent'}`,
-    color: active ? '#071A1E' : '#64748B',
-    marginBottom: -1,
+    border: active ? '0.5px solid #E2E8F0' : 'none',
+    borderBottom: active ? '0.5px solid #FFFFFF' : 'none',
+    borderRadius: '12px 12px 0 0',
+    background: active ? '#FFFFFF' : hover ? '#F8FAFC' : 'transparent',
+    color: active ? '#071A1E' : hover ? '#1E293B' : '#64748B',
+    position: 'relative' as const,
+    zIndex: active ? 2 : 1,
+    transition: 'background 0.15s, color 0.15s',
   }),
   tabContent: {
+    background: '#FFFFFF',
+    border: '0.5px solid #E2E8F0',
+    borderRadius: '0 12px 12px 12px',
     padding: '24px 32px',
+    position: 'relative' as const,
+    zIndex: 1,
+    marginTop: -1,
   },
   sectionTitle: {
     fontSize: 13,
@@ -666,6 +673,47 @@ export default function DashboardPage() {
           to { opacity: 1; transform: translateY(0); }
         }
       `}</style>
+      <style>{`
+        .nosyormi-tab-spending.nosyormi-tab-active::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          right: -12px;
+          width: 12px;
+          height: 12px;
+          background: transparent;
+          border-bottom-left-radius: 12px;
+          box-shadow: -4px 4px 0 4px #FFFFFF;
+          z-index: 3;
+          pointer-events: none;
+        }
+        .nosyormi-tab-income.nosyormi-tab-active::before {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: -12px;
+          width: 12px;
+          height: 12px;
+          background: transparent;
+          border-bottom-right-radius: 12px;
+          box-shadow: 4px 4px 0 4px #FFFFFF;
+          z-index: 3;
+          pointer-events: none;
+        }
+        .nosyormi-tab-income.nosyormi-tab-active::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          right: -12px;
+          width: 12px;
+          height: 12px;
+          background: transparent;
+          border-bottom-left-radius: 12px;
+          box-shadow: -4px 4px 0 4px #FFFFFF;
+          z-index: 3;
+          pointer-events: none;
+        }
+      `}</style>
 
       <header style={styles.header}>
         <h1 style={styles.headerTitle}>Dashboard</h1>
@@ -781,18 +829,12 @@ export default function DashboardPage() {
             </div>
           )}
 
+          <div style={{ position: 'relative' }}>
           <div style={styles.subNav}>
             <button
               type="button"
-              style={{
-                ...styles.tab(activeTab === 'spending'),
-                color:
-                  activeTab === 'spending'
-                    ? '#071A1E'
-                    : tabHover === 'spending'
-                      ? '#1E293B'
-                      : '#64748B',
-              }}
+              className={`nosyormi-tab-spending${activeTab === 'spending' ? ' nosyormi-tab-active' : ''}`}
+              style={styles.tab(activeTab === 'spending', 'spending', tabHover === 'spending')}
               onClick={() => {
                 setActiveTab('spending');
                 setActiveCategoryIndex(null);
@@ -804,15 +846,8 @@ export default function DashboardPage() {
             </button>
             <button
               type="button"
-              style={{
-                ...styles.tab(activeTab === 'income'),
-                color:
-                  activeTab === 'income'
-                    ? '#071A1E'
-                    : tabHover === 'income'
-                      ? '#1E293B'
-                      : '#64748B',
-              }}
+              className={`nosyormi-tab-income${activeTab === 'income' ? ' nosyormi-tab-active' : ''}`}
+              style={styles.tab(activeTab === 'income', 'income', tabHover === 'income')}
               onClick={() => setActiveTab('income')}
               onMouseEnter={() => setTabHover('income')}
               onMouseLeave={() => setTabHover(null)}
@@ -822,7 +857,7 @@ export default function DashboardPage() {
           </div>
 
           {activeTab === 'spending' && (
-            <div style={styles.tabContent}>
+            <div style={{ ...styles.tabContent, borderRadius: activeTab === 'spending' ? '0 12px 12px 12px' : '12px 12px 12px 12px' }}>
               <div style={styles.chartRow}>
                 <div style={styles.chartColLeft}>
                   <div
@@ -1368,7 +1403,7 @@ export default function DashboardPage() {
           )}
 
           {activeTab === 'income' && (
-            <div style={styles.tabContent}>
+            <div style={{ ...styles.tabContent, borderRadius: '12px 12px 12px 12px' }}>
               <div
                 style={{
                   display: 'flex',
@@ -1437,6 +1472,7 @@ export default function DashboardPage() {
               )}
             </div>
           )}
+          </div>
         </>
       )}
     </div>
