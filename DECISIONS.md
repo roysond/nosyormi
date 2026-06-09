@@ -30,7 +30,7 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Chat context | Full transaction list per statement | Grounds answers in real data; query-time RAG deferred |
 | ~750 txn ceiling | Full context injection below ~750 rows | Above this, prompt size/latency/cost degrade — RAG retrieval required; not enforced in code |
 | topN chart fallback | Server-side in `OpenRouterChatService` | Forces ranked expenses when model misses `topN` intent |
-| Narration model | `anthropic/claude-sonnet-4-5` (NARRATION) | Reserved for anomaly/forecast narration — **configured but not wired in current build** |
+| Narration model | `anthropic/claude-sonnet-4-5` (NARRATION) | Dashboard statement summary — **wired** (`NarrationService`, cached in `Statement.Narration`) |
 | Embedding model | `openai/text-embedding-3-small` | 1536D, fixed — never changed post-data — **wired** |
 | Anomaly detection | Z-score (statistical, not AI) | Deterministic, auditable, exact |
 | Forecasting | Weighted moving average (not AI) | Deterministic, no hallucination risk |
@@ -71,7 +71,8 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 | Single statement view | Per-bank filtering | Multi-bank grouping adds app-wide state, deferred |
 | CSV only | PDF upload | PdfPig integration deferred — CSV covers real bank exports |
 | ChatPage as one large component | Extracted chart components | Chart renderers belong in their own modules; deferred under deadline |
-| `MODEL_NARRATION` left as dead config | Implemented narration tier | Routing abstraction makes wiring it later additive; not needed for MVP |
+| Narration DB cache | `Statement.Narration` column | One OpenRouter call per statement; Dashboard re-fetch is instant after first generation |
+| `MODEL_NARRATION` env vs hardcoded model | Hardcoded in `NarrationService` for now | Tier is live; reading env var is a one-line follow-up when swap-without-deploy is needed |
 
 ---
 
@@ -139,4 +140,14 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 1 June 2026 — Design v1.1, month-specific routing, Reflect switching, 15 categories*
+## Week 8 Decisions (June 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| AI narration scope | Dashboard statement summary only | Distinct from chat; auto-surfaces on Reflect without user prompt |
+| Narration cache | Persist on `Statement.Narration` | Avoid repeat OpenRouter cost/latency on every Dashboard visit |
+| Narration API | `GET /api/narration/{statementId}` | Separate from chat SSE; simple JSON for Dashboard card |
+
+---
+
+*Last updated: 9 June 2026 — AI Dashboard narration, Design v1.1, month-specific routing, Reflect switching, 15 categories*

@@ -65,7 +65,7 @@ handle the kind of work they are best suited for.
 - ✅ Vector embeddings via text-embedding-3-small stored in pgvector
 - ✅ Z-score anomaly detection at upload time
 - ✅ Moving average forecasting service
-- ✅ All API endpoints: statements, chat, forecast, timeseries
+- ✅ All API endpoints: statements, chat, forecast, timeseries, narration
 - ✅ GitHub project board: 11 epics, 56 stories
 
 **Deferred:**
@@ -158,10 +158,8 @@ handle the kind of work they are best suited for.
   superseded by the Dashboard date-range filter
 - ✅ Removed interim `CrystalPieCell.tsx` / `CRYSTAL_COLORS`
 
-**Noted (not a change):**
-- `MODEL_NARRATION` is provisioned in config but unwired in code — the
-  narration tier (anomaly/forecast narration) is not implemented in the
-  current build. Documented as a known limitation.
+**Noted (superseded June 2026):**
+- ~~`MODEL_NARRATION` unwired~~ — the NARRATION tier is now wired via `NarrationService` and the Dashboard narration card (see Week 8). Per-anomaly and forecast-specific LLM narration remain deferred.
 
 ---
 
@@ -232,6 +230,20 @@ handle the kind of work they are best suited for.
 
 **Uncommitted at doc time (local working tree):**
 - Backend + frontend month-specific changes above are implemented and build-clean but may not yet be on `main` — verify with `git status` before submission tagging.
+
+---
+
+### Week 8 (June 2026) — AI Dashboard Narration (NARRATION Tier)
+
+**Completed:**
+- ✅ **`NarrationService`** — OpenRouter NARRATION-tier call (`anthropic/claude-sonnet-4-5`) builds a warm 3–4 sentence statement summary from pre-computed income/expense/category/anomaly figures
+- ✅ **`NarrationController`** — `GET /api/narration/{statementId}` returns `{ narration }`
+- ✅ **DB caching** — `Statement.Narration` column (migration `AddNarrationToStatement`); narration generated once per statement, subsequent requests return the cached value with no API call
+- ✅ **Dashboard narration card** — auto-fetches when the active statement loads; loading pulse then italic summary paragraph between stats row and sub-nav
+
+**Still deferred (not this feature):**
+- Per-anomaly LLM explanations and forecast-specific narratives (separate from the Dashboard summary)
+- Reading `MODEL_NARRATION` from env in `NarrationService` (model is hardcoded today; env key remains provisioned for future swap)
 
 ---
 
@@ -369,13 +381,11 @@ NOSYOR.M.I uses three AI model tiers, all routed through OpenRouter:
 | Tier | Model | Used For |
 |---|---|---|
 | MODEL_LIGHT | openai/gpt-4o-mini | Per-transaction categorization at upload |
+| MODEL_NARRATION | anthropic/claude-sonnet-4-5 | Dashboard statement narration (`NarrationService`; cached in `Statement.Narration`) |
 | MODEL_CHAT | anthropic/claude-sonnet-4-5 | Conversational chat (full statement context injection) |
 | EMBEDDING_MODEL | openai/text-embedding-3-small | 1536D vector embeddings for RAG |
 
-> A third tier, `MODEL_NARRATION`, is provisioned in configuration for a
-> planned anomaly/forecast narration feature but is **not wired into any
-> service in the current build**. Categorization uses `MODEL_LIGHT`; chat
-> uses `MODEL_CHAT`. (See Known Issues & Limitations.)
+> All three LLM tiers are wired in the current build. **NARRATION** executes via `NarrationService` + `NarrationController` when the Dashboard loads a statement. The model is hardcoded in code (matches the default `MODEL_NARRATION` in `.env.example`); the env var itself is not read yet — a one-line follow-up when env-driven routing is desired. Per-anomaly and forecast-specific LLM narration remain deferred.
 
 ### System Prompt Strategy
 
@@ -574,13 +584,14 @@ runtime, never from hardcoded values.
 | 6 | No per-statement deep-dive page | Changed | `StatementDetailPage` removed in Week 4; Dashboard date-range filter + Transactions page cover analysis |
 | 7 | Chat history lost on browser close | By design | sessionStorage only; DB persistence deferred |
 | 8 | Sparklines + change vs last month not implemented | Deferred | Additive tier story; deferred for submission timeline |
-| 9 | `MODEL_NARRATION` configured but unwired | Known | Narration tier provisioned in env/k8s but read by no code; anomaly/forecast narration not implemented |
-| 10 | Tooltip frosted-glass tints over dense colour | Known | `UniversalTooltip` is translucent; over fully-coloured Treemap tiles it picks up tile colour. Browser compositing limitation; accepted |
-| 11 | Query-time RAG not wired in chat | Deferred | Embeddings stored at upload; chat uses full statement context today |
-| 12 | ~750 transaction ceiling (architectural) | By design | Full context reliable ≤ ~750 txns; RAG required beyond; not enforced in code |
-| 13 | Chat streaming model | By design | OpenRouter streams to API; client receives parsed answer word-by-word via SSE (not raw JSON tokens) |
-| 14 | Early docs labelled chat as "RAG" | Corrected 29 May | Upload-half done; retrieval-half not implemented; diagrams updated |
-| 15 | Logo not a standalone asset file | Known | Brand mark is inline SVG in `NosyormiLogo.tsx`; `favicon.svg` is a separate icon |
+| 9 | Per-anomaly / forecast LLM narration | Deferred | Dashboard statement summary uses NARRATION tier; per-anomaly explanations and forecast-specific narratives not implemented |
+| 10 | `MODEL_NARRATION` env var not read | Known | `NarrationService` is wired; model hardcoded to `anthropic/claude-sonnet-4-5`. Env/k8s key provisioned but not consumed yet |
+| 11 | Tooltip frosted-glass tints over dense colour | Known | `UniversalTooltip` is translucent; over fully-coloured Treemap tiles it picks up tile colour. Browser compositing limitation; accepted |
+| 12 | Query-time RAG not wired in chat | Deferred | Embeddings stored at upload; chat uses full statement context today |
+| 13 | ~750 transaction ceiling (architectural) | By design | Full context reliable ≤ ~750 txns; RAG required beyond; not enforced in code |
+| 14 | Chat streaming model | By design | OpenRouter streams to API; client receives parsed answer word-by-word via SSE (not raw JSON tokens) |
+| 15 | Early docs labelled chat as "RAG" | Corrected 29 May | Upload-half done; retrieval-half not implemented; diagrams updated |
+| 16 | Logo not a standalone asset file | Known | Brand mark is inline SVG in `NosyormiLogo.tsx`; `favicon.svg` is a separate icon |
 
 ---
 
@@ -612,6 +623,8 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
   month-scoped category breakdowns (null category + highlight IDs)
 - Dashboard date-range filter (All Time / per-month / custom) scoping all
   stats, anomalies, and category totals to the chosen period
+- **AI Dashboard narration** — NARRATION-tier statement summary auto-generated
+  on Reflect, cached in `Statement.Narration` (one OpenRouter call per statement)
 - Custom chart visual system (`JewelBar`, `JewelSlice`, unified
   `UniversalTooltip`) centralised in `palette.ts` + `chartEffects.tsx`
 - 15-category taxonomy including Education and Government & Fees
@@ -629,4 +642,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 1 June 2026 — Design v1.1, 15-category taxonomy, Reflect statement switching, month-specific chat routing, bar highlight filtering, assistant history chart context.*
+*Last updated: 9 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15-category taxonomy, Reflect statement switching, month-specific chat routing, bar highlight filtering, assistant history chart context.*

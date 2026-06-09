@@ -114,8 +114,9 @@ Different features call for different tools. The matrix below documents which to
 | Semantic similarity search | Layer 3 | pgvector + embeddings | Yes (embeddings at upload; **retrieval not wired in chat**) |
 | Anomaly detection | Layer 2 | ML.NET / statistical methods | No |
 | Time-series forecasting | Layer 2 | ML.NET SSA forecaster | No |
-| Anomaly explanation | Layer 4 | LLM (narration tier) | Yes |
-| Forecast narration | Layer 4 | LLM (narration tier) | Yes |
+| Anomaly explanation | Layer 4 | LLM (narration tier) | Deferred (Dashboard summary shipped; per-anomaly LLM not yet) |
+| Forecast narration | Layer 4 | LLM (narration tier) | Deferred (Dashboard summary shipped; forecast-specific LLM not yet) |
+| Dashboard statement narration | Layer 4 | LLM (narration tier) | Yes (`NarrationService`, cached in `Statement.Narration`) |
 | Conversational chat | Layer 4 | LLM (chat tier) | Yes |
 | Chat-triggered visualization updates | Layers 1 + 4 | Structured JSON contract (`chartUpdate`, optional `highlightTransactionIds`) | Yes (LLM + server fallback for `topN`) |
 
@@ -128,14 +129,14 @@ When LLM work is required, the system routes between three model tiers. This rou
 | Tier | Role | Used For | Optimization |
 |---|---|---|---|
 | **LIGHT** | High-volume, low-complexity tasks | Categorization fallback, simple labeling, structured tagging | Cost & latency |
-| **NARRATION** | Mid-complexity explanation tasks | Anomaly explanations, forecast summaries, monthly narratives | Balance of cost and quality |
+| **NARRATION** | Mid-complexity explanation tasks | Dashboard statement summaries (shipped); anomaly explanations, forecast summaries (deferred) | Balance of cost and quality |
 | **CHAT** | Premium reasoning tasks | Conversational interface, multi-step reasoning, tool-using agentic flows | Quality |
 
 The roles are decoupled from specific models. The configuration in `.env.example` provides recommended models for each tier (`openai/gpt-4o-mini` for LIGHT and NARRATION, `openai/gpt-4o` for CHAT at the time of writing), but the architecture treats these as swappable. The canonical source of truth for which model is in use is `.env.example`; any change to the model assignment is reflected there first.
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 1 June 2026):** Two of the three tiers are wired into code today — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback) and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). The **NARRATION** tier (`MODEL_NARRATION`) is provisioned in configuration (`.env`, `.env.docker`, `k8s/configmap.yaml`) but is **not yet consumed by any service**. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context. The feature rows below marked "narration tier" describe intended design, not shipping code.
+> **Implementation status (as of June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -216,7 +217,7 @@ backend/
 ├── Nosyormi.Infrastructure/     # External dependencies & implementations
 │   ├── Analysis/                # ZScoreAnomalyDetector, MovingAverageForecastingService, TimeSeriesService
 │   ├── Categorization/          # OpenRouterCategoryClassifier
-│   ├── Chat/                    # OpenRouterChatService (system prompt + chartUpdate parsing)
+│   ├── Chat/                    # OpenRouterChatService, NarrationService
 │   ├── Embeddings/              # OpenRouterEmbeddingService
 │   ├── Migrations/              # EF Core migration history
 │   ├── Parsing/                 # CsvStatementParser (Standard, Huntington, BOA)
@@ -226,6 +227,7 @@ backend/
     ├── Controllers/
     │   ├── StatementsController.cs
     │   ├── ChatController.cs
+    │   ├── NarrationController.cs
     │   ├── ForecastController.cs
     │   └── TimeSeriesController.cs
     ├── Program.cs               # Composition root, CORS, DI
@@ -517,9 +519,10 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Decision:** Deleted `StatementDetailPage`, its `/dashboard/:id` route in `App.tsx`, and the "View Details →" link on the Statements page (and the now-unused `Link` import). The app now has four routed pages.
 - **Rationale:** The per-statement view duplicated Dashboard/Transactions analysis. With the Dashboard date-range filter in place, the separate page no longer earned its complexity; removing it reduces surface area and duplication.
 
-### 2026-05-28 — `MODEL_NARRATION` Confirmed as Unwired Config
+### 2026-05-28 — `MODEL_NARRATION` Confirmed as Unwired Config *(superseded June 2026)*
 
-- **Finding (documented, not a change):** A codebase scan confirmed `MODEL_NARRATION` is referenced only in configuration and docs — no service reads it. The narration tier described in Section 3 is design intent, not shipping code. Recorded here so the architecture's aspirational rows are not mistaken for implemented behavior.
+- **Finding (May 2026):** A codebase scan confirmed `MODEL_NARRATION` was referenced only in configuration and docs — no service read it.
+- **Resolution (June 2026):** `NarrationService` + `NarrationController` wired the NARRATION tier for Dashboard statement summaries; results cached in `Statement.Narration`. Per-anomaly and forecast-specific narration remain deferred.
 
 ### 2026-05-29 — Chat `topN` Chart + Server-Side Fallback
 
@@ -588,9 +591,16 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Dynamic height:** Non-drill-down bar `ResponsiveContainer` height `Math.max(320, barData.length * 56)` scales with category count.
 - **Title threshold:** Merchant word-derived title requires >70% dominance (was 40%).
 
+### 2026-06-09 — AI Dashboard Narration (NARRATION Tier)
+
+- **Decision:** Added `NarrationService` (OpenRouter, `anthropic/claude-sonnet-4-5`) and `NarrationController` (`GET /api/narration/{statementId}`). Dashboard auto-fetches narration when a statement loads.
+- **Caching:** `Statement.Narration` column (migration `AddNarrationToStatement`) stores the generated paragraph; subsequent requests return cached text with no LLM call.
+- **Scope:** Statement-level summary paragraph only — not per-anomaly or forecast-specific LLM narration (those remain deferred).
+- **Config note:** Model is hardcoded in `NarrationService`; `MODEL_NARRATION` env var is provisioned but not read yet.
+
 ---
 
-*Last updated: Sunday, 1 June 2026 — Design v1.1, 15 categories, Reflect switching, month-specific chat routing.*
+*Last updated: 9 June 2026 — AI Dashboard narration, Design v1.1, 15 categories, Reflect switching, month-specific chat routing.*
 
 As the corresponding parts of the system are built, the following sections will be written:
 

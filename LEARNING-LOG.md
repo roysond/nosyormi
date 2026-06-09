@@ -304,15 +304,22 @@ and the link that pointed to it — made the app simpler without losing any
 real capability. I learned that taking code *out* can be as valuable as
 putting it in, and that "I built it" is not a reason to keep something.
 
-### Dead config is worth finding
+### Dead config is worth finding — and worth wiring when the time comes
 
 While reviewing the app I checked whether `MODEL_NARRATION` (one of my
-three AI model tiers) was actually used anywhere. It wasn't — it sits in
-my `.env`, Docker, and Kubernetes config but no code reads it. The
-narration feature it was meant for was never wired up. Rather than quietly
+three AI model tiers) was actually used anywhere. In May 2026 it wasn't — it sat in
+my `.env`, Docker, and Kubernetes config but no code read it. The
+narration feature it was meant for was not wired up yet. Rather than quietly
 pretend it works, I documented it honestly as a known limitation. Lesson:
 configuration that nothing reads is a trap for the next person (or
 future-me) — name it out loud.
+
+In June 2026 I wired the NARRATION tier: `NarrationService` generates a
+Dashboard statement summary via OpenRouter, `NarrationController` exposes
+`GET /api/narration/{statementId}`, and the result is cached in
+`Statement.Narration` so each statement is narrated once. The env var
+`MODEL_NARRATION` is still not read (the model is hardcoded today) — a
+smaller leftover, but the tier itself is live.
 
 ---
 
@@ -441,4 +448,21 @@ learning came first. The speed came after.
 
 ---
 
-*Last updated: 1 June 2026 — Design v1.1, Reflect switching, month-specific chat routing.*
+## Week 8 — AI Dashboard Narration (June 2026)
+
+### Generate once, cache forever
+
+Calling OpenRouter on every Dashboard visit would be slow and expensive.
+The narration card only needs one paragraph per statement — it does not
+change unless the underlying data changes. Caching the result in
+`Statement.Narration` means the first visit pays the API cost; every
+reload after that is instant.
+
+The NARRATION tier was provisioned in config for months before any code
+read it. Wiring `NarrationService` closed that gap — and documenting the
+remaining env-var follow-up (`MODEL_NARRATION` not read yet) keeps the
+docs honest about what is fully dynamic vs hardcoded.
+
+---
+
+*Last updated: 9 June 2026 — AI Dashboard narration, Design v1.1, Reflect switching, month-specific chat routing.*

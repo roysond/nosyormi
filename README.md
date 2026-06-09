@@ -21,6 +21,7 @@ It doesn't shame you. It doesn't moralize. It reflects.
 - **Multi-statement switching** — upload several statements and **Reflect** on any one; the active statement syncs across Dashboard, Transactions, and Chat via sessionStorage.
 - **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
 - **Date-range analysis** — scope the Dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
+- **AI Dashboard narration** — when you reflect on a statement, NOSYOR.M.I auto-generates a warm financial summary paragraph (NARRATION tier via OpenRouter); generated once per statement and cached in the database.
 
 ---
 
@@ -152,7 +153,8 @@ Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
 | **Not query-time RAG** | Embeddings are stored at upload; chat injects the **full statement** as text context — no pgvector similarity search at chat time. |
 | **~750 transaction ceiling** | Full-context chat is architecturally reliable for typical single-statement CSVs (≤ ~750 rows). Beyond that, query-time RAG is required. Not enforced in code. |
 | **CSV only** | PDF ingestion deferred. |
-| **`MODEL_NARRATION` unwired** | Configured in env/k8s but no service reads it. |
+| **Per-anomaly / forecast LLM narration** | Dashboard statement summary uses the NARRATION tier; per-anomaly explanations and forecast-specific narratives remain deferred. |
+| **`MODEL_NARRATION` env var** | `NarrationService` is wired and active; model is hardcoded to `anthropic/claude-sonnet-4-5`. The env/k8s `MODEL_NARRATION` key is provisioned but not read yet. |
 | **Chat streaming (implementation detail)** | OpenRouter streams to the API; the server parses full JSON, then streams the **parsed answer** word-by-word to the client (not raw model tokens). |
 | **Chat history** | `sessionStorage` only — cleared on tab close. |
 
@@ -164,7 +166,7 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 
 **Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
 **Target completion:** before 4 June 2026  
-**Latest:** Design v1.1 (Urbanist, floating sidebar, brand teal/gold, `NosyormiLogo`); month-specific chat chart routing; statement Reflect switching  
+**Latest:** AI Dashboard narration (NARRATION tier, DB-cached); Design v1.1 (Urbanist, floating sidebar, brand teal/gold, `NosyormiLogo`); month-specific chat chart routing; statement Reflect switching  
 **Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.

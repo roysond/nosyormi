@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: Sunday, 1 June 2026 — Design v1.1, 15 categories, Reflect switching, month-specific chat routing, bar highlight filtering
+> Last updated: 9 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15 categories, Reflect switching, month-specific chat routing, bar highlight filtering
 
 ---
 
@@ -46,7 +46,7 @@ Upload bank statements or CSVs. The app categorizes spending, detects anomalies,
 
 **Three-tier AI model routing (config) — current wiring status:**
 - `MODEL_LIGHT` = `openai/gpt-4o-mini` — CSV categorization (cheap, fast, per-transaction) — **wired** (`OpenRouterCategoryClassifier`)
-- `MODEL_NARRATION` = `anthropic/claude-sonnet-4-5` — narrative generation — **configured but NOT wired in code.** Defined in `.env`/`.env.docker`/`k8s/configmap.yaml` and reserved for anomaly/forecast narration, but no service reads it in the current build. Dead config, kept as a documented placeholder for the planned narration tier.
+- `MODEL_NARRATION` = `anthropic/claude-sonnet-4-5` — Dashboard statement narration — **wired** (`NarrationService`, cached in `Statement.Narration`). Env var provisioned in `.env`/`.env.docker`/`k8s/configmap.yaml` but **not read by code yet** (model hardcoded in service).
 - `MODEL_CHAT` = `anthropic/claude-sonnet-4-5` — conversational chat (full context injection, not query-time RAG) — **wired** (`OpenRouterChatService`, `MaxTokens = 1500`)
 - `EMBEDDING_MODEL` = `openai/text-embedding-3-small` — vector embeddings — **wired** (`OpenRouterEmbeddingService`)
 
@@ -55,10 +55,10 @@ Upload bank statements or CSVs. The app categorizes spending, detects anomalies,
 ## 4. CLEAN ARCHITECTURE — 4 LAYERS
 
 ```
-Nosyormi.Domain          — Entities: Statement, Transaction, Category. No external deps.
+Nosyormi.Domain          — Entities: Statement (incl. Narration cache), Transaction, Category. No external deps.
 Nosyormi.Application     — Interfaces + services: IStatementQueryService, StatementUploadService, ICsvStatementParser, IAnomalyDetector, IForecastingService, IChatService
-Nosyormi.Infrastructure  — Implementations: DbContext, parsers, classifiers, embeddings, anomaly, forecasting, StatementQueryService
-Nosyormi.Api             — Controllers: StatementsController, ForecastController, TimeSeriesController, ChatController. Program.cs.
+Nosyormi.Infrastructure  — Implementations: DbContext, parsers, classifiers, embeddings, anomaly, forecasting, OpenRouterChatService, NarrationService, StatementQueryService
+Nosyormi.Api             — Controllers: StatementsController, ForecastController, TimeSeriesController, ChatController, NarrationController. Program.cs.
 ```
 
 **Known technical debt:** `StatementUploadService` is in Application but still injects `DbContext` directly. Accepted and documented.
@@ -88,6 +88,12 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 8. **Multi-turn history:** assistant turns serialized as JSON with `"chartUpdate": {}` (not `null`) in `BuildMessages` to preserve chart context
 
 > **Not RAG today:** embeddings are written at upload into pgvector, but chat never embeds the user's question or runs similarity search. Query-time retrieval (Epic 6 story 26) is deferred.
+
+**Narration pipeline (Dashboard — NARRATION tier):**
+1. Dashboard loads active statement → `GET /api/narration/{statementId}`
+2. If `Statement.Narration` is cached → return immediately (no OpenRouter call)
+3. Else load transactions with categories → `NarrationService.GenerateNarrationAsync` (pre-computed summary → OpenRouter `anthropic/claude-sonnet-4-5`)
+4. Save paragraph to `Statement.Narration` → return to Dashboard narration card
 
 **~750 transaction architectural ceiling:** Full context injection works reliably for typical single-statement CSVs (roughly up to **~750 transactions**). Beyond that, prompt size, latency, cost, and answer quality degrade — **query-time RAG becomes necessary**. There is no hard cap in code; this is a documented architectural limit.
 
@@ -355,7 +361,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - **Added Dashboard date-range filter** — `availablePeriods` (pure), `filterTransactionsByDate` (pure), All Time / per-month pills / custom range; all derived stats (incl. `anomalyCount`) honour the selected range; custom range applies only on "Apply"
 - Fixed `useCountUp` so zero targets snap to `0` immediately (no stale value across date ranges)
 - **Removed `StatementDetailPage` entirely** — deleted the file, the `/dashboard/:id` route in `App.tsx`, and the "View Details →" link on the Statements page (and the now-unused `Link` import)
-- Confirmed `MODEL_NARRATION` is dead config (referenced only in env/k8s/docs, read by no code)
+- Confirmed `MODEL_NARRATION` was unwired (May 2026); **wired June 2026** via `NarrationService` + DB cache on `Statement.Narration`
 
 **May 29 — chat intelligence:**
 - Added `topN` chart type + `highlightTransactionIds` in `chartUpdate` contract (frontend + backend)
@@ -384,6 +390,11 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - Assistant history: `"chartUpdate": {}` in BuildMessages; single `DetectTimePeriod()` call in ParseChatResponse
 - Bar drill-down `.slice(0, 20)`; merchant title threshold 0.7; dynamic non-drill-down bar height
 
+**June 2026 — AI Dashboard narration (NARRATION tier):**
+- `NarrationService` + `NarrationController` (`GET /api/narration/{statementId}`)
+- `Statement.Narration` DB cache (migration `AddNarrationToStatement`) — one generation per statement
+- Dashboard narration card (auto-fetch on statement load)
+
 ---
 
 ## 15. KNOWN LIMITATIONS (documented for submission)
@@ -397,16 +408,17 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 7. **Chat sessionStorage only** — Not persisted to database.
 8. **ChatPage god component** — SRP violation acknowledged. Chart renderers should be extracted into separate components. Accepted tradeoff under deadline.
 9. **Tooltip backdrop-filter** — Frosted glass effect visible when tooltip overlaps coloured slices (most noticeable on the Treemap, where tiles are fully coloured). Appears cleaner over white/light backgrounds. Browser compositing limitation — accepted.
-10. **`MODEL_NARRATION` not wired** — The narration model tier is provisioned in config (`.env`, `.env.docker`, `k8s/configmap.yaml`) but no code reads it. Anomaly/forecast narration is not implemented in the current build; categorization uses `MODEL_LIGHT` and chat uses `MODEL_CHAT`.
-11. **Query-time RAG not wired** — Embeddings stored at upload; chat loads the **entire** statement as text context. No embed-query → pgvector search → top-K retrieval step exists in `OpenRouterChatService`.
-12. **~750 transaction ceiling (architectural, not enforced)** — Full context injection is reliable for typical single-statement CSVs (~750 transactions or fewer). Beyond that, prompt size, latency, cost, and answer quality degrade; query-time RAG (story 26) becomes necessary. No upload or chat rejection at 750 — this is a documented design limit, not runtime validation.
-13. **Chat streaming** — SSE implemented: server buffers OpenRouter stream, parses JSON, streams parsed answer word-by-word (not raw model tokens).
-14. **Misleading “RAG” labelling in early docs/diagrams** — Corrected 29 May 2026. Upload half of RAG (embed + store) is done; retrieval half is not.
-15. **Logo asset** — Brand SVG only in `NosyormiLogo.tsx`; no downloadable logo file in repo. `favicon.svg` is unrelated.
+10. **Per-anomaly / forecast LLM narration** — Dashboard statement summary uses NARRATION tier (`NarrationService`). Per-anomaly explanations and forecast-specific LLM narratives remain deferred.
+11. **`MODEL_NARRATION` env var not read** — `NarrationService` is wired; model hardcoded to `anthropic/claude-sonnet-4-5`. Env/k8s key provisioned but not consumed yet.
+12. **Query-time RAG not wired** — Embeddings stored at upload; chat loads the **entire** statement as text context. No embed-query → pgvector search → top-K retrieval step exists in `OpenRouterChatService`.
+13. **~750 transaction ceiling (architectural, not enforced)** — Full context injection is reliable for typical single-statement CSVs (~750 transactions or fewer). Beyond that, prompt size, latency, cost, and answer quality degrade; query-time RAG (story 26) becomes necessary. No upload or chat rejection at 750 — this is a documented design limit, not runtime validation.
+14. **Chat streaming** — SSE implemented: server buffers OpenRouter stream, parses JSON, streams parsed answer word-by-word (not raw model tokens).
+15. **Misleading “RAG” labelling in early docs/diagrams** — Corrected 29 May 2026. Upload half of RAG (embed + store) is done; retrieval half is not.
+16. **Logo asset** — Brand SVG only in `NosyormiLogo.tsx`; no downloadable logo file in repo. `favicon.svg` is unrelated.
 
 ---
 
-## 16. PENDING WORK (as of 1 June 2026)
+## 16. PENDING WORK (as of 9 June 2026)
 
 **SUBMISSION CRITICAL:**
 - [ ] PowerPoint deck (8+ slides, real screenshots) — story #60
@@ -418,6 +430,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - [x] QA suite documented — 47/47 pass (`QA-TEST-CASES.md`, last run 30 May)
 - [x] Docker + Minikube deployment
 - [x] Core FinSight features + nine chart types
+- [x] AI Dashboard narration (NARRATION tier, DB-cached)
 
 **LOCAL (may be uncommitted):**
 - [ ] Commit month-specific chat routing + bar highlight filtering + assistant history fix (verify `git status`)

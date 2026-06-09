@@ -3,6 +3,8 @@
 React 19 + TypeScript single-page app built with Vite. Talks to the .NET API over HTTP; renders financial charts with Recharts and a shared visual system (`palette.ts` + `chartEffects.tsx`).
 
 > **Chat:** `POST /api/chat/{statementId}` returns **Server-Sent Events** (`text/event-stream`). The backend buffers the OpenRouter stream, parses JSON (`answer` + `chartUpdate`), then streams the parsed answer word-by-word. Chart updates arrive in a separate `chart` event. Full statement context is injected server-side (not query-time pgvector RAG; reliable for roughly ≤ 750 transactions).
+>
+> **Narration:** `GET /api/narration/{statementId}` returns a cached statement summary paragraph for the Dashboard (`Statement.Narration` in the DB; one OpenRouter call per statement on first load).
 
 ---
 
@@ -10,7 +12,7 @@ React 19 + TypeScript single-page app built with Vite. Talks to the .NET API ove
 
 | Route | Component | Purpose |
 |---|---|---|
-| `/` | `DashboardPage` | Stat cards (teal hero + gradients), donut chart, spending/income tabs, date-range filter |
+| `/` | `DashboardPage` | Stat cards (teal hero + gradients), AI narration card (NARRATION tier, cached), donut chart, spending/income tabs, date-range filter |
 | `/transactions` | `TransactionsPage` | Search, category filter, anomaly pill toggle, sort, expandable rows |
 | `/statements` | `StatementsPage` | Upload CSV (macOS glass modal), list statements, **Reflect** to switch active statement, delete |
 | `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types); “Let's Reflect” in sidebar nav |
@@ -100,7 +102,7 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 ---
 
-*Last updated: 1 June 2026*
+*Last updated: 9 June 2026*
 
 ## Related docs
 
