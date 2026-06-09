@@ -27,6 +27,9 @@ public class NarrationController : ControllerBase
             .FirstOrDefaultAsync(s => s.Id == statementId, cancellationToken);
         if (statement is null) return NotFound();
 
+        if (!string.IsNullOrWhiteSpace(statement.Narration))
+            return Ok(new { narration = statement.Narration });
+
         var transactions = await _db.Set<Transaction>()
             .Include(t => t.Category)
             .Where(t => t.StatementId == statementId)
@@ -34,6 +37,9 @@ public class NarrationController : ControllerBase
 
         var narration = await _narration.GenerateNarrationAsync(
             transactions, cancellationToken);
+
+        statement.Narration = narration;
+        await _db.SaveChangesAsync(cancellationToken);
 
         return Ok(new { narration });
     }
