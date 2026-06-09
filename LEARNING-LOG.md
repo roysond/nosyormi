@@ -1,7 +1,8 @@
 # LEARNING-LOG.md
 > NOSYOR.M.I — What I Learned Building This  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
-> Background: No prior IT or coding experience before this program
+> Background: No prior IT or coding experience before this program  
+> **Last updated:** 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache); Week 8 learning notes
 
 This document captures the real learning that happened during the build —
 the errors encountered, how they were fixed, and what the fix taught me.
@@ -465,4 +466,4 @@ docs honest about what is fully dynamic vs hardcoded.
 
 ---
 
-*Last updated: 9 June 2026 — AI Dashboard narration, Design v1.1, Reflect switching, month-specific chat routing.*
+*Last updated: 8 June 2026 — AI Dashboard narration, Design v1.1, Reflect switching, month-specific chat routing.*

@@ -6,6 +6,8 @@ This document is the architectural source of truth for NOSYOR.M.I. It describes 
 
 The document is intentionally written as a **living blueprint**. Sections are added as the architecture they describe is built. What is documented here is committed to; what is not yet documented is not yet binding.
 
+> **Last updated:** 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache); all three OpenRouter tiers wired.
+
 ---
 
 ## 1. Purpose & Philosophy
@@ -136,7 +138,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
+> **Implementation status (as of 8 June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -591,7 +593,7 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Dynamic height:** Non-drill-down bar `ResponsiveContainer` height `Math.max(320, barData.length * 56)` scales with category count.
 - **Title threshold:** Merchant word-derived title requires >70% dominance (was 40%).
 
-### 2026-06-09 — AI Dashboard Narration (NARRATION Tier)
+### 2026-06-08 — AI Dashboard Narration (NARRATION Tier)
 
 - **Decision:** Added `NarrationService` (OpenRouter, `anthropic/claude-sonnet-4-5`) and `NarrationController` (`GET /api/narration/{statementId}`). Dashboard auto-fetches narration when a statement loads.
 - **Caching:** `Statement.Narration` column (migration `AddNarrationToStatement`) stores the generated paragraph; subsequent requests return cached text with no LLM call.
@@ -600,7 +602,7 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 
 ---
 
-*Last updated: 9 June 2026 — AI Dashboard narration, Design v1.1, 15 categories, Reflect switching, month-specific chat routing.*
+*Last updated: 8 June 2026 — AI Dashboard narration, Design v1.1, 15 categories, Reflect switching, month-specific chat routing.*
 
 As the corresponding parts of the system are built, the following sections will be written:
 

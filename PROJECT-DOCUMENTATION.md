@@ -2,7 +2,8 @@
 > NOSYOR.M.I — Project Submission Documentation  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Program: AI Integration Capstone · .NET 10 + React  
-> Deadline: Before 4 June 2026
+> Deadline: Before 4 June 2026  
+> Last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), merchant chat routing, Design v1.1
 
 ---
 
@@ -13,7 +14,8 @@
 Upload bank statements or CSVs. The app categorizes spending, detects
 anomalies, forecasts next month, and has a chat interface for questions
 like "Where did I overspend in March?" — AI narrative connected to live
-data visualizations.
+data visualizations. The Dashboard also auto-generates a cached statement
+summary paragraph (NARRATION tier) when you reflect on an uploaded statement.
 
 Required features: CSV Parsing · Time-Series · Anomaly Detection · 
 Data Visualization
@@ -642,4 +644,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 9 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15-category taxonomy, Reflect statement switching, month-specific chat routing, bar highlight filtering, assistant history chart context.*
+*Last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15-category taxonomy, Reflect statement switching, month-specific chat routing, bar highlight filtering, assistant history chart context.*

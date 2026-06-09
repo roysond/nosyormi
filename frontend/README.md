@@ -102,7 +102,7 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 ---
 
-*Last updated: 9 June 2026*
+*Last updated: 8 June 2026 — AI Dashboard narration card, NARRATION API, Design v1.1*
 
 ## Related docs
 

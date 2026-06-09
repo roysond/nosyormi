@@ -5,7 +5,7 @@ You glance at your balance and freeze. The number is smaller than it should be �
 
 **NOSYOR.M.I reflects the holes you couldn't see.**
 
-Upload a bank statement. The app reads it, categorizes every transaction, spots the spending that doesn't match your usual pattern, forecasts where next month is heading, and lets you ask plain-English questions like *"Where did I overspend in March?"* — answers tied to the same charts you're looking at.
+Upload a bank statement. The app reads it, categorizes every transaction, spots the spending that doesn't match your usual pattern, forecasts where next month is heading, auto-generates a warm Dashboard summary when you reflect on a statement, and lets you ask plain-English questions like *"Where did I overspend in March?"* — answers tied to the same charts you're looking at.
 
 It doesn't shame you. It doesn't moralize. It reflects.
 
@@ -167,6 +167,7 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 **Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
 **Target completion:** before 4 June 2026  
 **Latest:** AI Dashboard narration (NARRATION tier, DB-cached); Design v1.1 (Urbanist, floating sidebar, brand teal/gold, `NosyormiLogo`); month-specific chat chart routing; statement Reflect switching  
+**Docs last updated:** 8 June 2026  
 **Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.
@@ -187,6 +188,8 @@ It's a small piece of the same idea that runs through the product. Hold somethin
 Built as part of the AI Integration Capstone Program · 2026
 
 ---
+
+*Documentation last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), three-tier OpenRouter routing fully wired.*
 
 ## License
 

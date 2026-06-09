@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: 9 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15 categories, Reflect switching, month-specific chat routing, bar highlight filtering
+> Last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15 categories, Reflect switching, month-specific chat routing, bar highlight filtering
 
 ---
 
@@ -22,7 +22,7 @@
 
 ## 2. CAPSTONE BRIEF (Project 11 — FinSight)
 
-Upload bank statements or CSVs. The app categorizes spending, detects anomalies, forecasts next month, and has a chat interface for questions like "Where did I overspend in March?" — AI narrative connected to live data visualizations.
+Upload bank statements or CSVs. The app categorizes spending, detects anomalies, forecasts next month, auto-generates a cached Dashboard statement summary (NARRATION tier), and has a chat interface for questions like "Where did I overspend in March?" — AI narrative connected to live data visualizations.
 
 **Required features:** CSV Parsing · Time-Series · Anomaly Detection · Data Visualization  
 **Stack required:** .NET 10 + React + OpenRouter + Docker + Cloud/Minikube  
@@ -133,6 +133,7 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 2. `AddCategoryAndTransaction`
 3. `AddEmbeddingToTransaction`
 4. `20260521031445_AddFileHashToStatement`
+5. `AddNarrationToStatement` — nullable `Statement.Narration` for cached AI Dashboard summary
 
 **Category taxonomy (15 categories as of 31 May):**
 Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Government & Fees, Other
@@ -151,6 +152,7 @@ DELETE /api/statements/{id}         — hard delete statement + cascade transact
 POST   /api/chat/{statementId}      — chat (body: { message, history[] })
 GET    /api/forecast/{statementId}  — moving average forecast by category
 GET    /api/timeseries/{statementId}— spending over time
+GET    /api/narration/{statementId} — AI Dashboard statement summary (cached in Statement.Narration)
 GET    /health                       — health check
 ```
 
@@ -160,7 +162,7 @@ GET    /health                       — health check
 
 | Page | Route | Status |
 |---|---|---|
-| Dashboard | `/` | ✅ Done — stat cards, donut chart, spending/income tabs, transaction list, **date-range filter (All Time / month pills / custom range)** |
+| Dashboard | `/` | ✅ Done — stat cards, **AI narration card** (NARRATION tier, DB-cached), donut chart, spending/income tabs, transaction list, **date-range filter (All Time / month pills / custom range)** |
 | Transactions | `/transactions` | ✅ Done — search, filter, sort, expand rows, anomaly badge |
 | Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation |
 | Chat | `/chat` | ✅ Done — chat + 9 chart types; SSE streaming; month-aware titles; bar highlight filtering; draggable divider |
@@ -418,7 +420,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 
 ---
 
-## 16. PENDING WORK (as of 9 June 2026)
+## 16. PENDING WORK (as of 8 June 2026)
 
 **SUBMISSION CRITICAL:**
 - [ ] PowerPoint deck (8+ slides, real screenshots) — story #60

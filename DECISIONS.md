@@ -2,6 +2,8 @@
 > NOSYOR.M.I — Key Architectural & Product Decisions  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)
 
+> **Last updated:** 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache); Week 8 decisions added.
+
 This document summarises the most significant decisions made during the 
 build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
@@ -150,4 +152,4 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 9 June 2026 — AI Dashboard narration, Design v1.1, month-specific routing, Reflect switching, 15 categories*
+*Last updated: 8 June 2026 — AI Dashboard narration, Design v1.1, month-specific routing, Reflect switching, 15 categories*
