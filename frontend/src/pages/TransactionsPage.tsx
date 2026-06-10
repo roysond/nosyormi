@@ -651,7 +651,7 @@ export default function TransactionsPage() {
             {
               label: 'Largest Transaction',
               value: formatCurrency(summaryStats.largestTransaction),
-              valueColor: '#EF4444',
+              valueColor: '#10B981',
             },
             {
               label: 'Average Transaction',
