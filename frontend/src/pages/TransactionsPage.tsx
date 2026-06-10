@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ANOMALY_COLOR } from '../constants/palette';
+import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
+import { ANOMALY_COLOR, APP_COLORS } from '../constants/palette';
+import { JewelSlice, UniversalTooltip } from '../components/chartEffects';
 import {
   fetchActiveStatement,
   subscribeStatementSwitched,
@@ -98,9 +100,20 @@ export default function TransactionsPage() {
     'date',
   );
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [scrolled, setScrolled] = useState(false);
   const [showAnomaliesOnly, setShowAnomaliesOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<'spending' | 'income'>('spending');
+  const [tabHover, setTabHover] = useState<'spending' | 'income' | null>(null);
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState<number | null>(null);
+  const [dateFilter, setDateFilter] = useState<{
+    type: 'all' | 'month' | 'custom';
+    month?: string;
+    from?: string;
+    to?: string;
+  }>({ type: 'all' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
 
   const loadStatement = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -115,6 +128,7 @@ export default function TransactionsPage() {
       setStatement(result.statement);
       setError(null);
       setExpandedRowId(null);
+      setActiveCategoryIndex(null);
     } else {
       setStatement(null);
       setError(result.message);
@@ -142,6 +156,31 @@ export default function TransactionsPage() {
     return () => mainEl.removeEventListener('scroll', handleScroll);
   }, []);
 
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as SVGElement | HTMLElement;
+      const isPieSlice =
+        (target as SVGElement).classList?.contains('recharts-sector') ||
+        target.closest?.('[class*="recharts-pie"]') !== null;
+      if (!isPieSlice) {
+        setActiveCategoryIndex(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-datepicker]')) {
+        setShowDatePicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const allTransactions = useMemo(() => {
     if (!statement) return [];
     return [...statement.transactions].sort((a, b) =>
@@ -149,16 +188,100 @@ export default function TransactionsPage() {
     );
   }, [statement]);
 
-  const categories = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of allTransactions) {
-      set.add(getCategoryName(t));
-    }
-    return Array.from(set).sort();
-  }, [allTransactions]);
+  const availablePeriods = useMemo(() => {
+    if (!statement) return ['all'];
+    const periodSet = new Set<string>();
+    statement.transactions.forEach((t) => {
+      const d = new Date(t.transactionDate + 'T00:00:00');
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      periodSet.add(key);
+    });
+    return ['all', ...Array.from(periodSet).sort()];
+  }, [statement]);
+
+  const filterTransactionsByDate = useCallback(
+    (transactions: Transaction[]) => {
+      if (dateFilter.type === 'all') return transactions;
+      if (dateFilter.type === 'month' && dateFilter.month) {
+        return transactions.filter((t) => t.transactionDate.startsWith(dateFilter.month!));
+      }
+      if (dateFilter.type === 'custom' && dateFilter.from && dateFilter.to) {
+        return transactions.filter(
+          (t) => t.transactionDate >= dateFilter.from! && t.transactionDate <= dateFilter.to!,
+        );
+      }
+      return transactions;
+    },
+    [dateFilter],
+  );
+
+  const spendingCategoryTotals = useMemo(() => {
+    const dateFiltered = filterTransactionsByDate(allTransactions);
+    const expenses = dateFiltered.filter((t) => t.amount < 0);
+    const totalSpend = expenses.reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    const grouped = expenses.reduce(
+      (acc, t) => {
+        const cat = t.category || 'Other';
+        if (!acc[cat]) acc[cat] = { name: cat, value: 0, percentage: 0 };
+        acc[cat].value = Math.round((acc[cat].value + Math.abs(t.amount)) * 100) / 100;
+        return acc;
+      },
+      {} as Record<string, { name: string; value: number; percentage: number }>,
+    );
+    return Object.values(grouped)
+      .map((c) => ({
+        ...c,
+        percentage: totalSpend > 0 ? Math.round((c.value / totalSpend) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [allTransactions, filterTransactionsByDate]);
+
+  const incomeCategoryTotals = useMemo(() => {
+    const dateFiltered = filterTransactionsByDate(allTransactions);
+    const income = dateFiltered.filter((t) => t.amount > 0);
+    const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
+    const grouped = income.reduce(
+      (acc, t) => {
+        const cat = t.category || 'Other';
+        if (!acc[cat]) acc[cat] = { name: cat, value: 0, percentage: 0 };
+        acc[cat].value = Math.round((acc[cat].value + t.amount) * 100) / 100;
+        return acc;
+      },
+      {} as Record<string, { name: string; value: number; percentage: number }>,
+    );
+    return Object.values(grouped)
+      .map((c) => ({
+        ...c,
+        percentage: totalIncome > 0 ? Math.round((c.value / totalIncome) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [allTransactions, filterTransactionsByDate]);
+
+  const activeCategoryTotals =
+    activeTab === 'spending' ? spendingCategoryTotals : incomeCategoryTotals;
+
+  const activeTotalAmount = useMemo(() => {
+    const dateFiltered = filterTransactionsByDate(allTransactions);
+    return activeTab === 'spending'
+      ? dateFiltered.filter((t) => t.amount < 0).reduce((sum, t) => sum + Math.abs(t.amount), 0)
+      : dateFiltered.filter((t) => t.amount > 0).reduce((sum, t) => sum + t.amount, 0);
+  }, [allTransactions, activeTab, filterTransactionsByDate]);
+
+  const activeCategory =
+    activeCategoryIndex !== null
+      ? (activeCategoryTotals[activeCategoryIndex] ?? null)
+      : null;
 
   const filteredTransactions = useMemo(() => {
-    let txs = [...allTransactions];
+    let txs = filterTransactionsByDate(allTransactions);
+
+    if (activeTab === 'spending') txs = txs.filter((t) => t.amount < 0);
+    if (activeTab === 'income') txs = txs.filter((t) => t.amount > 0);
+
+    if (activeCategoryIndex !== null) {
+      const catName = activeCategoryTotals[activeCategoryIndex]?.name;
+      if (catName) txs = txs.filter((t) => (t.category || 'Other') === catName);
+    }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -167,10 +290,6 @@ export default function TransactionsPage() {
           t.description.toLowerCase().includes(q) ||
           getCategoryName(t).toLowerCase().includes(q),
       );
-    }
-
-    if (selectedCategory) {
-      txs = txs.filter((t) => getCategoryName(t) === selectedCategory);
     }
 
     if (showAnomaliesOnly) {
@@ -201,7 +320,16 @@ export default function TransactionsPage() {
     }
 
     return txs;
-  }, [allTransactions, searchQuery, selectedCategory, sortBy, showAnomaliesOnly]);
+  }, [
+    allTransactions,
+    searchQuery,
+    sortBy,
+    showAnomaliesOnly,
+    activeTab,
+    activeCategoryIndex,
+    activeCategoryTotals,
+    filterTransactionsByDate,
+  ]);
 
   const summaryStats = useMemo(() => {
     const txs = filteredTransactions;
@@ -524,6 +652,21 @@ export default function TransactionsPage() {
     },
   ];
 
+  const tabStyle = (active: boolean, hover: boolean) => ({
+    padding: active ? '10px 28px 12px' : '10px 28px',
+    fontSize: 14,
+    fontWeight: active ? 500 : 400,
+    cursor: 'pointer',
+    border: active ? '0.5px solid #E2E8F0' : 'none',
+    borderBottom: active ? '0.5px solid #FFFFFF' : 'none',
+    borderRadius: '12px 12px 0 0',
+    background: active ? '#FFFFFF' : hover ? '#F8FAFC' : 'transparent',
+    color: active ? '#071A1E' : hover ? '#1E293B' : '#64748B',
+    position: 'relative' as const,
+    zIndex: active ? 2 : 1,
+    transition: 'background 0.15s, color 0.15s',
+  });
+
   return (
     <div
       style={{
@@ -549,6 +692,28 @@ export default function TransactionsPage() {
         @keyframes tx-loading-pulse {
           0%, 100% { opacity: 0.45; }
           50% { opacity: 1; }
+        }
+        @keyframes chartFadeIn {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .nosyormi-tx-tab-spending.nosyormi-tx-tab-active::after {
+          content: ''; position: absolute; bottom: 0; right: -12px;
+          width: 12px; height: 12px; background: transparent;
+          border-bottom-left-radius: 12px;
+          box-shadow: -4px 4px 0 4px #FFFFFF; z-index: 3; pointer-events: none;
+        }
+        .nosyormi-tx-tab-income.nosyormi-tx-tab-active::before {
+          content: ''; position: absolute; bottom: 0; left: -12px;
+          width: 12px; height: 12px; background: transparent;
+          border-bottom-right-radius: 12px;
+          box-shadow: 4px 4px 0 4px #FFFFFF; z-index: 3; pointer-events: none;
+        }
+        .nosyormi-tx-tab-income.nosyormi-tx-tab-active::after {
+          content: ''; position: absolute; bottom: 0; right: -12px;
+          width: 12px; height: 12px; background: transparent;
+          border-bottom-left-radius: 12px;
+          box-shadow: -4px 4px 0 4px #FFFFFF; z-index: 3; pointer-events: none;
         }
       `}</style>
 
@@ -613,21 +778,6 @@ export default function TransactionsPage() {
             </div>
 
             <select
-              value={selectedCategory ?? ''}
-              onChange={(e) =>
-                setSelectedCategory(e.target.value || null)
-              }
-              style={selectStyle}
-            >
-              <option value="">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-
-            <select
               value={sortBy}
               onChange={(e) =>
                 setSortBy(
@@ -678,10 +828,473 @@ export default function TransactionsPage() {
       )}
 
       {!loading && !error && statement && (
+        <>
+          <div style={{ padding: '0 32px', marginBottom: 24 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3 }}>
+              <button
+                type="button"
+                className={`nosyormi-tx-tab-spending${activeTab === 'spending' ? ' nosyormi-tx-tab-active' : ''}`}
+                style={tabStyle(activeTab === 'spending', tabHover === 'spending')}
+                onClick={() => {
+                  setActiveTab('spending');
+                  setActiveCategoryIndex(null);
+                }}
+                onMouseEnter={() => setTabHover('spending')}
+                onMouseLeave={() => setTabHover(null)}
+              >
+                Spending
+              </button>
+              <button
+                type="button"
+                className={`nosyormi-tx-tab-income${activeTab === 'income' ? ' nosyormi-tx-tab-active' : ''}`}
+                style={tabStyle(activeTab === 'income', tabHover === 'income')}
+                onClick={() => {
+                  setActiveTab('income');
+                  setActiveCategoryIndex(null);
+                }}
+                onMouseEnter={() => setTabHover('income')}
+                onMouseLeave={() => setTabHover(null)}
+              >
+                Income
+              </button>
+            </div>
+
+            <div
+              style={{
+                background: '#FFFFFF',
+                borderLeft: '0.5px solid #E2E8F0',
+                borderRight: '0.5px solid #E2E8F0',
+                borderBottom: '0.5px solid #E2E8F0',
+                borderRadius:
+                  activeTab === 'spending' ? '0 12px 12px 12px' : '12px 12px 12px 12px',
+                padding: '24px 32px',
+              }}
+            >
+              <div
+                style={{ position: 'relative', display: 'inline-block' }}
+                data-datepicker
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowDatePicker((p) => !p)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '8px 14px',
+                    borderRadius: 8,
+                    border: '1px solid #E2E8F0',
+                    background: 'white',
+                    color: '#1E293B',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+                  }}
+                >
+                  <span>📅</span>
+                  <span>
+                    {dateFilter.type === 'all'
+                      ? 'All Time'
+                      : dateFilter.type === 'month' && dateFilter.month
+                        ? new Date(dateFilter.month + '-01T00:00:00').toLocaleString('default', {
+                            month: 'long',
+                            year: 'numeric',
+                          })
+                        : `${dateFilter.from} → ${dateFilter.to}`}
+                  </span>
+                  <span style={{ color: '#94A3B8' }}>▾</span>
+                </button>
+                {showDatePicker && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 'calc(100% + 8px)',
+                      left: 0,
+                      zIndex: 200,
+                      background: 'white',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: 12,
+                      padding: 16,
+                      boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
+                      minWidth: 280,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: '#94A3B8',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        marginBottom: 10,
+                      }}
+                    >
+                      Quick Select
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+                      {availablePeriods.map((period) => {
+                        const isActive =
+                          period === 'all'
+                            ? dateFilter.type === 'all'
+                            : dateFilter.type === 'month' && dateFilter.month === period;
+                        const label =
+                          period === 'all'
+                            ? 'All Time'
+                            : new Date(period + '-01T00:00:00').toLocaleString('default', {
+                                month: 'short',
+                                year: 'numeric',
+                              });
+                        return (
+                          <button
+                            key={period}
+                            type="button"
+                            onClick={() => {
+                              if (period === 'all') setDateFilter({ type: 'all' });
+                              else setDateFilter({ type: 'month', month: period });
+                              setShowDatePicker(false);
+                            }}
+                            style={{
+                              padding: '5px 12px',
+                              borderRadius: 999,
+                              border: isActive ? '1.5px solid #124346' : '1px solid #E2E8F0',
+                              background: isActive ? 'rgba(18,67,70,0.08)' : 'white',
+                              color: isActive ? '#124346' : '#475569',
+                              fontSize: 12,
+                              fontWeight: isActive ? 600 : 400,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 600,
+                        color: '#94A3B8',
+                        letterSpacing: '0.08em',
+                        textTransform: 'uppercase',
+                        marginBottom: 10,
+                      }}
+                    >
+                      Custom Range
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+                      <input
+                        type="date"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: '1px solid #E2E8F0',
+                          fontSize: 12,
+                          color: '#1E293B',
+                        }}
+                      />
+                      <span style={{ color: '#94A3B8', fontSize: 12 }}>→</span>
+                      <input
+                        type="date"
+                        value={customTo}
+                        onChange={(e) => setCustomTo(e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: '1px solid #E2E8F0',
+                          fontSize: 12,
+                          color: '#1E293B',
+                        }}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (customFrom && customTo) {
+                          setDateFilter({ type: 'custom', from: customFrom, to: customTo });
+                        }
+                        setShowDatePicker(false);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '8px 0',
+                        borderRadius: 8,
+                        border: 'none',
+                        background: '#124346',
+                        color: 'white',
+                        fontSize: 13,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: 24,
+                  alignItems: 'flex-start',
+                  marginTop: 20,
+                }}
+              >
+                <div style={{ width: '45%', minWidth: 0 }}>
+                  <h2
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#64748B',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      marginBottom: 8,
+                    }}
+                  >
+                    {activeTab === 'spending' ? 'Spending' : 'Income'} by Category
+                  </h2>
+                  <div
+                    style={{
+                      position: 'relative',
+                      zIndex: 1,
+                      animation: 'chartFadeIn 0.4s ease-out',
+                    }}
+                  >
+                    <ResponsiveContainer width="100%" height={340} minHeight={1}>
+                      <div
+                        style={{ filter: 'saturate(1.12) contrast(1.05) brightness(1.02)' }}
+                      >
+                        <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+                          <Pie
+                            data={activeCategoryTotals}
+                            shape={(props: any) => (
+                              <JewelSlice
+                                {...props}
+                                isActive={props.index === activeCategoryIndex}
+                              />
+                            )}
+                            dataKey="value"
+                            nameKey="name"
+                            cx="50%"
+                            cy="50%"
+                            outerRadius={130}
+                            innerRadius={78}
+                            paddingAngle={2}
+                            isAnimationActive={true}
+                            onClick={(_, index) =>
+                              setActiveCategoryIndex(
+                                activeCategoryIndex === index ? null : index,
+                              )
+                            }
+                          >
+                            {activeCategoryTotals.map((_, index) => {
+                              const color = APP_COLORS[index % APP_COLORS.length];
+                              const isActive = activeCategoryIndex === index;
+                              const hasActive = activeCategoryIndex !== null;
+                              const dimmed = hasActive && !isActive;
+                              return (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={color}
+                                  fillOpacity={dimmed ? 0.35 : 1}
+                                  stroke={isActive ? color : 'none'}
+                                  strokeWidth={isActive ? 2.5 : 0}
+                                />
+                              );
+                            })}
+                          </Pie>
+                          <Tooltip
+                            content={<UniversalTooltip />}
+                            wrapperStyle={{ zIndex: 9999, background: 'transparent' }}
+                          />
+                        </PieChart>
+                      </div>
+                    </ResponsiveContainer>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: -1,
+                        pointerEvents: 'none',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {activeCategoryIndex === null ? (
+                        <>
+                          <div
+                            style={{
+                              fontSize: 18,
+                              fontWeight: 700,
+                              color: '#1E293B',
+                            }}
+                          >
+                            {formatCurrency(activeTotalAmount)}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 11,
+                              color: '#94A3B8',
+                              marginTop: 4,
+                            }}
+                          >
+                            {activeTab === 'spending' ? 'total spend' : 'total income'}
+                          </div>
+                        </>
+                      ) : (
+                        activeCategory && (
+                          <>
+                            <div
+                              style={{
+                                fontSize: 18,
+                                fontWeight: 700,
+                                color: '#1E293B',
+                              }}
+                            >
+                              {formatCurrency(activeCategory.value)}
+                            </div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: '#94A3B8',
+                                marginTop: 4,
+                              }}
+                            >
+                              {activeCategory.name.length > 12
+                                ? `${activeCategory.name.slice(0, 12)}…`
+                                : activeCategory.name}
+                            </div>
+                          </>
+                        )
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ width: '55%', minWidth: 0 }}>
+                  <h2
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: '#64748B',
+                      letterSpacing: '0.08em',
+                      textTransform: 'uppercase',
+                      marginBottom: 8,
+                    }}
+                  >
+                    Categories
+                  </h2>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, 1fr)',
+                      gap: 8,
+                    }}
+                  >
+                    {activeCategoryTotals.map((cat, index) => {
+                      const isHighlighted = index === activeCategoryIndex;
+                      const color = APP_COLORS[index % APP_COLORS.length];
+                      return (
+                        <div
+                          key={cat.name}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            setActiveCategoryIndex(
+                              activeCategoryIndex === index ? null : index,
+                            )
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              setActiveCategoryIndex(
+                                activeCategoryIndex === index ? null : index,
+                              );
+                            }
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 10,
+                            padding: isHighlighted ? '10px 14px 10px 11px' : '10px 14px',
+                            borderRadius: 8,
+                            border: isHighlighted
+                              ? '1px solid rgba(201,145,26,0.2)'
+                              : '1px solid transparent',
+                            borderLeft: isHighlighted
+                              ? `3px solid ${color}`
+                              : '1px solid transparent',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s',
+                            background: isHighlighted ? 'rgba(201,145,26,0.06)' : '#F4F7F9',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isHighlighted) {
+                              e.currentTarget.style.background = '#F1F5F9';
+                              e.currentTarget.style.borderColor = '#E2E8F0';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isHighlighted) {
+                              e.currentTarget.style.background = '#F4F7F9';
+                              e.currentTarget.style.borderColor = 'transparent';
+                            }
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: '50%',
+                              background: color,
+                              flexShrink: 0,
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: 13,
+                              color: '#1E293B',
+                              flex: 1,
+                            }}
+                          >
+                            {cat.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: '#1E293B',
+                            }}
+                          >
+                            {formatCurrency(cat.value)}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: '#94A3B8',
+                              marginLeft: 4,
+                            }}
+                          >
+                            {cat.percentage.toFixed(0)}%
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         <div
           style={{
             display: 'flex',
-            padding: '24px 32px',
+            padding: '0 32px 24px',
             gap: 24,
           }}
         >
@@ -829,6 +1442,7 @@ export default function TransactionsPage() {
             </div>
           </div>
         </div>
+        </>
       )}
     </div>
   );
