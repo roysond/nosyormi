@@ -7,6 +7,20 @@ import {
   subscribeStatementSwitched,
 } from '../statementSelection';
 
+function hexToRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function darkenHex(hex: string): string {
+  const r = Math.round(parseInt(hex.slice(1, 3), 16) * 0.6);
+  const g = Math.round(parseInt(hex.slice(3, 5), 16) * 0.6);
+  const b = Math.round(parseInt(hex.slice(5, 7), 16) * 0.6);
+  return `rgb(${r},${g},${b})`;
+}
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:5034';
 
 interface Transaction {
@@ -148,7 +162,11 @@ export default function TransactionsPage() {
     if (!mainEl) return;
 
     const handleScroll = () => {
-      setScrolled(mainEl.scrollTop > 40);
+      setScrolled(prev => {
+        if (!prev && mainEl.scrollTop > 40) return true;
+        if (prev && mainEl.scrollTop < 20) return false;
+        return prev;
+      });
     };
 
     handleScroll();
@@ -260,6 +278,14 @@ export default function TransactionsPage() {
   const activeCategoryTotals =
     activeTab === 'spending' ? spendingCategoryTotals : incomeCategoryTotals;
 
+  const categoryColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    activeCategoryTotals.forEach((cat, index) => {
+      map[cat.name] = APP_COLORS[index % APP_COLORS.length];
+    });
+    return map;
+  }, [activeCategoryTotals]);
+
   const activeTotalAmount = useMemo(() => {
     const dateFiltered = filterTransactionsByDate(allTransactions);
     return activeTab === 'spending'
@@ -365,7 +391,11 @@ export default function TransactionsPage() {
     setExpandedRowId((prev) => (prev === id ? null : id));
   };
 
-  const renderRowGrid = (tx: Transaction, showDateColumn: boolean) => (
+  const renderRowGrid = (tx: Transaction, showDateColumn: boolean) => {
+    const catName = getCategoryName(tx);
+    const catColor = categoryColorMap[catName] ?? '#BAB0AC';
+
+    return (
     <>
       {showDateColumn && (
         <span
@@ -405,8 +435,9 @@ export default function TransactionsPage() {
         <span
           style={{
             fontSize: 11,
-            background: 'rgba(7,26,30,0.07)',
-            color: '#071A1E',
+            fontWeight: 400,
+            background: hexToRgba(catColor, 0.15),
+            color: darkenHex(catColor),
             borderRadius: 999,
             padding: '3px 10px',
             whiteSpace: 'nowrap',
@@ -454,7 +485,8 @@ export default function TransactionsPage() {
         </span>
       </div>
     </>
-  );
+    );
+  };
 
   const renderExpandedPanel = (tx: Transaction) => (
     <div
@@ -845,7 +877,7 @@ export default function TransactionsPage() {
 
       {!loading && !error && statement && (
         <>
-          <div style={{ padding: '0 32px', marginBottom: 24 }}>
+          <div style={{ padding: '0 32px', marginBottom: 24, marginTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3 }}>
               <button
                 type="button"
