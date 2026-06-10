@@ -616,41 +616,57 @@ export default function TransactionsPage() {
     return filteredTransactions.map((tx) => renderTransactionItem(tx));
   };
 
-  const summaryRows: Array<{
-    label: string;
-    value: string;
-    valueColor: string;
-    dividerAfter?: boolean;
-    noBorder?: boolean;
-  }> = [
-    {
-      label: 'Total Transactions',
-      value: String(summaryStats.totalTransactions),
-      valueColor: '#1E293B',
-    },
-    {
-      label: 'Largest Transaction',
-      value: formatCurrency(summaryStats.largestTransaction),
-      valueColor: '#EF4444',
-    },
-    {
-      label: 'Average Transaction',
-      value: formatCurrency(summaryStats.averageTransaction),
-      valueColor: '#1E293B',
-    },
-    {
-      label: 'Total Income',
-      value: formatCurrency(summaryStats.totalIncome),
-      valueColor: '#10B981',
-      dividerAfter: true,
-    },
-    {
-      label: 'Total Spending',
-      value: formatCurrency(summaryStats.totalSpending),
-      valueColor: '#EF4444',
-      noBorder: true,
-    },
-  ];
+  const summaryRows = useMemo(
+    () =>
+      activeTab === 'spending'
+        ? [
+            {
+              label: 'Total Transactions',
+              value: String(summaryStats.totalTransactions),
+              valueColor: '#1E293B',
+            },
+            {
+              label: 'Largest Transaction',
+              value: formatCurrency(summaryStats.largestTransaction),
+              valueColor: '#EF4444',
+            },
+            {
+              label: 'Average Transaction',
+              value: formatCurrency(summaryStats.averageTransaction),
+              valueColor: '#1E293B',
+            },
+            {
+              label: 'Total Spending',
+              value: formatCurrency(summaryStats.totalSpending),
+              valueColor: '#EF4444',
+              noBorder: true,
+            },
+          ]
+        : [
+            {
+              label: 'Total Transactions',
+              value: String(summaryStats.totalTransactions),
+              valueColor: '#1E293B',
+            },
+            {
+              label: 'Largest Transaction',
+              value: formatCurrency(summaryStats.largestTransaction),
+              valueColor: '#EF4444',
+            },
+            {
+              label: 'Average Transaction',
+              value: formatCurrency(summaryStats.averageTransaction),
+              valueColor: '#1E293B',
+            },
+            {
+              label: 'Total Income',
+              value: formatCurrency(summaryStats.totalIncome),
+              valueColor: '#10B981',
+              noBorder: true,
+            },
+          ],
+    [activeTab, summaryStats],
+  );
 
   const tabStyle = (active: boolean, hover: boolean) => ({
     padding: active ? '10px 28px 12px' : '10px 28px',
@@ -1410,14 +1426,6 @@ export default function TransactionsPage() {
                       {row.value}
                     </span>
                   </div>
-                  {row.dividerAfter && (
-                    <div
-                      style={{
-                        borderTop: '1px solid #E2E8F0',
-                        margin: '8px 0',
-                      }}
-                    />
-                  )}
                 </div>
               ))}
 
@@ -1435,8 +1443,8 @@ export default function TransactionsPage() {
                   }}
                 >
                   {'\u26a0'} {summaryStats.anomalyCount} Anomal
-                  {summaryStats.anomalyCount === 1 ? 'y' : 'ies'} Detected In This
-                  Statement. Review Highlighted Transactions.
+                  {summaryStats.anomalyCount === 1 ? 'y' : 'ies'} Detected. Review
+                  Highlighted Transactions.
                 </div>
               )}
             </div>
