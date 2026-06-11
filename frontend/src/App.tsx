@@ -22,13 +22,13 @@ const styles = {
     height: '100vh',
     width: '100vw',
     overflow: 'hidden',
-    background: '#ECEEF1',
+    background: '#E8EDED',
   },
   sidebar: {
     height: 'calc(100vh - 20px)',
     margin: '10px',
-    background: '#FFFFFF',
-    border: '0.5px solid #E6E6E6',
+    background: '#EEF5F5',
+    border: '1px solid rgba(18,67,70,0.12)',
     borderRadius: '16px',
     display: 'flex',
     flexDirection: 'column' as const,
@@ -53,7 +53,7 @@ const styles = {
   },
   brandTagline: {
     fontSize: '10px',
-    color: '#B8B8B8',
+    color: 'rgba(18,67,70,0.4)',
     fontStyle: 'italic' as const,
     marginTop: '2px',
     whiteSpace: 'nowrap' as const,
@@ -90,15 +90,15 @@ function navItemStyle(isActive: boolean, isHovered: boolean): CSSProperties {
     cursor: 'pointer',
     textDecoration: 'none',
     fontSize: '16px',
-    fontWeight: isActive ? 700 : 500,
-    color: isActive ? '#111111' : '#B0B0B0',
+    fontWeight: isActive ? 500 : 500,
+    color: isActive ? '#124346' : 'rgba(18,67,70,0.35)',
     border: 'none',
     transition: 'all 0.15s ease',
     position: 'relative' as const,
   };
 
   if (isHovered && !isActive) {
-    return { ...base, color: '#555555', background: 'rgba(0,0,0,0.03)' };
+    return { ...base, color: 'rgba(18,67,70,0.65)', background: 'rgba(18,67,70,0.05)' };
   }
 
   return base;
@@ -140,9 +140,9 @@ function NavItem({
               top: '50%',
               transform: 'translateY(-50%)',
               width: 3,
-              height: 18,
+              height: 20,
               borderRadius: '0 3px 3px 0',
-              background: 'linear-gradient(180deg, #1A5E5A, #124346)',
+              background: '#124346',
             }} aria-hidden />
           )}
           <span
@@ -150,7 +150,7 @@ function NavItem({
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
-              color: isActive ? '#124346' : '#CACACA',
+              color: isActive ? '#124346' : 'rgba(18,67,70,0.35)',
               filter: 'none',
               transition: 'color 0.15s ease, filter 0.15s ease',
             }}

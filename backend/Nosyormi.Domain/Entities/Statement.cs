@@ -7,4 +7,6 @@ public class Statement
     public string FileHash { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; }
     public string? Narration { get; set; }
+    public string? BankName { get; set; }
+    public string? AccountType { get; set; }
 }

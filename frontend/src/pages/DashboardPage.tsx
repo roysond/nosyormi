@@ -267,6 +267,8 @@ function useCountUp(target: number, duration: number = 800): number {
 }
 
 export default function DashboardPage() {
+  const [bankInfo, setBankInfo] = useState<{ bankName: string; accountType: string; statementPeriod: string } | null>(null);
+  const [bankInfoLoading, setBankInfoLoading] = useState(false);
   const [narration, setNarration] = useState<string | null>(null);
   const [narrationLoading, setNarrationLoading] = useState(false);
   const [statement, setStatement] = useState<Statement | null>(null);
@@ -341,6 +343,17 @@ export default function DashboardPage() {
       void loadStatement(false);
     });
   }, [loadStatement]);
+
+  useEffect(() => {
+    if (!statement?.id) return;
+    setBankInfo(null);
+    setBankInfoLoading(true);
+    fetch(`${API_BASE}/api/bankinfo/${statement.id}`)
+      .then(r => r.json())
+      .then(data => setBankInfo(data))
+      .catch(() => setBankInfo(null))
+      .finally(() => setBankInfoLoading(false));
+  }, [statement?.id]);
 
   useEffect(() => {
     if (!statement?.id) return;
@@ -789,6 +802,88 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
+
+          {(bankInfoLoading || bankInfo) && (
+            <div style={{
+              margin: '0 32px 20px',
+              padding: '16px 20px',
+              background: 'white',
+              borderRadius: 12,
+              border: '0.5px solid #E2E8F0',
+            }}>
+              {bankInfoLoading ? (
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  color: '#94A3B8',
+                  fontSize: 13,
+                }}>
+                  <div style={{
+                    width: 6, height: 6, borderRadius: '50%',
+                    background: '#124346',
+                    animation: 'dashboard-pulse 1.2s ease-in-out infinite',
+                  }} />
+                  Detecting bank info...
+                </div>
+              ) : bankInfo && (
+                <div style={{
+                  display: 'flex',
+                  gap: 32,
+                  alignItems: 'center',
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: '#94A3B8',
+                    }}>
+                      BANK
+                    </span>
+                    <span style={{
+                      fontSize: 15,
+                      fontWeight: 600,
+                      color: '#124346',
+                    }}>
+                      {bankInfo.bankName}
+                    </span>
+                  </div>
+                  <div style={{ width: 1, height: 32, background: '#E2E8F0' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: '#94A3B8',
+                    }}>
+                      ACCOUNT TYPE
+                    </span>
+                    <span style={{ fontSize: 15, color: '#1E293B' }}>
+                      {bankInfo.accountType}
+                    </span>
+                  </div>
+                  <div style={{ width: 1, height: 32, background: '#E2E8F0' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <span style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: '#94A3B8',
+                    }}>
+                      PERIOD
+                    </span>
+                    <span style={{ fontSize: 15, color: '#1E293B' }}>
+                      {bankInfo.statementPeriod}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {(narrationLoading || narration) && (
             <div style={{

@@ -62,6 +62,7 @@ builder.Services.AddHttpClient<ICategoryClassifier, OpenRouterCategoryClassifier
 builder.Services.AddHttpClient<IEmbeddingService, OpenRouterEmbeddingService>();
 builder.Services.AddHttpClient<IChatService, OpenRouterChatService>();
 builder.Services.AddHttpClient<NarrationService>();
+builder.Services.AddHttpClient<BankDetectionService>();
 builder.Configuration["OpenRouter:ApiKey"] =
     Environment.GetEnvironmentVariable("OPENROUTER_API_KEY");
 builder.Services.AddScoped<IAnomalyDetector, ZScoreAnomalyDetector>();
