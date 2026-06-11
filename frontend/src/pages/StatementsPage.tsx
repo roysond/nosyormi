@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { IconArrowUp } from '@tabler/icons-react';
 import { useUpload } from '../components/UploadContext';
-import { ANOMALY_COLOR, MACOS_GLASS_TEAL, MACOS_GLASS_GRAIN } from '../constants/palette';
+import { ANOMALY_COLOR, MACOS_GLASS_TEAL } from '../constants/palette';
 import {
   clearStatement,
   dispatchStatementSwitched,
@@ -526,7 +526,7 @@ export default function StatementsPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: isUploading ? 'rgba(10,40,42,0.15)' : 'rgba(10,40,42,0.32)',
+            background: isUploading ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.12)',
             zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
@@ -552,19 +552,6 @@ export default function StatementsPage() {
             aria-modal="true"
             aria-labelledby="upload-modal-title"
           >
-            <div
-              aria-hidden
-              style={{
-                position: 'absolute',
-                inset: 0,
-                backgroundImage: MACOS_GLASS_GRAIN,
-                opacity: 0.5,
-                mixBlendMode: 'overlay' as const,
-                pointerEvents: 'none',
-                zIndex: 0,
-                borderRadius: 'inherit',
-              }}
-            />
             <div style={{ position: 'relative', zIndex: 1 }}>
             <div
               style={{
