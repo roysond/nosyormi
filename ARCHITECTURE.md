@@ -6,7 +6,7 @@ This document is the architectural source of truth for NOSYOR.M.I. It describes 
 
 The document is intentionally written as a **living blueprint**. Sections are added as the architecture they describe is built. What is documented here is committed to; what is not yet documented is not yet binding.
 
-> **Last updated:** 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache); all three OpenRouter tiers wired.
+> **Last updated:** 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut); Dashboard folder-tab switcher.
 
 ---
 
@@ -138,7 +138,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 8 June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
+> **Implementation status (as of 10 June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -258,8 +258,8 @@ frontend/
 │   ├── main.tsx                 # Entry point — mounts <App /> to #root
 │   ├── index.css                # Global resets, fonts, shared @keyframes
 │   ├── pages/                   # One component per route (4 pages)
-│   │   ├── DashboardPage.tsx        # "/"            — stats, donut, tabs, date-range filter
-│   │   ├── TransactionsPage.tsx     # "/transactions"— search, filter, sort, expand
+│   │   ├── DashboardPage.tsx        # "/"            — stats, donut, folder-tab spending/income, date-range filter
+│   │   ├── TransactionsPage.tsx     # "/transactions"— folder tabs, date filter, donut, search, sort, coloured category pills, summary sidebar
 │   │   ├── StatementsPage.tsx       # "/statements"  — upload modal, list, delete
 │   │   └── ChatPage.tsx             # "/chat"        — chat + 9 chart types (incl. topN)
 │   ├── components/
@@ -600,9 +600,16 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Scope:** Statement-level summary paragraph only — not per-anomaly or forecast-specific LLM narration (those remain deferred).
 - **Config note:** Model is hardcoded in `NarrationService`; `MODEL_NARRATION` env var is provisioned but not read yet.
 
+### 2026-06-10 — Folder-Tab UI & Transactions Page Parity
+
+- **Decision:** Replaced underline Spending/Income tabs on Dashboard with **folder-tab** chrome — rounded active tab, white content panel, CSS pseudo-element corner curves (`nosyormi-tab-spending` / `nosyormi-tab-income`). Same visual system applied to Transactions (`nosyormi-tx-tab-*`).
+- **Transactions parity:** Ported Dashboard’s date-range filter (`availablePeriods`, `filterTransactionsByDate`, custom range on Apply, click-outside close) plus spending/income donut chart (`JewelSlice`, category click-to-filter). Transaction rows use **coloured category pills** from `APP_COLORS` via `categoryColorMap`.
+- **Summary sidebar:** Tab-conditional rows — Total Spending (red) vs Total Income (green); income largest/average values use green (`#10B981`). Anomaly callout shortened to “Review Highlighted Transactions.”
+- **Hysteresis scroll:** Transactions sticky header compacts when `main` scrollTop > 40 and only re-expands when scrollTop < 20 — prevents header size flicker at the boundary.
+
 ---
 
-*Last updated: 8 June 2026 — AI Dashboard narration, Design v1.1, 15 categories, Reflect switching, month-specific chat routing.*
+*Last updated: 10 June 2026 — Transactions page UI parity, folder-tab switcher, hysteresis sticky header.*
 
 As the corresponding parts of the system are built, the following sections will be written:
 

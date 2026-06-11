@@ -3,7 +3,7 @@
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Program: AI Integration Capstone · .NET 10 + React  
 > Deadline: Before 4 June 2026  
-> Last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), merchant chat routing, Design v1.1
+> Last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut), Dashboard folder-tab switcher
 
 ---
 
@@ -87,10 +87,11 @@ handle the kind of work they are best suited for.
 
 **Completed:**
 - ✅ React 19 + TypeScript + Vite frontend scaffolded
-- ✅ Dashboard page: stat cards, donut chart, spending/income tabs,
+- ✅ Dashboard page: stat cards, donut chart, spending/income folder tabs,
   transaction list with summary panel
-- ✅ Transactions page: search, filter by category, sort, expandable
-  rows, anomaly badge
+- ✅ Transactions page: search, sort, expandable rows, anomaly badge
+  *(Week 9: folder tabs, date filter, donut, coloured category pills,
+  tab-aware summary sidebar)*
 - ✅ Statements page: list, upload modal, delete with confirmation
 - ✅ Chat page: AI chat interface + dynamic chart panel
   (pie/bar/line/anomaly/forecast; stacked/horizontal/treemap in Week 4;
@@ -230,9 +231,6 @@ handle the kind of work they are best suited for.
 - ✅ **Chart title polish** — month-aware titles (e.g. “March — Spending Breakdown”); merchant word-dominance threshold 0.7; drill-down capped at 20 transactions; fallback titles “Breakdown” / “Spending Breakdown”
 - ✅ **Anomaly filter pill** on Transactions page; unified anomaly legend in chat drill-down bar chart
 
-**Uncommitted at doc time (local working tree):**
-- Backend + frontend month-specific changes above are implemented and build-clean but may not yet be on `main` — verify with `git status` before submission tagging.
-
 ---
 
 ### Week 8 (June 2026) — AI Dashboard Narration (NARRATION Tier)
@@ -246,6 +244,19 @@ handle the kind of work they are best suited for.
 **Still deferred (not this feature):**
 - Per-anomaly LLM explanations and forecast-specific narratives (separate from the Dashboard summary)
 - Reading `MODEL_NARRATION` from env in `NarrationService` (model is hardcoded today; env key remains provisioned for future swap)
+
+---
+
+### Week 9 (June 2026) — Transactions Page Parity & Folder-Tab UI
+
+**Completed:**
+- ✅ **Folder-tab Spending/Income switcher** — Dashboard underline tabs replaced with rounded folder-tab chrome (white active tab, pseudo-element corner curves, shared panel border); same pattern applied to Transactions page (`nosyormi-tx-tab-*` classes)
+- ✅ **Transactions date-range filter** — All Time / per-month quick-select pills / custom from–to range (same `availablePeriods` + `filterTransactionsByDate` pattern as Dashboard); scopes donut, category legend, transaction list, and summary sidebar
+- ✅ **Transactions donut chart** — Spending/income category breakdown with `JewelSlice`, click-to-filter category, click-outside to reset; legend with percentages
+- ✅ **Coloured category pills** — Transaction rows show category badges tinted from `APP_COLORS` via `categoryColorMap` (15% background, darkened text)
+- ✅ **Tab-aware summary sidebar** — Spending tab shows Total Spending (red); Income tab shows Total Income (green); Largest/Average amounts use tab-appropriate colours
+- ✅ **Shortened anomaly callout** — Summary sidebar message: “Review Highlighted Transactions” (concise vs prior copy)
+- ✅ **Hysteresis sticky header** — Transactions page header compacts on scroll (`scrollTop > 40`) and expands only when `scrollTop < 20` to prevent flicker at the threshold
 
 ---
 
@@ -333,13 +344,13 @@ Stories are listed by epic. Status reflects the state at submission.
 | # | Story | Tier | Status |
 |---|---|---|---|
 | 36 | Build Dashboard page with stat cards and donut chart | Major | ✅ Done |
-| 37 | Build Transactions page with search, filter, sort | Major | ✅ Done |
+| 37 | Build Transactions page with search, filter, sort | Major | ✅ Done (folder tabs, date filter, donut, category pills, summary sidebar — Week 9) |
 | 38 | Build Statements page with upload modal and list | Major | ✅ Done |
 | 39 | Build Chat page with message interface and chart panel | Major | ✅ Done |
 | 40 | Build StatementDetailPage with transactions + charts tabs | Minor | ✅ Done → ⛔ Removed (Week 4, superseded by Dashboard date-range filter) |
 | 41 | Connect all pages to live API endpoints | Major | ✅ Done |
 | 42 | Implement dynamic chart rendering from chartUpdate JSON | Major | ✅ Done |
-| 43 | Add spending/income tab switching on Dashboard | Minor | ✅ Done |
+| 43 | Add spending/income tab switching on Dashboard | Minor | ✅ Done (folder-tab style — Week 9) |
 | 44 | Add expandable transaction rows with full details | Minor | ✅ Done |
 | 45 | Implement sessionStorage chat persistence across navigation | Minor | ✅ Done |
 | 46 | Add clear chat button and auto-clear on statement delete | Minor | ✅ Done |
@@ -518,7 +529,7 @@ See `DECISIONS.md` for the full decision log. Key decisions:
 ### Test Locations
 
 - Unit + Integration: `backend/Nosyormi.Tests/`
-- QA Manual Cases: `QA-TEST-CASES.md` in repo root
+- QA Manual Cases: `docs/QA-TEST-CASES.md`
 - E2E spec: `frontend/e2e/critical-path.spec.ts`
 - Playwright config: `frontend/playwright.config.ts`
 
@@ -623,8 +634,8 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
   forecast, stacked, horizontal, treemap, topN) driven by the `chartUpdate`
   contract, including `highlightTransactionIds` for ranked expenses **and**
   month-scoped category breakdowns (null category + highlight IDs)
-- Dashboard date-range filter (All Time / per-month / custom) scoping all
-  stats, anomalies, and category totals to the chosen period
+- Dashboard and Transactions date-range filters (All Time / per-month / custom)
+  scoping stats, donuts, and category totals to the chosen period
 - **AI Dashboard narration** — NARRATION-tier statement summary auto-generated
   on Reflect, cached in `Statement.Narration` (one OpenRouter call per statement)
 - Custom chart visual system (`JewelBar`, `JewelSlice`, unified
@@ -644,4 +655,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15-category taxonomy, Reflect statement switching, month-specific chat routing, bar highlight filtering, assistant history chart context.*
+*Last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher, hysteresis sticky header.*

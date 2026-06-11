@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), Design v1.1, 15 categories, Reflect switching, month-specific chat routing, bar highlight filtering
+> Last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher, hysteresis sticky header
 
 ---
 
@@ -162,8 +162,8 @@ GET    /health                       — health check
 
 | Page | Route | Status |
 |---|---|---|
-| Dashboard | `/` | ✅ Done — stat cards, **AI narration card** (NARRATION tier, DB-cached), donut chart, spending/income tabs, transaction list, **date-range filter (All Time / month pills / custom range)** |
-| Transactions | `/transactions` | ✅ Done — search, filter, sort, expand rows, anomaly badge |
+| Dashboard | `/` | ✅ Done — stat cards, **AI narration card** (NARRATION tier, DB-cached), donut chart, **folder-tab** spending/income switcher, transaction list, **date-range filter (All Time / month pills / custom range)** |
+| Transactions | `/transactions` | ✅ Done — **folder-tab** spending/income, **date-range filter**, **donut chart** (click-to-filter category), search, sort, expand rows, **coloured category pills**, anomaly toggle, **tab-aware summary sidebar**, hysteresis sticky header |
 | Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation |
 | Chat | `/chat` | ✅ Done — chat + 9 chart types; SSE streaming; month-aware titles; bar highlight filtering; draggable divider |
 
@@ -189,6 +189,7 @@ GET    /health                       — health check
 - **Reflect / statement switching:** Statements page **Reflect** button sets active statement in sessionStorage; sidebar `StatementPill` shows **explicitly selected** statement only (not auto-latest); syncs Dashboard, Transactions, Chat
 - All pages: load active statement from sessionStorage selection or `GET /api/statements` fallback
 - Dashboard date-range filter: pure `availablePeriods` (derives `YYYY-MM` periods) + pure `filterTransactionsByDate` callback; all derived stats (expenses, income, anomalyCount, category totals) computed from the date-filtered set. Custom range stages in local `customFrom`/`customTo` state and only commits on "Apply". Click-outside closes the picker (`[data-datepicker]`).
+- Transactions page (Week 9): folder-tab spending/income (`nosyormi-tx-tab-*`); same date-range filter pattern; donut + legend with click-to-filter; `categoryColorMap` coloured pills on rows; summary sidebar rows conditional by tab (Total Spending red / Total Income green); anomaly callout “Review Highlighted Transactions”; hysteresis sticky header (compact when scrollTop > 40, expand when < 20).
 - Chat: sessionStorage persistence for `messages`, `chartUpdate`, `statementId`, `statementFileName`, **selected statement**
 - Chat: preserve history on navigation — do not overwrite sessionStorage when remounting with empty messages if stored data exists
 - Chat bar chart: when `category` null + `highlightTransactionIds` → filter expenses to highlights before category totals; non-drill-down height `Math.max(320, barData.length * 56)`; drill-down capped at 20 rows
@@ -397,6 +398,10 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - `Statement.Narration` DB cache (migration `AddNarrationToStatement`) — one generation per statement
 - Dashboard narration card (auto-fetch on statement load)
 
+**June 2026 — Transactions page parity + folder-tab UI (Week 9):**
+- Dashboard Spending/Income: underline tabs → folder-tab chrome (`nosyormi-tab-*` pseudo-element curves)
+- Transactions: same folder tabs (`nosyormi-tx-tab-*`), date-range filter, donut chart, coloured category pills, tab-aware summary sidebar, hysteresis sticky header
+
 ---
 
 ## 15. KNOWN LIMITATIONS (documented for submission)
@@ -420,7 +425,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 
 ---
 
-## 16. PENDING WORK (as of 8 June 2026)
+## 16. PENDING WORK (as of 10 June 2026)
 
 **SUBMISSION CRITICAL:**
 - [ ] PowerPoint deck (8+ slides, real screenshots) — story #60
@@ -433,9 +438,6 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - [x] Docker + Minikube deployment
 - [x] Core FinSight features + nine chart types
 - [x] AI Dashboard narration (NARRATION tier, DB-cached)
-
-**LOCAL (may be uncommitted):**
-- [ ] Commit month-specific chat routing + bar highlight filtering + assistant history fix (verify `git status`)
 
 **OPTIONAL / DEFERRED:**
 - [ ] Query-time RAG in chat (story #26 — partial; embeddings at upload only)
@@ -450,6 +452,10 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 ## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
+feat(ui): colored category pills, hysteresis scroll fix on Transactions page
+feat(ui): conditional summary sidebar rows by tab, shorten anomaly message, fix income summary colors
+feat(ui): add spending/income folder tabs, date range filter, and donut chart to Transactions page
+feat(ui): replace underline tabs with folder-tab style on Dashboard Spending/Income switcher
 design: font size bump, stat card color gradients, blue net card
 fix(statements): pill only shows explicitly selected statement, brand teal pill colors
 design(v1.1): teal gradient on Upload Statement button

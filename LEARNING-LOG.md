@@ -2,7 +2,7 @@
 > NOSYOR.M.I — What I Learned Building This  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Background: No prior IT or coding experience before this program  
-> **Last updated:** 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache); Week 8 learning notes
+> **Last updated:** 10 June 2026 — Transactions page UI parity, folder-tab switcher; Week 9 learning notes
 
 This document captures the real learning that happened during the build —
 the errors encountered, how they were fixed, and what the fix taught me.
@@ -466,4 +466,38 @@ docs honest about what is fully dynamic vs hardcoded.
 
 ---
 
-*Last updated: 8 June 2026 — AI Dashboard narration, Design v1.1, Reflect switching, month-specific chat routing.*
+## Week 9 — Transactions Parity & Folder Tabs (June 2026)
+
+### Folder tabs are CSS, not a component library
+
+The Spending/Income switcher on Dashboard and Transactions uses the same trick:
+rounded top corners on the active tab, a white content panel below, and
+`::before` / `::after` pseudo-elements with `box-shadow` to fake smooth
+outer curves where the tab meets the panel. No extra dependency — just
+positioned elements and z-index.
+
+### Hysteresis stops scroll jitter
+
+A sticky header that shrinks at `scrollTop > 0` and grows at `scrollTop === 0`
+flickers when you scroll slowly around the top. Using **different thresholds**
+(compact above 40px, expand only below 20px) creates a dead band so the
+header does not oscillate. Small UX detail; noticeable when testing on a
+trackpad.
+
+### Parity reduces cognitive load
+
+Once Dashboard had a date filter and donut, Transactions felt incomplete with
+only a flat list. Porting the same `availablePeriods` + `filterTransactionsByDate`
+helpers and donut interaction means users learn one pattern for “scope by
+period and drill into a category” on both analysis pages.
+
+### Category pills tie list to chart
+
+Colouring each row’s category badge from the same `APP_COLORS` index as the
+donut legend makes the table and chart feel like one view. The pill uses a
+light tint (`hexToRgba` at 15% opacity) and a darkened text colour so it
+stays readable on white rows.
+
+---
+
+*Last updated: 10 June 2026 — Transactions page UI parity, folder-tab switcher, hysteresis sticky header.*

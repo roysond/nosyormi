@@ -19,8 +19,9 @@ It doesn't shame you. It doesn't moralize. It reflects.
 - **Next-month forecasting** — weighted moving average projects spending by category.
 - **Conversational chat interface** — ask questions in plain English (including month-specific queries like *"Where did I overspend in March?"*); the AI answers from your full statement context, streams the reply word-by-word (SSE), and updates live visualizations to match.
 - **Multi-statement switching** — upload several statements and **Reflect** on any one; the active statement syncs across Dashboard, Transactions, and Chat via sessionStorage.
+- **Transactions analysis view** — folder-tab Spending/Income switcher, date-range filter, donut chart with click-to-filter categories, coloured category pills, and a tab-aware summary sidebar.
 - **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
-- **Date-range analysis** — scope the Dashboard to all time, a single month, or a custom range; every figure re-computes for the period you pick.
+- **Date-range analysis** — scope the Dashboard and Transactions page to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 - **AI Dashboard narration** — when you reflect on a statement, NOSYOR.M.I auto-generates a warm financial summary paragraph (NARRATION tier via OpenRouter); generated once per statement and cached in the database.
 
 ---
@@ -128,7 +129,7 @@ cd backend && dotnet test
 cd frontend && npx playwright test
 ```
 
-Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
+Manual QA cases: see [QA-TEST-CASES.md](./docs/QA-TEST-CASES.md).
 
 ---
 
@@ -139,7 +140,7 @@ Manual QA cases: see [QA-TEST-CASES.md](./QA-TEST-CASES.md).
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, four-layer model, decision log |
 | [PROJECT-DOCUMENTATION.md](./PROJECT-DOCUMENTATION.md) | Capstone submission: sprint log, user stories, AI details |
 | [DECISIONS.md](./DECISIONS.md) | Key product and technical decisions |
-| [QA-TEST-CASES.md](./QA-TEST-CASES.md) | Manual test cases and results |
+| [docs/QA-TEST-CASES.md](./docs/QA-TEST-CASES.md) | Manual test cases and results |
 | [PROJECT-MEMORY.md](./PROJECT-MEMORY.md) | Session context anchor for development |
 | [frontend/src/components/NosyormiLogo.tsx](./frontend/src/components/NosyormiLogo.tsx) | Brand logo (inline SVG — teal circle, gold N, coloured arcs) |
 | [docs/diagrams/](./docs/diagrams/) | Six architectural PNG diagrams (system, AI flow, schema, API, deployment, user flow) |
@@ -166,8 +167,8 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 
 **Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
 **Target completion:** before 4 June 2026  
-**Latest:** AI Dashboard narration (NARRATION tier, DB-cached); Design v1.1 (Urbanist, floating sidebar, brand teal/gold, `NosyormiLogo`); month-specific chat chart routing; statement Reflect switching  
-**Docs last updated:** 8 June 2026  
+**Latest:** Transactions page parity (folder tabs, date-range filter, donut chart, coloured category pills, tab-aware summary sidebar); Dashboard folder-tab Spending/Income switcher; hysteresis sticky header on Transactions  
+**Docs last updated:** 10 June 2026  
 **Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.
@@ -189,7 +190,7 @@ Built as part of the AI Integration Capstone Program · 2026
 
 ---
 
-*Documentation last updated: 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache), three-tier OpenRouter routing fully wired.*
+*Documentation last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher.*
 
 ## License
 

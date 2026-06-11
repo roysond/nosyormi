@@ -12,8 +12,8 @@ React 19 + TypeScript single-page app built with Vite. Talks to the .NET API ove
 
 | Route | Component | Purpose |
 |---|---|---|
-| `/` | `DashboardPage` | Stat cards (teal hero + gradients), AI narration card (NARRATION tier, cached), donut chart, spending/income tabs, date-range filter |
-| `/transactions` | `TransactionsPage` | Search, category filter, anomaly pill toggle, sort, expandable rows |
+| `/` | `DashboardPage` | Stat cards (teal hero + gradients), AI narration card (NARRATION tier, cached), donut chart, **folder-tab** spending/income switcher, date-range filter |
+| `/transactions` | `TransactionsPage` | **Folder-tab** spending/income, **date-range filter**, **donut chart** (click-to-filter), search, sort, **coloured category pills**, anomaly toggle, **tab-aware summary sidebar**, hysteresis sticky header, expandable rows |
 | `/statements` | `StatementsPage` | Upload CSV (macOS glass modal), list statements, **Reflect** to switch active statement, delete |
 | `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types); “Let's Reflect” in sidebar nav |
 
@@ -102,7 +102,7 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 ---
 
-*Last updated: 8 June 2026 — AI Dashboard narration card, NARRATION API, Design v1.1*
+*Last updated: 10 June 2026 — Transactions page parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher*
 
 ## Related docs
 

@@ -2,7 +2,7 @@
 > NOSYOR.M.I — Key Architectural & Product Decisions  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)
 
-> **Last updated:** 8 June 2026 — AI Dashboard narration (NARRATION tier, DB cache); Week 8 decisions added.
+> **Last updated:** 10 June 2026 — Transactions page UI parity, folder-tab switcher; Week 9 decisions added.
 
 This document summarises the most significant decisions made during the 
 build. Full rationale for each is in ARCHITECTURE.md Section 9.
@@ -152,4 +152,19 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 8 June 2026 — AI Dashboard narration, Design v1.1, month-specific routing, Reflect switching, 15 categories*
+## Week 9 Decisions (June 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Spending/Income tabs | Folder-tab chrome (Dashboard + Transactions) | Visual continuity with Design v1.1 cards; active tab “connects” to content panel |
+| Transactions date filter | Same pattern as Dashboard | One mental model for period scoping across analysis pages |
+| Transactions donut | `JewelSlice` + click-to-filter | Parity with Dashboard; category drill-down without leaving the page |
+| Category pills | `APP_COLORS` tint per category | Scan rows faster; colours align with donut legend |
+| Summary sidebar rows | Tab-conditional (spending vs income totals) | Avoid showing “Total Spending” on the Income tab |
+| Income summary colours | Green `#10B981` for income amounts | Consistent income/expense colour language app-wide |
+| Anomaly callout copy | “Review Highlighted Transactions” | Shorter sidebar message; action-oriented |
+| Sticky header scroll | Hysteresis thresholds 40 / 20 px | Prevents compact/expand flicker when scrolling near the boundary |
+
+---
+
+*Last updated: 10 June 2026 — Transactions page UI parity, folder-tab switcher, hysteresis sticky header*

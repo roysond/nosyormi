@@ -6,7 +6,7 @@
 > Postgres: localhost:5432 (Postgres.app, `pgvector` enabled)
 >
 > **Last full manual run:** 29 May 2026  
-> **Last regression check:** 8 June 2026 (builds pass; all markdown synced; AI Dashboard narration documented; manual TC-01–TC-19 unchanged)
+> **Last regression check:** 10 June 2026 (builds pass; all markdown synced; Transactions UI parity documented; manual TC-01–TC-19 unchanged)
 >
 > **Revision notes:**
 > - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
@@ -14,6 +14,7 @@
 > - **30 May 2026:** Re-verified automated suite; E2E TC-E2E-04 locator scoped to statement list `<p>` in `main`. Docs synced for SSE streaming, anomaly `#D97706`, CSV memo fallback.
 > - **1 June 2026:** Documented Design v1.1, Reflect statement switching, 15-category taxonomy, month-specific bar chart routing. **Suggested manual follow-up (not yet formal TC-20):** ask chat “How did I spend in March?” → expect `bar` chart with month-scoped category totals and title “March — Spending Breakdown”.
 > - **8 June 2026:** Full markdown doc sync (NARRATION tier wired, DB cache, `GET /api/narration/{statementId}`). **Suggested manual follow-up (not yet formal TC-21):** open Dashboard with a reflected statement → expect narration card with loading pulse then italic summary; reload page → same text without re-generation delay (cached in `Statement.Narration`).
+> - **10 June 2026:** Transactions page UI parity documented (folder tabs, date filter, donut, category pills, summary sidebar). **Suggested manual follow-ups (not yet formal TC-22–TC-24):** (TC-22) Transactions Spending tab → date-range filter scopes donut + list; (TC-23) click donut slice → list filters to that category; (TC-24) scroll Transactions → sticky header compacts without flicker at top.
 
 ---
 
@@ -295,4 +296,4 @@ cd frontend && npx playwright test
 
 ---
 
-*Last updated: 8 June 2026 — documentation synced for AI Dashboard narration (NARRATION tier, DB cache). Manual test run dates unchanged (29–30 May 2026).*
+*Last updated: 10 June 2026 — documentation synced for Transactions page UI parity and Dashboard folder-tab switcher. Manual test run dates unchanged (29–30 May 2026).*
