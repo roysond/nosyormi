@@ -90,7 +90,7 @@ export default function StatementPill() {
   }, [fetchStatement]);
 
   const pillText = fileName ?? 'No Statement';
-  const pillColor = fileName ? '#124346' : '#94A3B8';
+  const pillColor = fileName ? '#1E293B' : '#94A3B8';
 
   return (
     <div style={{ margin: '0 12px', marginBottom: 16 }}>
@@ -98,7 +98,8 @@ export default function StatementPill() {
       <div
         title={pillText}
         style={{
-          background: 'rgba(18,67,70,0.08)',
+          background: '#ECEEF1',
+          border: '1px solid #E2E8F0',
           color: pillColor,
           textAlign: 'center',
           fontSize: 12,

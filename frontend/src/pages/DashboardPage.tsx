@@ -68,19 +68,19 @@ const styles = {
     gap: 16,
   },
   statCardExpenses: {
-    background: 'radial-gradient(ellipse at 82% 10%, rgba(239,68,68,0.07) 0%, white 60%)',
+    background: 'white',
     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
     borderRadius: 12,
     padding: '16px 20px',
   },
   statCardNet: {
-    background: 'radial-gradient(ellipse at 82% 10%, rgba(59,130,246,0.07) 0%, white 60%)',
+    background: 'white',
     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
     borderRadius: 12,
     padding: '16px 20px',
   },
   statCardAnomalies: {
-    background: 'radial-gradient(ellipse at 82% 10%, rgba(212,168,67,0.07) 0%, white 60%)',
+    background: 'white',
     boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
     borderRadius: 12,
     padding: '16px 20px',
@@ -375,35 +375,23 @@ export default function DashboardPage() {
         <p style={{ ...styles.centered, ...styles.error }}>{error}</p>
       )}
 
-      {!loading && !error && hasNoStatements && (
-        <div
-          style={{
-            ...styles.centered,
-            flexDirection: 'column',
-            gap: 8,
-            textAlign: 'center',
-          }}
-        >
-          <p
-            style={{
-              margin: 0,
-              fontSize: 16,
-              fontWeight: 600,
-              color: '#1E293B',
-            }}
-          >
-            No statements uploaded yet.
-          </p>
-          <p style={{ margin: 0, fontSize: 14, color: '#94A3B8' }}>
-            Upload a bank statement CSV to get started.
-          </p>
-        </div>
-      )}
-
-      {!loading && !error && !hasNoStatements && statement && (
+      {!loading && !error && (
         <>
-          {(bankInfoLoading || bankInfo) && (
+          {hasNoStatements && (
             <div style={{
+              margin: '0 32px 16px',
+              padding: '10px 16px',
+              background: 'rgba(18,67,70,0.06)',
+              borderRadius: 8,
+              border: '0.5px solid rgba(18,67,70,0.15)',
+              fontSize: 13,
+              color: '#124346',
+            }}>
+              Upload a bank statement from the Statements page to populate your dashboard.
+            </div>
+          )}
+
+          <div style={{
               margin: '0 32px 20px',
               padding: '16px 20px',
               background: 'white',
@@ -425,7 +413,7 @@ export default function DashboardPage() {
                   }} />
                   Detecting bank info...
                 </div>
-              ) : bankInfo && (
+              ) : (
                 <div style={{
                   display: 'flex',
                   gap: 32,
@@ -446,7 +434,7 @@ export default function DashboardPage() {
                       fontWeight: 600,
                       color: '#124346',
                     }}>
-                      {bankInfo.bankName}
+                      {bankInfo?.bankName ?? '—'}
                     </span>
                   </div>
                   <div style={{ width: 1, height: 32, background: '#E2E8F0' }} />
@@ -461,7 +449,7 @@ export default function DashboardPage() {
                       ACCOUNT TYPE
                     </span>
                     <span style={{ fontSize: 15, color: '#1E293B' }}>
-                      {bankInfo.accountType}
+                      {bankInfo?.accountType ?? '—'}
                     </span>
                   </div>
                   <div style={{ width: 1, height: 32, background: '#E2E8F0' }} />
@@ -476,16 +464,14 @@ export default function DashboardPage() {
                       PERIOD
                     </span>
                     <span style={{ fontSize: 15, color: '#1E293B' }}>
-                      {bankInfo.statementPeriod}
+                      {bankInfo?.statementPeriod ?? '—'}
                     </span>
                   </div>
                 </div>
               )}
             </div>
-          )}
 
-          {(narrationLoading || narration) && (
-            <div style={{
+          <div style={{
               margin: '0 24px 20px',
               padding: '16px 20px',
               background: 'white',
@@ -515,11 +501,10 @@ export default function DashboardPage() {
                   color: '#334155',
                   lineHeight: 1.7,
                 }}>
-                  {narration}
+                  {narration ?? 'Upload a statement to begin your reflection.'}
                 </p>
               )}
             </div>
-          )}
 
           <div style={styles.statsRow}>
             <div style={styles.statCardHero}>
@@ -555,13 +540,13 @@ export default function DashboardPage() {
 
           <div style={{ padding: '0 32px 32px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-            {/* Top row: trend + categories + anomaly count */}
+            {/* Top row: trend + categories + forecast */}
             <div style={{ display: 'grid', gridTemplateColumns: '40% 30% 30%', gap: 16, alignItems: 'stretch' }}>
 
             {/* Monthly Trend */}
             <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '20px 24px' }}>
               <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: '0 0 2px' }}>Monthly Trend</p>
-              <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Income vs Expenses</p>
+              <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Income vs Expenses</p>
               <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748B' }}>
                   <div style={{ width: 16, height: 2, background: '#1D9E75', borderRadius: 1 }} /> Income
@@ -583,8 +568,8 @@ export default function DashboardPage() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
+                  <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
                     wrapperStyle={{ zIndex: 9999 }}
                     contentStyle={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12, padding: '8px 12px' }}
@@ -609,7 +594,7 @@ export default function DashboardPage() {
                           <span style={{ fontSize: 12, color: '#1E293B' }}>{cat.name}</span>
                         </div>
                         <span style={{ fontSize: 12, fontWeight: 600, color: '#1E293B' }}>
-                          {formatCurrency(cat.value)} <span style={{ color: '#94A3B8', fontWeight: 400, fontSize: 11 }}>{cat.percentage.toFixed(0)}%</span>
+                          {formatCurrency(cat.value)} <span style={{ color: '#94A3B8', fontWeight: 400, fontSize: 12 }}>{cat.percentage.toFixed(0)}%</span>
                         </span>
                       </div>
                       <div style={{ height: 4, background: '#F1F5F9', borderRadius: 2 }}>
@@ -620,53 +605,68 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>Anomaly Count</p>
+              {/* Next Month Forecast */}
+              <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', margin: 0 }}>Next Month Forecast</p>
                   <div style={{ display: 'flex', gap: 2, background: '#F4F7F9', borderRadius: 6, padding: 2 }}>
-                    {(['spending', 'income'] as const).map(tab => (
+                    {(['expenses', 'income'] as const).map(tab => (
                       <button
                         key={tab}
                         type="button"
-                        onClick={() => setAnomalyChartTab(tab)}
+                        onClick={() => setForecastTab(tab)}
                         style={{
                           padding: '3px 8px', borderRadius: 4, border: 'none',
                           fontSize: 10, cursor: 'pointer', fontFamily: 'inherit',
-                          background: anomalyChartTab === tab ? 'white' : 'transparent',
-                          color: anomalyChartTab === tab ? '#1E293B' : '#94A3B8',
-                          fontWeight: anomalyChartTab === tab ? 600 : 400,
+                          background: forecastTab === tab ? 'white' : 'transparent',
+                          color: forecastTab === tab ? '#1E293B' : '#94A3B8',
+                          fontWeight: forecastTab === tab ? 600 : 400,
                         }}
                       >
-                        {tab === 'spending' ? 'Spend' : 'Income'}
+                        {tab === 'expenses' ? 'Spend' : 'Income'}
                       </button>
                     ))}
                   </div>
                 </div>
-                <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Anomalies per month</p>
-                <ResponsiveContainer width="100%" height={240}>
-                  <BarChart data={anomalyMonthlyData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                    <XAxis dataKey="label" tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 9, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={false} />
-                    <Tooltip
-                      wrapperStyle={{ zIndex: 9999 }}
-                      contentStyle={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12 }}
-                      formatter={(value) => [value, anomalyChartTab === 'spending' ? 'Spending Anomalies' : 'Income Anomalies']}
-                      labelFormatter={(label) => label}
-                    />
-                    <Bar
-                      dataKey={anomalyChartTab}
-                      fill={anomalyChartTab === 'spending' ? ANOMALY_COLOR : '#10B981'}
-                      radius={[4, 4, 0, 0]}
-                      name={anomalyChartTab === 'spending' ? 'Spending Anomalies' : 'Income Anomalies'}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                {forecastData ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 2px' }}>Next Month Predicted</p>
+                    <p style={{ fontSize: 22, fontWeight: 700, color: forecastTab === 'expenses' ? '#EF4444' : '#10B981', margin: '0 0 2px' }}>
+                      {formatCurrency(forecastTab === 'expenses' ? forecastData.predictedExpenses : forecastData.predictedIncome)}
+                    </p>
+                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 12px' }}>
+                      {forecastTab === 'expenses'
+                        ? forecastData.expensesDelta > 0 ? `↑ +${formatCurrency(forecastData.expensesDelta)} vs last month` : `↓ ${formatCurrency(Math.abs(forecastData.expensesDelta))} vs last month`
+                        : forecastData.incomeDelta > 0 ? `↑ +${formatCurrency(forecastData.incomeDelta)} vs last month` : `↓ ${formatCurrency(Math.abs(forecastData.incomeDelta))} vs last month`
+                      }
+                    </p>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flex: 1, minHeight: 60 }}>
+                      {forecastData.recentMonths.map((m, i) => {
+                        const val = forecastTab === 'expenses' ? m.expenses : m.income;
+                        const predicted = forecastTab === 'expenses' ? forecastData.predictedExpenses : forecastData.predictedIncome;
+                        const maxVal = Math.max(...forecastData.recentMonths.map(r => forecastTab === 'expenses' ? r.expenses : r.income), predicted);
+                        const h = maxVal > 0 ? Math.round((val / maxVal) * 50) : 0;
+                        return (
+                          <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                            <div style={{ width: '100%', height: h, background: '#E2E8F0', borderRadius: '3px 3px 0 0', minHeight: 4 }} />
+                            <span style={{ fontSize: 9, color: '#94A3B8' }}>{m.label}</span>
+                          </div>
+                        );
+                      })}
+                      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                        <div style={{ width: '100%', height: 40, background: forecastTab === 'expenses' ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', border: `1.5px dashed ${forecastTab === 'expenses' ? '#EF4444' : '#10B981'}`, borderRadius: '3px 3px 0 0' }} />
+                        <span style={{ fontSize: 9, color: forecastTab === 'expenses' ? '#EF4444' : '#10B981' }}>Next ✦</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>Not enough data to forecast.</p>
+                )}
               </div>
 
             </div>
 
-            {/* Bottom row: anomaly + forecast full width */}
+            {/* Bottom row: anomaly spotlight + count + category */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
 
                 {/* Anomaly Spotlight */}
@@ -713,68 +713,54 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Next Month Forecast */}
-                <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', margin: 0 }}>Next Month Forecast</p>
+                {/* Anomaly Count */}
+                <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>Anomaly Count</p>
                     <div style={{ display: 'flex', gap: 2, background: '#F4F7F9', borderRadius: 6, padding: 2 }}>
-                      {(['expenses', 'income'] as const).map(tab => (
+                      {(['spending', 'income'] as const).map(tab => (
                         <button
                           key={tab}
                           type="button"
-                          onClick={() => setForecastTab(tab)}
+                          onClick={() => setAnomalyChartTab(tab)}
                           style={{
                             padding: '3px 8px', borderRadius: 4, border: 'none',
                             fontSize: 10, cursor: 'pointer', fontFamily: 'inherit',
-                            background: forecastTab === tab ? 'white' : 'transparent',
-                            color: forecastTab === tab ? '#1E293B' : '#94A3B8',
-                            fontWeight: forecastTab === tab ? 600 : 400,
+                            background: anomalyChartTab === tab ? 'white' : 'transparent',
+                            color: anomalyChartTab === tab ? '#1E293B' : '#94A3B8',
+                            fontWeight: anomalyChartTab === tab ? 600 : 400,
                           }}
                         >
-                          {tab === 'expenses' ? 'Spend' : 'Income'}
+                          {tab === 'spending' ? 'Spend' : 'Income'}
                         </button>
                       ))}
                     </div>
                   </div>
-                  {forecastData ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                      <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 2px' }}>Next Month Predicted</p>
-                      <p style={{ fontSize: 22, fontWeight: 700, color: forecastTab === 'expenses' ? '#EF4444' : '#10B981', margin: '0 0 2px' }}>
-                        {formatCurrency(forecastTab === 'expenses' ? forecastData.predictedExpenses : forecastData.predictedIncome)}
-                      </p>
-                      <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 12px' }}>
-                        {forecastTab === 'expenses'
-                          ? forecastData.expensesDelta > 0 ? `↑ +${formatCurrency(forecastData.expensesDelta)} vs last month` : `↓ ${formatCurrency(Math.abs(forecastData.expensesDelta))} vs last month`
-                          : forecastData.incomeDelta > 0 ? `↑ +${formatCurrency(forecastData.incomeDelta)} vs last month` : `↓ ${formatCurrency(Math.abs(forecastData.incomeDelta))} vs last month`
-                        }
-                      </p>
-                      <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end', flex: 1, minHeight: 60 }}>
-                        {forecastData.recentMonths.map((m, i) => {
-                          const val = forecastTab === 'expenses' ? m.expenses : m.income;
-                          const predicted = forecastTab === 'expenses' ? forecastData.predictedExpenses : forecastData.predictedIncome;
-                          const maxVal = Math.max(...forecastData.recentMonths.map(r => forecastTab === 'expenses' ? r.expenses : r.income), predicted);
-                          const h = maxVal > 0 ? Math.round((val / maxVal) * 50) : 0;
-                          return (
-                            <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                              <div style={{ width: '100%', height: h, background: '#E2E8F0', borderRadius: '3px 3px 0 0', minHeight: 4 }} />
-                              <span style={{ fontSize: 9, color: '#94A3B8' }}>{m.label}</span>
-                            </div>
-                          );
-                        })}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <div style={{ width: '100%', height: 40, background: forecastTab === 'expenses' ? 'rgba(239,68,68,0.12)' : 'rgba(16,185,129,0.12)', border: `1.5px dashed ${forecastTab === 'expenses' ? '#EF4444' : '#10B981'}`, borderRadius: '3px 3px 0 0' }} />
-                          <span style={{ fontSize: 9, color: forecastTab === 'expenses' ? '#EF4444' : '#10B981' }}>Next ✦</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>Not enough data to forecast.</p>
-                  )}
+                  <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 12px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Anomalies per month</p>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={anomalyMonthlyData} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 11, fill: '#94A3B8' }} axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip
+                        wrapperStyle={{ zIndex: 9999 }}
+                        contentStyle={{ background: 'white', border: '1px solid #E2E8F0', borderRadius: 8, fontSize: 12 }}
+                        formatter={(value) => [value, anomalyChartTab === 'spending' ? 'Spending Anomalies' : 'Income Anomalies']}
+                        labelFormatter={(label) => label}
+                      />
+                      <Bar
+                        dataKey={anomalyChartTab}
+                        fill={anomalyChartTab === 'spending' ? ANOMALY_COLOR : '#10B981'}
+                        radius={[4, 4, 0, 0]}
+                        name={anomalyChartTab === 'spending' ? 'Spending Anomalies' : 'Income Anomalies'}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
 
                 <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', margin: '0 0 4px' }}>Anomaly by Category</p>
-                  <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Flagged transactions per category</p>
+                  <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Flagged transactions per category</p>
                   {anomalyCategoryData.length === 0 ? (
                     <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>No anomalies detected.</p>
                   ) : (

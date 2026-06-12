@@ -1491,7 +1491,7 @@ export default function ChatPage() {
   ]);
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: '#F4F7F9' }}>
+    <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden', background: 'transparent' }}>
       <style>{`
         @keyframes tooltipFadeIn {
           from { opacity: 0; transform: translateY(4px) scale(0.97); }
@@ -1534,17 +1534,17 @@ export default function ChatPage() {
       <div
         style={{
           flex: `0 0 ${chatWidth}%`,
-          height: '100vh',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          background: '#F4F7F9',
+          background: 'transparent',
           borderRight: '1px solid #E2E8F0',
         }}
       >
         <div
           style={{
             padding: '24px 28px',
-            background: '#F4F7F9',
+            background: 'transparent',
             display: 'flex',
             alignItems: 'flex-start',
             justifyContent: 'space-between',
@@ -1590,7 +1590,7 @@ export default function ChatPage() {
             display: 'flex',
             flexDirection: 'column',
             gap: '30px',
-            background: '#F4F7F9',
+            background: 'transparent',
           }}
         >
           {messages.length === 0 && !loading && (

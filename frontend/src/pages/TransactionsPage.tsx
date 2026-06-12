@@ -618,7 +618,9 @@ export default function TransactionsPage() {
   const renderTransactionList = () => {
     if (filteredTransactions.length === 0) {
       return (
-        <p style={{ color: '#94A3B8', fontSize: 13 }}>No transactions match your filters.</p>
+        <p style={{ color: '#94A3B8', fontSize: 13 }}>
+          {!statement ? 'No transactions to show.' : 'No transactions match your filters.'}
+        </p>
       );
     }
 
@@ -721,7 +723,7 @@ export default function TransactionsPage() {
         display: 'flex',
         flexDirection: 'column',
         minHeight: '100%',
-        background: '#F4F7F9',
+        background: 'transparent',
       }}
     >
       <style>{`
@@ -770,7 +772,9 @@ export default function TransactionsPage() {
           position: 'sticky',
           top: 0,
           zIndex: 10,
-          background: '#F4F7F9',
+          background: '#E4E9F0',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
           padding: scrolled ? '10px 32px' : '16px 32px',
           display: 'flex',
           alignItems: 'center',
@@ -791,7 +795,7 @@ export default function TransactionsPage() {
           Transactions
         </h1>
 
-        {!loading && !error && statement && (
+        {!loading && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             <div style={{ position: 'relative' }}>
               <span
@@ -860,22 +864,21 @@ export default function TransactionsPage() {
         </p>
       )}
 
-      {!loading && error && (
-        <p
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#EF4444',
-            fontSize: 15,
-          }}
-        >
-          {error}
-        </p>
+      {!loading && error && !statement && (
+        <div style={{
+          margin: '0 32px 16px',
+          padding: '10px 16px',
+          background: 'rgba(18,67,70,0.06)',
+          borderRadius: 8,
+          border: '0.5px solid rgba(18,67,70,0.15)',
+          fontSize: 13,
+          color: '#124346',
+        }}>
+          Upload a bank statement from the Statements page to get started.
+        </div>
       )}
 
-      {!loading && !error && statement && (
+      {!loading && (
         <>
           <div style={{ padding: '0 32px', marginBottom: 24, marginTop: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-end', gap: 3 }}>

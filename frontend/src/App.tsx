@@ -22,13 +22,15 @@ const styles = {
     height: '100vh',
     width: '100vw',
     overflow: 'hidden',
-    background: '#E8EDED',
+    background: '#FFFFFF',
+    gap: '20px',
+    padding: '0',
   },
   sidebar: {
     height: 'calc(100vh - 20px)',
-    margin: '10px',
-    background: '#EEF5F5',
-    border: '1px solid rgba(18,67,70,0.12)',
+    margin: '10px 0 10px 10px',
+    background: '#E4E9F0',
+    border: '1px solid #C8D1DC',
     borderRadius: '16px',
     display: 'flex',
     flexDirection: 'column' as const,
@@ -38,7 +40,7 @@ const styles = {
     transition: 'width 0.25s ease, min-width 0.25s ease, max-width 0.25s ease',
     overflow: 'visible',
     position: 'relative' as const,
-    boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
   },
   brand: {
     padding: '0 8px 24px',
@@ -53,7 +55,7 @@ const styles = {
   },
   brandTagline: {
     fontSize: '10px',
-    color: 'rgba(18,67,70,0.4)',
+    color: '#94A3B8',
     fontStyle: 'italic' as const,
     marginTop: '2px',
     whiteSpace: 'nowrap' as const,
@@ -66,10 +68,15 @@ const styles = {
   },
   main: {
     flex: 1,
-    height: '100vh',
+    height: 'calc(100vh - 20px)',
+    margin: '10px 10px 10px 0',
+    borderRadius: '16px',
     overflow: 'auto',
-    background: '#F4F7F9',
+    background: '#E4E9F0',
     minWidth: 0,
+    border: '1px solid #C8D1DC',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+    isolation: 'isolate' as const,
   },
   version: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -91,14 +98,14 @@ function navItemStyle(isActive: boolean, isHovered: boolean): CSSProperties {
     textDecoration: 'none',
     fontSize: '16px',
     fontWeight: isActive ? 500 : 500,
-    color: isActive ? '#124346' : 'rgba(18,67,70,0.35)',
+    color: isActive ? '#124346' : '#94A3B8',
     border: 'none',
     transition: 'all 0.15s ease',
     position: 'relative' as const,
   };
 
   if (isHovered && !isActive) {
-    return { ...base, color: 'rgba(18,67,70,0.65)', background: 'rgba(18,67,70,0.05)' };
+    return { ...base, color: '#475569', background: 'rgba(0,0,0,0.04)' };
   }
 
   return base;
@@ -150,7 +157,7 @@ function NavItem({
               display: 'inline-flex',
               alignItems: 'center',
               flexShrink: 0,
-              color: isActive ? '#124346' : 'rgba(18,67,70,0.35)',
+              color: isActive ? '#124346' : '#94A3B8',
               filter: 'none',
               transition: 'color 0.15s ease, filter 0.15s ease',
             }}
@@ -195,6 +202,27 @@ export default function App() {
   return (
     <UploadProvider>
     <div style={styles.app}>
+      <style>{`
+  .nosyormi-main {
+    scrollbar-width: thin;
+    scrollbar-color: #C8D1DC transparent;
+  }
+  .nosyormi-main::-webkit-scrollbar {
+    width: 5px;
+  }
+  .nosyormi-main::-webkit-scrollbar-track {
+    background: transparent;
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+  .nosyormi-main::-webkit-scrollbar-thumb {
+    background: #C8D1DC;
+    border-radius: 999px;
+  }
+  .nosyormi-main::-webkit-scrollbar-thumb:hover {
+    background: #A8B5C4;
+  }
+`}</style>
       <aside
         style={{
           ...styles.sidebar,
@@ -247,7 +275,7 @@ export default function App() {
         )}
       </aside>
 
-      <main style={styles.main}>
+      <main style={styles.main} className="nosyormi-main">
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/transactions" element={<TransactionsPage />} />
