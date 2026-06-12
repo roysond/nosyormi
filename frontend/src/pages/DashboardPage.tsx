@@ -51,12 +51,15 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 32px',
-    background: '#F4F7F9',
+    padding: '16px 32px',
+    background: 'transparent',
+    position: 'sticky' as const,
+    top: 0,
+    zIndex: 10,
   },
   headerTitle: {
-    fontSize: '26px',
-    fontWeight: 800,
+    fontSize: '28px',
+    fontWeight: 600,
     letterSpacing: '-0.02em',
     color: '#1E293B',
     margin: 0,
@@ -92,24 +95,24 @@ const styles = {
     padding: '16px 20px',
   },
   statLabelHero: {
-    fontSize: 11,
-    fontWeight: 600,
+    fontSize: 12,
+    fontWeight: 500,
     letterSpacing: '0.06em',
     textTransform: 'uppercase' as const,
     color: 'rgba(212,168,67,0.65)',
     margin: 0,
   },
   statLabel: {
-    fontSize: 11,
-    fontWeight: 600,
+    fontSize: 12,
+    fontWeight: 500,
     letterSpacing: '0.06em',
     textTransform: 'uppercase' as const,
     color: '#94A3B8',
     margin: 0,
   },
   statValue: (color: string) => ({
-    fontSize: 24,
-    fontWeight: 700,
+    fontSize: 26,
+    fontWeight: 600,
     marginTop: 4,
     margin: '4px 0 0',
     color,
@@ -430,8 +433,8 @@ export default function DashboardPage() {
                       BANK
                     </span>
                     <span style={{
-                      fontSize: 15,
-                      fontWeight: 600,
+                      fontSize: 16,
+                      fontWeight: 500,
                       color: '#124346',
                     }}>
                       {bankInfo?.bankName ?? '—'}
@@ -448,7 +451,7 @@ export default function DashboardPage() {
                     }}>
                       ACCOUNT TYPE
                     </span>
-                    <span style={{ fontSize: 15, color: '#1E293B' }}>
+                    <span style={{ fontSize: 16, color: '#1E293B' }}>
                       {bankInfo?.accountType ?? '—'}
                     </span>
                   </div>
@@ -463,7 +466,7 @@ export default function DashboardPage() {
                     }}>
                       PERIOD
                     </span>
-                    <span style={{ fontSize: 15, color: '#1E293B' }}>
+                    <span style={{ fontSize: 16, color: '#1E293B' }}>
                       {bankInfo?.statementPeriod ?? '—'}
                     </span>
                   </div>
@@ -497,7 +500,7 @@ export default function DashboardPage() {
               ) : (
                 <p style={{
                   margin: 0,
-                  fontSize: 14,
+                  fontSize: 15,
                   color: '#334155',
                   lineHeight: 1.7,
                 }}>
@@ -509,7 +512,7 @@ export default function DashboardPage() {
           <div style={styles.statsRow}>
             <div style={styles.statCardHero}>
               <p style={styles.statLabelHero}>Total Income</p>
-              <p style={{ ...styles.statValue('#D4A843'), fontSize: 28, fontWeight: 800 }}>
+              <p style={{ ...styles.statValue('#D4A843'), fontSize: 30, fontWeight: 700 }}>
                 {formatCurrency(animatedIncome)}
               </p>
             </div>
@@ -545,7 +548,7 @@ export default function DashboardPage() {
 
             {/* Monthly Trend */}
             <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '20px 24px' }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: '0 0 2px' }}>Monthly Trend</p>
+              <p style={{ fontSize: 15, fontWeight: 500, color: '#1E293B', margin: '0 0 2px' }}>Monthly Trend</p>
               <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 16px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Income vs Expenses</p>
               <div style={{ display: 'flex', gap: 20, marginBottom: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#64748B' }}>
@@ -584,16 +587,16 @@ export default function DashboardPage() {
 
               {/* Top Spending Categories */}
               <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '16px 20px', flex: 1 }}>
-                <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: '0 0 14px' }}>Top Spending Categories</p>
+                <p style={{ fontSize: 15, fontWeight: 500, color: '#1E293B', margin: '0 0 14px' }}>Top Spending Categories</p>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {topCategories.map((cat, index) => (
                     <div key={cat.name}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                           <div style={{ width: 8, height: 8, borderRadius: '50%', background: APP_COLORS[index % APP_COLORS.length], flexShrink: 0 }} />
-                          <span style={{ fontSize: 12, color: '#1E293B' }}>{cat.name}</span>
+                          <span style={{ fontSize: 13, color: '#1E293B' }}>{cat.name}</span>
                         </div>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#1E293B' }}>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: '#1E293B' }}>
                           {formatCurrency(cat.value)} <span style={{ color: '#94A3B8', fontWeight: 400, fontSize: 12 }}>{cat.percentage.toFixed(0)}%</span>
                         </span>
                       </div>
@@ -608,7 +611,7 @@ export default function DashboardPage() {
               {/* Next Month Forecast */}
               <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', margin: 0 }}>Next Month Forecast</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', margin: 0 }}>Next Month Forecast</p>
                   <div style={{ display: 'flex', gap: 2, background: '#F4F7F9', borderRadius: 6, padding: 2 }}>
                     {(['expenses', 'income'] as const).map(tab => (
                       <button
@@ -630,11 +633,11 @@ export default function DashboardPage() {
                 </div>
                 {forecastData ? (
                   <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 2px' }}>Next Month Predicted</p>
-                    <p style={{ fontSize: 22, fontWeight: 700, color: forecastTab === 'expenses' ? '#EF4444' : '#10B981', margin: '0 0 2px' }}>
+                    <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 2px' }}>Next Month Predicted</p>
+                    <p style={{ fontSize: 24, fontWeight: 600, color: forecastTab === 'expenses' ? '#EF4444' : '#10B981', margin: '0 0 2px' }}>
                       {formatCurrency(forecastTab === 'expenses' ? forecastData.predictedExpenses : forecastData.predictedIncome)}
                     </p>
-                    <p style={{ fontSize: 11, color: '#94A3B8', margin: '0 0 12px' }}>
+                    <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 12px' }}>
                       {forecastTab === 'expenses'
                         ? forecastData.expensesDelta > 0 ? `↑ +${formatCurrency(forecastData.expensesDelta)} vs last month` : `↓ ${formatCurrency(Math.abs(forecastData.expensesDelta))} vs last month`
                         : forecastData.incomeDelta > 0 ? `↑ +${formatCurrency(forecastData.incomeDelta)} vs last month` : `↓ ${formatCurrency(Math.abs(forecastData.incomeDelta))} vs last month`
@@ -672,7 +675,7 @@ export default function DashboardPage() {
                 {/* Anomaly Spotlight */}
                 <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', margin: 0 }}>Anomaly Spotlight</p>
+                    <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', margin: 0 }}>Anomaly Spotlight</p>
                     <div style={{ display: 'flex', gap: 2, background: '#F4F7F9', borderRadius: 6, padding: 2 }}>
                       {(['spending', 'income'] as const).map(tab => (
                         <button
@@ -698,12 +701,12 @@ export default function DashboardPage() {
                     ) : (
                       (anomalyTab === 'spending' ? topAnomaliesSpending : topAnomaliesIncome).map(tx => (
                         <div key={tx.id} style={{ padding: '7px 10px', background: anomalyTab === 'spending' ? 'rgba(217,119,6,0.06)' : 'rgba(16,185,129,0.06)', borderRadius: 8 }}>
-                          <p style={{ fontSize: 11, fontWeight: 600, color: anomalyTab === 'spending' ? '#D97706' : '#10B981', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <p style={{ fontSize: 12, fontWeight: 600, color: anomalyTab === 'spending' ? '#D97706' : '#10B981', margin: '0 0 2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {tx.description.split(' ').slice(0, 3).join(' ')}
                           </p>
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 10, color: '#94A3B8' }}>{new Date(tx.transactionDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                            <span style={{ fontSize: 11, fontWeight: 600, color: anomalyTab === 'spending' ? '#EF4444' : '#10B981' }}>
+                            <span style={{ fontSize: 11, color: '#94A3B8' }}>{new Date(tx.transactionDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                            <span style={{ fontSize: 12, fontWeight: 600, color: anomalyTab === 'spending' ? '#EF4444' : '#10B981' }}>
                               {tx.amount > 0 ? '+' : ''}{formatCurrency(Math.abs(tx.amount))}
                             </span>
                           </div>
@@ -716,7 +719,7 @@ export default function DashboardPage() {
                 {/* Anomaly Count */}
                 <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '16px 20px', display: 'flex', flexDirection: 'column' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: '#1E293B', margin: 0 }}>Anomaly Count</p>
+                    <p style={{ fontSize: 15, fontWeight: 500, color: '#1E293B', margin: 0 }}>Anomaly Count</p>
                     <div style={{ display: 'flex', gap: 2, background: '#F4F7F9', borderRadius: 6, padding: 2 }}>
                       {(['spending', 'income'] as const).map(tab => (
                         <button
@@ -759,7 +762,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div style={{ background: 'white', borderRadius: 12, border: '0.5px solid #E2E8F0', padding: '14px 16px', display: 'flex', flexDirection: 'column' }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: '#1E293B', margin: '0 0 4px' }}>Anomaly by Category</p>
+                  <p style={{ fontSize: 13, fontWeight: 500, color: '#1E293B', margin: '0 0 4px' }}>Anomaly by Category</p>
                   <p style={{ fontSize: 12, color: '#94A3B8', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Flagged transactions per category</p>
                   {anomalyCategoryData.length === 0 ? (
                     <p style={{ fontSize: 12, color: '#94A3B8', margin: 0 }}>No anomalies detected.</p>
@@ -773,9 +776,9 @@ export default function DashboardPage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: APP_COLORS[index % APP_COLORS.length], flexShrink: 0 }} />
-                                <span style={{ fontSize: 12, color: '#1E293B' }}>{cat.name}</span>
+                                <span style={{ fontSize: 13, color: '#1E293B' }}>{cat.name}</span>
                               </div>
-                              <span style={{ fontSize: 12, fontWeight: 600, color: ANOMALY_COLOR }}>{cat.count} {cat.count === 1 ? 'anomaly' : 'anomalies'}</span>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: ANOMALY_COLOR }}>{cat.count} {cat.count === 1 ? 'anomaly' : 'anomalies'}</span>
                             </div>
                             <div style={{ height: 4, background: '#F1F5F9', borderRadius: 2 }}>
                               <div style={{ width: `${barWidth}%`, height: '100%', background: ANOMALY_COLOR, borderRadius: 2, opacity: 0.7 }} />

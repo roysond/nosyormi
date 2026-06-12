@@ -114,7 +114,6 @@ export default function TransactionsPage() {
     'date',
   );
   const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
-  const [scrolled, setScrolled] = useState(false);
   const [showAnomaliesOnly, setShowAnomaliesOnly] = useState(false);
   const [activeTab, setActiveTab] = useState<'spending' | 'income'>('spending');
   const [tabHover, setTabHover] = useState<'spending' | 'income' | null>(null);
@@ -156,23 +155,6 @@ export default function TransactionsPage() {
       void loadStatement(false);
     });
   }, [loadStatement]);
-
-  useEffect(() => {
-    const mainEl = document.querySelector('main');
-    if (!mainEl) return;
-
-    const handleScroll = () => {
-      setScrolled(prev => {
-        if (!prev && mainEl.scrollTop > 40) return true;
-        if (prev && mainEl.scrollTop < 20) return false;
-        return prev;
-      });
-    };
-
-    handleScroll();
-    mainEl.addEventListener('scroll', handleScroll, { passive: true });
-    return () => mainEl.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -775,21 +757,19 @@ export default function TransactionsPage() {
           background: '#E4E9F0',
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-          padding: scrolled ? '10px 32px' : '16px 32px',
+          padding: '16px 32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexShrink: 0,
-          transition: 'padding 0.25s ease, font-size 0.25s ease',
         }}
       >
         <h1
           style={{
-            fontSize: scrolled ? 16 : 26,
-            fontWeight: 700,
+            fontSize: 28,
+            fontWeight: 600,
             color: '#1E293B',
             margin: 0,
-            transition: 'font-size 0.25s ease',
           }}
         >
           Transactions

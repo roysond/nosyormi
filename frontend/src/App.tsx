@@ -47,11 +47,12 @@ const styles = {
     marginBottom: '32px',
   },
   brandName: {
-    fontSize: '15px',
-    fontWeight: 800,
+    fontSize: '16px',
+    fontWeight: 700,
     color: '#124346',
     letterSpacing: '0.02em',
     whiteSpace: 'nowrap' as const,
+    fontFamily: 'Urbanist, sans-serif',
   },
   brandTagline: {
     fontSize: '10px',
@@ -80,7 +81,7 @@ const styles = {
   },
   version: {
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-    fontSize: '9px',
+    fontSize: '11px',
     color: '#CDCDCD',
     padding: '0 12px',
     marginTop: 'auto',
@@ -96,8 +97,8 @@ function navItemStyle(isActive: boolean, isHovered: boolean): CSSProperties {
     borderRadius: 10,
     cursor: 'pointer',
     textDecoration: 'none',
-    fontSize: '16px',
-    fontWeight: isActive ? 500 : 500,
+    fontSize: '15px',
+    fontWeight: isActive ? 600 : 400,
     color: isActive ? '#124346' : '#94A3B8',
     border: 'none',
     transition: 'all 0.15s ease',
@@ -146,10 +147,11 @@ function NavItem({
               left: -12,
               top: '50%',
               transform: 'translateY(-50%)',
-              width: 3,
-              height: 20,
+              width: 4,
+              height: 28,
               borderRadius: '0 3px 3px 0',
-              background: '#124346',
+              background: 'linear-gradient(180deg, #1A5E5A 0%, #124346 100%)',
+              boxShadow: '2px 0 8px rgba(18,67,70,0.4)',
             }} aria-hidden />
           )}
           <span
@@ -158,8 +160,8 @@ function NavItem({
               alignItems: 'center',
               flexShrink: 0,
               color: isActive ? '#124346' : '#94A3B8',
-              filter: 'none',
-              transition: 'color 0.15s ease, filter 0.15s ease',
+              filter: isActive ? 'drop-shadow(0 1px 4px rgba(18,67,70,0.3))' : 'none',
+              transition: 'color 0.15s ease',
             }}
             aria-hidden
           >
@@ -237,9 +239,9 @@ export default function App() {
           style={{
             position: 'absolute',
             top: '72px',
-            right: '-16px',
-            width: '32px',
-            height: '32px',
+            right: '-17px',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
             background: BRAND_TEAL_BASE,
             border: '2px solid #ECEEF1',
@@ -248,7 +250,7 @@ export default function App() {
             alignItems: 'center',
             justifyContent: 'center',
             cursor: 'pointer',
-            fontSize: '13px',
+            fontSize: '18px',
             zIndex: 50,
             boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
             fontWeight: 700,
@@ -257,15 +259,21 @@ export default function App() {
           {collapsed ? '›' : '‹'}
         </button>
 
-        <div style={{ ...styles.brand, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-          <NosyormiLogo size={32} showWordmark={!collapsed} />
+        <div style={{ ...styles.brand, display: 'flex', alignItems: 'center', gap: collapsed ? 0 : 10, justifyContent: collapsed ? 'center' : 'flex-start' }}>
+          <NosyormiLogo size={52} showWordmark={false} />
+          {!collapsed && (
+            <div style={styles.brandName}>
+              NOSYOR<span style={{ color: '#D4A843' }}>.</span>
+              M<span style={{ color: '#D4A843' }}>.</span>I
+            </div>
+          )}
         </div>
 
         <nav style={styles.nav}>
-          <NavItem to="/" icon={<IconLayoutDashboard size={18} />} label="Dashboard" collapsed={collapsed} />
-          <NavItem to="/transactions" icon={<IconArrowsExchange size={18} />} label="Transactions" collapsed={collapsed} />
-          <NavItem to="/statements" icon={<IconFileText size={18} />} label="Statements" collapsed={collapsed} />
-          <NavItem to="/chat" icon={<IconMessageCircle size={18} />} label="Let's Reflect" collapsed={collapsed} />
+          <NavItem to="/" icon={<IconLayoutDashboard size={22} />} label="Dashboard" collapsed={collapsed} />
+          <NavItem to="/transactions" icon={<IconArrowsExchange size={22} />} label="Transactions" collapsed={collapsed} />
+          <NavItem to="/statements" icon={<IconFileText size={22} />} label="Statements" collapsed={collapsed} />
+          <NavItem to="/chat" icon={<IconMessageCircle size={22} />} label="Let's Reflect" collapsed={collapsed} />
         </nav>
 
         {!collapsed && <StatementPill />}

@@ -1543,16 +1543,16 @@ export default function ChatPage() {
       >
         <div
           style={{
-            padding: '24px 28px',
+            padding: '16px 32px',
             background: 'transparent',
             display: 'flex',
-            alignItems: 'flex-start',
+            alignItems: 'center',
             justifyContent: 'space-between',
             gap: 12,
           }}
         >
           <div>
-            <h2 style={{ margin: 0, color: '#1E293B', fontSize: '26px', fontWeight: 800, letterSpacing: '-0.02em' }}>
+            <h2 style={{ margin: 0, color: '#1E293B', fontSize: '28px', fontWeight: 600, letterSpacing: '-0.02em' }}>
               Ask NOSYOR.M.I
             </h2>
             <p style={{ margin: '6px 0 0', color: '#64748B', fontSize: 13 }}>
@@ -1574,7 +1574,7 @@ export default function ChatPage() {
                 padding: '4px 10px',
                 fontSize: 11,
                 cursor: 'pointer',
-                flexShrink: 0,
+                alignSelf: 'center',
               }}
             >
               Clear chat
@@ -1760,54 +1760,65 @@ export default function ChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
-        <div
-          style={{
-            padding: '16px 28px',
-            background: 'white',
-            borderTop: '1px solid #E2E8F0',
+        <div style={{
+          padding: '16px 20px',
+          background: 'transparent',
+          display: 'flex',
+          alignItems: 'center',
+        }}>
+          <div style={{
+            flex: 1,
+            position: 'relative',
             display: 'flex',
-            gap: 12,
-          }}
-        >
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void sendMessage();
-            }}
-            onFocus={() => setInputFocused(true)}
-            onBlur={() => setInputFocused(false)}
-            placeholder="Ask about your spending..."
-            disabled={loading}
-            style={{
-              flex: 1,
-              background: '#F4F7F9',
-              border: `1px solid ${inputFocused ? '#C9911A' : '#E2E8F0'}`,
-              borderRadius: 12,
-              padding: '14px 18px',
-              color: '#1E293B',
-              fontSize: 14,
-              outline: 'none',
-            }}
-          />
-          <button
-            type="button"
-            onClick={() => void sendMessage()}
-            disabled={loading || !input.trim()}
-            style={{
-              background: '#071A1E',
-              color: colors.white,
-              border: 'none',
-              borderRadius: 12,
-              padding: '14px 20px',
-              cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
-              fontSize: 14,
-              opacity: loading || !input.trim() ? 0.6 : 1,
-            }}
-          >
-            →
-          </button>
+            alignItems: 'center',
+          }}>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void sendMessage();
+              }}
+              onFocus={() => setInputFocused(true)}
+              onBlur={() => setInputFocused(false)}
+              placeholder="Ask about your spending..."
+              disabled={loading}
+              style={{
+                width: '100%',
+                background: '#F4F7F9',
+                border: `1.5px solid ${inputFocused ? '#C9911A' : '#E2E8F0'}`,
+                borderRadius: 14,
+                padding: '14px 56px 14px 18px',
+                color: '#1E293B',
+                fontSize: 16,
+                outline: 'none',
+                boxSizing: 'border-box' as const,
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => void sendMessage()}
+              disabled={loading || !input.trim()}
+              style={{
+                position: 'absolute',
+                right: 8,
+                background: loading || !input.trim() ? '#E2E8F0' : '#071A1E',
+                color: loading || !input.trim() ? '#94A3B8' : 'white',
+                border: 'none',
+                borderRadius: 10,
+                width: 36,
+                height: 36,
+                cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                fontSize: 16,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              →
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1847,7 +1858,7 @@ export default function ChatPage() {
           padding: '24px',
           overflowX: 'hidden',
           overflowY: 'hidden',
-          background: '#F4F7F9',
+          background: 'transparent',
           borderLeft: '1px solid #E2E8F0',
         }}
       >
