@@ -23,7 +23,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column' as const,
     minHeight: '100%',
-    background: '#F4F7F9',
+    background: '#E4E9F0',
   },
   header: {
     display: 'flex',

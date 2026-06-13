@@ -1543,7 +1543,7 @@ export default function ChatPage() {
       >
         <div
           style={{
-            padding: '16px 32px',
+            padding: '24px 32px 16px',
             background: 'transparent',
             display: 'flex',
             alignItems: 'center',
@@ -1852,10 +1852,10 @@ export default function ChatPage() {
       <div
         style={{
           flex: `0 0 ${100 - chatWidth}%`,
-          height: '100vh',
+          height: '100%',
           display: 'flex',
           flexDirection: 'column',
-          padding: '24px',
+          padding: '24px 24px 16px',
           overflowX: 'hidden',
           overflowY: 'hidden',
           background: 'transparent',
@@ -1866,8 +1866,8 @@ export default function ChatPage() {
           style={{
             margin: '0 0 16px',
             color: '#1E293B',
-            fontSize: 20,
-            fontWeight: 700,
+            fontSize: 22,
+            fontWeight: 600,
             textAlign: 'center',
           }}
         >
