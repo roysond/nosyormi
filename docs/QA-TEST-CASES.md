@@ -6,7 +6,7 @@
 > Postgres: localhost:5432 (Postgres.app, `pgvector` enabled)
 >
 > **Last full manual run:** 29 May 2026  
-> **Last regression check:** 10 June 2026 (builds pass; all markdown synced; Transactions UI parity documented; manual TC-01–TC-19 unchanged)
+> **Last regression check:** 13 June 2026 (builds pass; all markdown synced; panel background unification, Chat layout polish, Transactions anomaly-toggle fix documented; manual TC-01–TC-19 unchanged)
 >
 > **Revision notes:**
 > - **28 May 2026:** `StatementDetailPage` removed; TC-13/TC-14 re-pointed to Dashboard date filter and new chart types.
@@ -15,6 +15,7 @@
 > - **1 June 2026:** Documented Design v1.1, Reflect statement switching, 15-category taxonomy, month-specific bar chart routing. **Suggested manual follow-up (not yet formal TC-20):** ask chat “How did I spend in March?” → expect `bar` chart with month-scoped category totals and title “March — Spending Breakdown”.
 > - **8 June 2026:** Full markdown doc sync (NARRATION tier wired, DB cache, `GET /api/narration/{statementId}`). **Suggested manual follow-up (not yet formal TC-21):** open Dashboard with a reflected statement → expect narration card with loading pulse then italic summary; reload page → same text without re-generation delay (cached in `Statement.Narration`).
 > - **10 June 2026:** Transactions page UI parity documented (folder tabs, date filter, donut, category pills, summary sidebar). **Suggested manual follow-ups (not yet formal TC-22–TC-24):** (TC-22) Transactions Spending tab → date-range filter scopes donut + list; (TC-23) click donut slice → list filters to that category; (TC-24) scroll Transactions → sticky header compacts without flicker at top.
+> - **13 June 2026:** Panel background unification (`#E4E9F0`), Chat layout polish, Transactions anomaly-toggle click-outside fix documented. **Suggested manual follow-ups (not yet formal TC-25–TC-27):** (TC-25) Transactions → select donut category → toggle “Anomalies only” → category filter remains active; (TC-26) Dashboard/Statements → panel colour uniform between sticky header and white cards (no `#F4F7F9` banding); (TC-27) Chat → right chart panel fills main area without extra vertical scroll from viewport height.
 
 ---
 
@@ -296,4 +297,4 @@ cd frontend && npx playwright test
 
 ---
 
-*Last updated: 10 June 2026 — documentation synced for Transactions page UI parity and Dashboard folder-tab switcher. Manual test run dates unchanged (29–30 May 2026).*
+*Last updated: 13 June 2026 — documentation synced for panel background unification (#E4E9F0), Chat layout polish, and Transactions anomaly-toggle click-outside fix. Manual test run dates unchanged (29–30 May 2026).*

@@ -2,7 +2,7 @@
 > NOSYOR.M.I — Key Architectural & Product Decisions  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)
 
-> **Last updated:** 10 June 2026 — Transactions page UI parity, folder-tab switcher; Week 9 decisions added.
+> **Last updated:** 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix; Week 10 decisions added.
 
 This document summarises the most significant decisions made during the 
 build. Full rationale for each is in ARCHITECTURE.md Section 9.
@@ -167,4 +167,19 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 10 June 2026 — Transactions page UI parity, folder-tab switcher, hysteresis sticky header*
+## Week 10 Decisions (June 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Panel background | `#E4E9F0` on App main panel + page-level surfaces | One coherent content panel colour; replaces `#F4F7F9` banding on Dashboard/Statements |
+| Dashboard page wrapper | `transparent` | Lets App panel colour show through gaps between sticky header and white cards |
+| Dashboard sticky header | `#E4E9F0`, `marginBottom: 0` | Header strip matches panel; no visual seam above stats row |
+| Statements page | `styles.page` → `#E4E9F0` | Aligns Statements with main panel token |
+| Anomaly toggle click-outside | `data-anomaly-toggle` exclusion in mousedown handler | Toggling anomaly filter must not clear active donut category selection |
+| Chat right panel height | `100%` not `100vh` | Avoids overflow inside App flex main (`calc(100vh - 20px)`) |
+| Chat panel padding | Left header `24px 32px 16px`; right panel `24px 24px 16px` | Aligns header baselines with chart title spacing |
+| Chat chart title | `fontSize: 22`, `fontWeight: 600` | Matches Dashboard header hierarchy |
+
+---
+
+*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix*

@@ -3,7 +3,7 @@
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Program: AI Integration Capstone · .NET 10 + React  
 > Deadline: Before 4 June 2026  
-> Last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut), Dashboard folder-tab switcher
+> Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix
 
 ---
 
@@ -257,6 +257,18 @@ handle the kind of work they are best suited for.
 - ✅ **Tab-aware summary sidebar** — Spending tab shows Total Spending (red); Income tab shows Total Income (green); Largest/Average amounts use tab-appropriate colours
 - ✅ **Shortened anomaly callout** — Summary sidebar message: “Review Highlighted Transactions” (concise vs prior copy)
 - ✅ **Hysteresis sticky header** — Transactions page header compacts on scroll (`scrollTop > 40`) and expands only when `scrollTop < 20` to prevent flicker at the threshold
+
+---
+
+### Week 10 (June 2026) — Panel Background Unification & UI Polish
+
+**Completed:**
+- ✅ **Panel colour `#E4E9F0`** — App main content panel (`App.tsx`), Dashboard sticky header, Transactions sticky header, and Statements page background aligned to one surface token (replaces `#F4F7F9` on page-level areas)
+- ✅ **Dashboard transparent page wrapper** — `styles.page` → `transparent` so gaps between sticky header and white cards show the panel colour uniformly; card/chart backgrounds unchanged
+- ✅ **Dashboard sticky header** — `background: '#E4E9F0'`, `marginBottom: 0`
+- ✅ **Statements page** — `styles.page` → `#E4E9F0`
+- ✅ **Transactions anomaly-toggle fix** — `data-anomaly-toggle=""` on filter button; document mousedown handler excludes `[data-anomaly-toggle]` so toggling anomalies-only does not reset active donut category selection
+- ✅ **Chat layout polish** — left panel header padding `24px 32px 16px`; right panel padding `24px 24px 16px`, height `100%` (was `100vh`); chart title `h3` → fontSize 22, fontWeight 600
 
 ---
 
@@ -636,6 +648,8 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
   month-scoped category breakdowns (null category + highlight IDs)
 - Dashboard and Transactions date-range filters (All Time / per-month / custom)
   scoping stats, donuts, and category totals to the chosen period
+- **Unified panel chrome (`#E4E9F0`)** — App main panel, sticky headers, and
+  page wrappers aligned so content areas read as one surface between white cards
 - **AI Dashboard narration** — NARRATION-tier statement summary auto-generated
   on Reflect, cached in `Statement.Narration` (one OpenRouter call per statement)
 - Custom chart visual system (`JewelBar`, `JewelSlice`, unified
@@ -655,4 +669,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher, hysteresis sticky header.*
+*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*

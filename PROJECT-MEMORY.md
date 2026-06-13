@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher, hysteresis sticky header
+> Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix
 
 ---
 
@@ -162,10 +162,10 @@ GET    /health                       — health check
 
 | Page | Route | Status |
 |---|---|---|
-| Dashboard | `/` | ✅ Done — stat cards, **AI narration card** (NARRATION tier, DB-cached), donut chart, **folder-tab** spending/income switcher, transaction list, **date-range filter (All Time / month pills / custom range)** |
-| Transactions | `/transactions` | ✅ Done — **folder-tab** spending/income, **date-range filter**, **donut chart** (click-to-filter category), search, sort, expand rows, **coloured category pills**, anomaly toggle, **tab-aware summary sidebar**, hysteresis sticky header |
-| Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation |
-| Chat | `/chat` | ✅ Done — chat + 9 chart types; SSE streaming; month-aware titles; bar highlight filtering; draggable divider |
+| Dashboard | `/` | ✅ Done — stat cards, **AI narration card** (NARRATION tier, DB-cached), donut chart, **folder-tab** spending/income switcher, transaction list, **date-range filter**; transparent page wrapper + `#E4E9F0` sticky header |
+| Transactions | `/transactions` | ✅ Done — **folder-tab** spending/income, **date-range filter**, **donut chart** (click-to-filter category), search, sort, expand rows, **coloured category pills**, anomaly toggle (`data-anomaly-toggle` click-outside exclusion), **tab-aware summary sidebar**, hysteresis sticky header, `#E4E9F0` sticky header |
+| Statements | `/statements` | ✅ Done — list, upload modal, delete confirmation; `#E4E9F0` page background |
+| Chat | `/chat` | ✅ Done — chat + 9 chart types; SSE streaming; month-aware titles; bar highlight filtering; draggable divider; split layout padding polish; right panel `height: 100%` |
 
 > **REMOVED (28 May 2026):** `StatementDetailPage` and its `/dashboard/:id` route were deleted from the app entirely, along with the "View Details →" link on the Statements page. There are now **4 frontend pages**.
 
@@ -174,8 +174,10 @@ GET    /health                       — health check
 - No standalone logo PNG/SVG in repo; `frontend/public/favicon.svg` is a separate purple icon (not the brand mark)
 
 **Theme tokens (Design v1.1 — current):**
-- App shell: `#ECEEF1` · Page/content bg: `#F4F7F9`
-- **Floating sidebar:** white `#FFFFFF`, `borderRadius: 16px`, soft shadow; collapsible 220px ↔ 64px
+- App shell: `#FFFFFF` outer · Main content panel (`App.tsx` `styles.main`): `#E4E9F0`
+- **Page wrappers:** Dashboard and Transactions use `background: 'transparent'` so the panel colour shows through between sticky headers and white cards; Statements page uses `#E4E9F0` on `styles.page`
+- **Sticky page headers:** Dashboard and Transactions — `#E4E9F0`, `position: sticky`, `marginBottom: 0` (Dashboard)
+- **Floating sidebar:** `#E4E9F0`, `borderRadius: 16px`, soft shadow; collapsible 220px ↔ 64px
 - Brand teal: `BRAND_TEAL_BASE` `#124346`, `BRAND_TEAL_EDGE` `#0A2E30`, `BRAND_GOLD` `#D4A843`
 - Active nav: teal marker + `#124346` text (Urbanist 800 for logo wordmark)
 - Typography: **Urbanist** (global, via `index.css`) — replaced Inter
@@ -190,13 +192,15 @@ GET    /health                       — health check
 - All pages: load active statement from sessionStorage selection or `GET /api/statements` fallback
 - Dashboard date-range filter: pure `availablePeriods` (derives `YYYY-MM` periods) + pure `filterTransactionsByDate` callback; all derived stats (expenses, income, anomalyCount, category totals) computed from the date-filtered set. Custom range stages in local `customFrom`/`customTo` state and only commits on "Apply". Click-outside closes the picker (`[data-datepicker]`).
 - Transactions page (Week 9): folder-tab spending/income (`nosyormi-tx-tab-*`); same date-range filter pattern; donut + legend with click-to-filter; `categoryColorMap` coloured pills on rows; summary sidebar rows conditional by tab (Total Spending red / Total Income green); anomaly callout “Review Highlighted Transactions”; hysteresis sticky header (compact when scrollTop > 40, expand when < 20).
+- Transactions click-outside (13 Jun): document mousedown handler clears active donut slice unless click is on pie slice **or** `[data-anomaly-toggle]` — anomaly filter toggle no longer resets category selection.
 - Chat: sessionStorage persistence for `messages`, `chartUpdate`, `statementId`, `statementFileName`, **selected statement**
+- Chat layout (13 Jun): left panel header padding `24px 32px 16px`; right panel padding `24px 24px 16px`, height `100%` (not `100vh`); chart title `h3` fontSize 22 / fontWeight 600
 - Chat: preserve history on navigation — do not overwrite sessionStorage when remounting with empty messages if stored data exists
 - Chat bar chart: when `category` null + `highlightTransactionIds` → filter expenses to highlights before category totals; non-drill-down height `Math.max(320, barData.length * 56)`; drill-down capped at 20 rows
 - Chat: `getChartTitle()` month-aware from last user message; merchant word threshold 0.7 for auto-titles
 - Chat: custom event `nosyormi-statement-deleted` triggers auto-clear when statement deleted
 - Clear chat button in chat header (shown when messages.length > 0)
-- Click anywhere on page resets selected donut slice (document mousedown handler)
+- Click anywhere on page resets selected donut slice (document mousedown handler) — **except** clicks on `[data-anomaly-toggle]` (Transactions)
 - `useCountUp` hook: snaps to `0` immediately for zero targets (fixes stale stat value when a date range has no data)
 
 ---
@@ -402,6 +406,13 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 - Dashboard Spending/Income: underline tabs → folder-tab chrome (`nosyormi-tab-*` pseudo-element curves)
 - Transactions: same folder tabs (`nosyormi-tx-tab-*`), date-range filter, donut chart, coloured category pills, tab-aware summary sidebar, hysteresis sticky header
 
+**June 2026 — Panel background unification + Chat/Transactions polish (Week 10):**
+- **Panel colour `#E4E9F0`** — App main panel, Dashboard sticky header, Transactions sticky header, Statements page background aligned to one surface colour (replaces `#F4F7F9` on page-level areas)
+- **Dashboard** — `styles.page` → `transparent`; `styles.header` → `#E4E9F0`, `marginBottom: 0`; white card backgrounds unchanged
+- **Statements** — `styles.page` → `#E4E9F0`
+- **Transactions anomaly toggle** — `data-anomaly-toggle=""` on filter button; mousedown handler skips reset when click target is inside that control
+- **Chat** — left header padding `24px 32px 16px`; right panel `padding: 24px 24px 16px`, `height: 100%`; chart title typography 22px / weight 600
+
 ---
 
 ## 15. KNOWN LIMITATIONS (documented for submission)
@@ -425,7 +436,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 
 ---
 
-## 16. PENDING WORK (as of 10 June 2026)
+## 16. PENDING WORK (as of 13 June 2026)
 
 **SUBMISSION CRITICAL:**
 - [ ] PowerPoint deck (8+ slides, real screenshots) — story #60
@@ -452,6 +463,7 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 ## 17. GIT COMMIT LOG (recent — most recent first)
 
 ```
+fix(ui): panel background unification #E4E9F0, Chat layout polish, anomaly-toggle click-outside fix
 feat(ui): colored category pills, hysteresis scroll fix on Transactions page
 feat(ui): conditional summary sidebar rows by tab, shorten anomaly message, fix income summary colors
 feat(ui): add spending/income folder tabs, date range filter, and donut chart to Transactions page

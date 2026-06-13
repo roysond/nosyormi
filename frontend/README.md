@@ -12,17 +12,17 @@ React 19 + TypeScript single-page app built with Vite. Talks to the .NET API ove
 
 | Route | Component | Purpose |
 |---|---|---|
-| `/` | `DashboardPage` | Stat cards (teal hero + gradients), AI narration card (NARRATION tier, cached), donut chart, **folder-tab** spending/income switcher, date-range filter |
-| `/transactions` | `TransactionsPage` | **Folder-tab** spending/income, **date-range filter**, **donut chart** (click-to-filter), search, sort, **coloured category pills**, anomaly toggle, **tab-aware summary sidebar**, hysteresis sticky header, expandable rows |
-| `/statements` | `StatementsPage` | Upload CSV (macOS glass modal), list statements, **Reflect** to switch active statement, delete |
-| `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types); “Let's Reflect” in sidebar nav |
+| `/` | `DashboardPage` | Stat cards (teal hero + gradients), AI narration card (NARRATION tier, cached), donut chart, **folder-tab** spending/income switcher, date-range filter; transparent page wrapper + `#E4E9F0` sticky header |
+| `/transactions` | `TransactionsPage` | **Folder-tab** spending/income, **date-range filter**, **donut chart** (click-to-filter), search, sort, **coloured category pills**, anomaly toggle (`data-anomaly-toggle`), **tab-aware summary sidebar**, hysteresis sticky header, expandable rows |
+| `/statements` | `StatementsPage` | Upload CSV (macOS glass modal), list statements, **Reflect** to switch active statement, delete; `#E4E9F0` page background |
+| `/chat` | `ChatPage` | AI chat (SSE) + dynamic chart panel (9 chart types); split layout with padded headers; right panel `height: 100%`; “Let's Reflect” in sidebar nav |
 
 ---
 
 ## Brand & layout (Design v1.1)
 
 - **Font:** Urbanist (global)
-- **Shell:** `#ECEEF1` background; floating white sidebar (`App.tsx`)
+- **Shell:** `#FFFFFF` outer app · Main content panel `#E4E9F0` (`App.tsx` `styles.main`); floating sidebar `#E4E9F0` with border + shadow
 - **Logo:** `src/components/NosyormiLogo.tsx` — inline SVG (teal circle, gold N, coloured arcs) + wordmark; no separate logo file in repo
 - **Brand tokens:** `BRAND_TEAL_BASE`, `BRAND_TEAL_EDGE`, `BRAND_GOLD` in `palette.ts`
 - **Glass modal:** `MACOS_GLASS_TEXTURE` + `macosGlass(rgb, opacity)` on Statements upload overlay
@@ -95,14 +95,15 @@ Chart colours and effects: `src/constants/palette.ts`, `src/components/chartEffe
 
 ## Theme (Design v1.1)
 
-- App shell: `#ECEEF1` · Content: `#F4F7F9` · Cards: `#FFFFFF` with soft shadow
-- Sidebar: floating white card, teal active marker `#124346`
+- App outer: `#FFFFFF` · Main panel: `#E4E9F0` · Page wrappers: `transparent` (Dashboard, Transactions) or `#E4E9F0` (Statements) · Cards: `#FFFFFF` with soft shadow
+- Sticky page headers (Dashboard, Transactions): `#E4E9F0`
+- Sidebar: `#E4E9F0` floating card, teal active marker `#124346`
 - Line chart stroke: `#00897B` · Anomaly highlight: `#D97706` (`ANOMALY_COLOR`)
 - Chart palette: 15 colours in `APP_COLORS` (15 categories including Education, Government & Fees)
 
 ---
 
-*Last updated: 10 June 2026 — Transactions page parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher*
+*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix*
 
 ## Related docs
 

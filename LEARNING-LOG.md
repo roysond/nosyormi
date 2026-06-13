@@ -2,7 +2,7 @@
 > NOSYOR.M.I — What I Learned Building This  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Background: No prior IT or coding experience before this program  
-> **Last updated:** 10 June 2026 — Transactions page UI parity, folder-tab switcher; Week 9 learning notes
+> **Last updated:** 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix
 
 This document captures the real learning that happened during the build —
 the errors encountered, how they were fixed, and what the fix taught me.
@@ -500,4 +500,47 @@ stays readable on white rows.
 
 ---
 
-*Last updated: 10 June 2026 — Transactions page UI parity, folder-tab switcher, hysteresis sticky header.*
+## Week 10 — Panel Unification & Interaction Fixes (June 2026)
+
+### One panel colour beats two page backgrounds
+
+After Design v1.1, page wrappers still used `#F4F7F9` while the App main
+panel (`App.tsx`) used `#E4E9F0`. That created a subtle banding effect
+between the sticky header strip and the gaps around white cards. The fix was
+layered:
+
+1. **Dashboard** — set `styles.page` to `transparent` and the sticky header
+   to `#E4E9F0` so the panel colour shows uniformly between header and cards.
+2. **Statements** — set `styles.page` to `#E4E9F0` directly.
+3. **Transactions** — same transparent page + `#E4E9F0` sticky header pattern
+   as Dashboard.
+
+White card surfaces were left unchanged — only page-level wrappers and headers
+were adjusted. Lesson: background hierarchy matters; the shell colour should
+come from one place, not compete with per-page tints.
+
+### Click-outside handlers need an exclusion list
+
+The Transactions page resets the active donut slice on any document mousedown
+outside a pie slice. Toggling “Anomalies only” lived outside the chart but
+still triggered that reset — so users lost their category filter when
+filtering anomalies.
+
+The fix: add `data-anomaly-toggle=""` on the button and check
+`target.closest('[data-anomaly-toggle]')` in the handler before calling
+`setActiveCategoryIndex(null)`. Same pattern as the date picker’s
+`[data-datepicker]` guard on Dashboard. Lesson: global dismiss handlers must
+enumerate interactive islands that should not dismiss.
+
+### `100vh` inside a flex panel causes double scroll
+
+Chat’s right panel used `height: '100vh'`. Inside `App.tsx`’s main area
+(already `calc(100vh - 20px)` with its own scroll), `100vh` made the chart
+column taller than its parent and introduced unwanted overflow. Switching to
+`height: '100%'` lets the panel fill the flex parent instead of the viewport.
+Lesson: in nested layouts, percentage height respects the container;
+viewport height ignores it.
+
+---
+
+*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*
