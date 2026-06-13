@@ -162,7 +162,8 @@ export default function TransactionsPage() {
       const isPieSlice =
         (target as SVGElement).classList?.contains('recharts-sector') ||
         target.closest?.('[class*="recharts-pie"]') !== null;
-      if (!isPieSlice) {
+      const isAnomalyToggle = (target as HTMLElement).closest?.('[data-anomaly-toggle]') !== null;
+      if (!isPieSlice && !isAnomalyToggle) {
         setActiveCategoryIndex(null);
       }
     };
@@ -1345,6 +1346,7 @@ export default function TransactionsPage() {
               {summaryStats.anomalyCount > 0 && (
                 <button
                   type="button"
+                  data-anomaly-toggle=""
                   onClick={() => setShowAnomaliesOnly((prev) => !prev)}
                   style={{
                     display: 'inline-flex',
