@@ -6,7 +6,7 @@ This document is the architectural source of truth for NOSYOR.M.I. It describes 
 
 The document is intentionally written as a **living blueprint**. Sections are added as the architecture they describe is built. What is documented here is committed to; what is not yet documented is not yet binding.
 
-> **Last updated:** 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut); Dashboard folder-tab switcher.
+> **Last updated:** 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.
 
 ---
 
@@ -138,7 +138,7 @@ The roles are decoupled from specific models. The configuration in `.env.example
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
-> **Implementation status (as of 10 June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
+> **Implementation status (as of 13 June 2026):** All three model tiers are wired — **LIGHT** (`OpenRouterCategoryClassifier`, categorization with rule-based bypass + LLM fallback), **NARRATION** (`NarrationService` + `NarrationController`, Dashboard auto-narration via `GET /api/narration/{statementId}`, result cached in `Statement.Narration` — one OpenRouter call per statement), and **CHAT** (`OpenRouterChatService`, conversational responses, `MaxTokens = 1500`, nine `chartUpdate` types including `topN` with server-side fallback and **`isMonthSpecific`** month-scoped bar highlights). **NARRATION** uses `anthropic/claude-sonnet-4-5` hardcoded in `NarrationService` (matches default `MODEL_NARRATION` in config; env var not read yet). Per-anomaly and forecast-specific LLM narration remain deferred. Chat uses **full statement context injection** (all transactions with `[ID:uuid]` markers plus pre-computed monthly totals), **not** query-time pgvector retrieval — embeddings are stored at upload for future RAG. **Practical ceiling: ~750 transactions** per statement under full-context chat; beyond that, query-time RAG (embed question → similarity search → top-K context) becomes necessary. **Chat delivery:** OpenRouter streams to the API; `StreamChatAsync` parses the complete JSON response, then emits **SSE** events (`text` word-by-word, `chart`, `done`, `error`) to the React client. Assistant history serializes prior turns with `"chartUpdate": {}` to preserve multi-turn chart context.
 
 ### Embeddings: A Single Model, Used Consistently
 
@@ -327,6 +327,8 @@ Adopted a three-tier model routing strategy (`MODEL_LIGHT`, `MODEL_NARRATION`, `
 ### 2026-05-12 — Orchestrator Pattern (per Hannan)
 
 When multiple APIs (OpenRouter LIGHT, NARRATION, CHAT, embeddings, statistical models) are involved, a centralized orchestrator owns coordination, retries, fallbacks, and logging. Controllers and services never call external APIs directly — they call orchestrators. To be implemented as `IAIOrchestrator` and `IAnalysisOrchestrator` in the Application layer when AI integration begins.
+
+*(As implemented June 2026)* — Formal `IAIOrchestrator` and `IAnalysisOrchestrator` interfaces were not introduced (additional abstraction without MVP benefit at capstone scale). The orchestration principle is fully honoured: `StatementUploadService` coordinates the upload pipeline (CSV parse → categorize → embed → detect anomalies), and each controller coordinates the appropriate services for its feature scope. The browser never calls OpenRouter or any AI service directly — all AI coordination flows through the .NET API layer.
 
 ### 2026-05-12 — Database Stays Outside the Pod (per Hannan)
 
@@ -607,18 +609,21 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Summary sidebar:** Tab-conditional rows — Total Spending (red) vs Total Income (green); income largest/average values use green (`#10B981`). Anomaly callout shortened to “Review Highlighted Transactions.”
 - **Hysteresis scroll:** Transactions sticky header compacts when `main` scrollTop > 40 and only re-expands when scrollTop < 20 — prevents header size flicker at the boundary.
 
+### 2026-06-13 — Panel Background Unification (#E4E9F0)
+
+- **Decision:** Standardised the main content panel surface to `#E4E9F0` across App shell and page-level wrappers. Dashboard `styles.page` and Transactions outer wrapper use `transparent` so the App main panel colour shows through between sticky headers and white cards; Dashboard/Transactions sticky headers and Statements `styles.page` use `#E4E9F0` directly. White card/chart backgrounds unchanged.
+- **Rationale:** `#F4F7F9` page backgrounds created subtle banding against the App panel; one panel token gives a uniform chrome between header strips and card grids.
+
+### 2026-06-13 — Transactions Anomaly Toggle Click-Outside Exclusion
+
+- **Decision:** Transactions document mousedown handler clears active donut category unless the click target is inside a pie slice **or** `[data-anomaly-toggle]`. The anomalies-only filter button carries `data-anomaly-toggle=""`.
+- **Rationale:** Global dismiss handlers must not reset unrelated UI state when the user interacts with adjacent controls (same pattern as Dashboard `[data-datepicker]`).
+
+### 2026-06-13 — Chat Panel Layout Polish
+
+- **Decision:** Chat left panel header padding `24px 32px 16px`; right panel padding `24px 24px 16px`, height `100%` (replacing `100vh`); chart title `h3` fontSize 22 / fontWeight 600.
+- **Rationale:** `100vh` inside App’s flex main caused overflow; percentage height respects the parent. Padding and typography align chat chrome with Dashboard header hierarchy.
+
 ---
 
-*Last updated: 10 June 2026 — Transactions page UI parity, folder-tab switcher, hysteresis sticky header.*
-
-As the corresponding parts of the system are built, the following sections will be written:
-
-- **Section 4 — Database Schema Design** *(to be added when more entities are designed; current entities documented in Section 7)*
-- **Section 5 — The Chat-to-Visualization Bridge** *(to be added before the chat feature is implemented — will also include full system-prompt strategy for all model tiers)*
-- **Section 8 — Configuration & Environment** *(to be added when AI integration begins, since the configuration model will expand significantly then)*
-- **Section 10 — Out-of-Scope** *(to be added at end of Week 1)*
-- **Section 11 — Future Considerations** *(to be added at end of project)*
-
----
-
-## Sections Still To Be Added
+*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*

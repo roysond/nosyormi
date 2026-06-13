@@ -19,7 +19,7 @@ It doesn't shame you. It doesn't moralize. It reflects.
 - **Next-month forecasting** — weighted moving average projects spending by category.
 - **Conversational chat interface** — ask questions in plain English (including month-specific queries like *"Where did I overspend in March?"*); the AI answers from your full statement context, streams the reply word-by-word (SSE), and updates live visualizations to match.
 - **Multi-statement switching** — upload several statements and **Reflect** on any one; the active statement syncs across Dashboard, Transactions, and Chat via sessionStorage.
-- **Transactions analysis view** — folder-tab Spending/Income switcher, date-range filter, donut chart with click-to-filter categories, coloured category pills, and a tab-aware summary sidebar.
+- **Transactions analysis view** — folder-tab Spending/Income switcher, date-range filter, donut chart with click-to-filter categories, coloured category pills, tab-aware summary sidebar, anomaly toggle (preserves active category filter via `data-anomaly-toggle` click-outside exclusion).
 - **Live data visualizations** — nine AI-triggerable chart types (pie, bar, drilldown, line, anomalies, forecast, stacked, horizontal, treemap, topN) driven by a structured `chartUpdate` contract.
 - **Date-range analysis** — scope the Dashboard and Transactions page to all time, a single month, or a custom range; every figure re-computes for the period you pick.
 - **AI Dashboard narration** — when you reflect on a statement, NOSYOR.M.I auto-generates a warm financial summary paragraph (NARRATION tier via OpenRouter); generated once per statement and cached in the database.
@@ -166,9 +166,9 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 ## Project status
 
 **Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
-**Target completion:** before 4 June 2026  
-**Latest:** Transactions page parity (folder tabs, date-range filter, donut chart, coloured category pills, tab-aware summary sidebar); Dashboard folder-tab Spending/Income switcher; hysteresis sticky header on Transactions  
-**Docs last updated:** 10 June 2026  
+**Capstone presentation:** 14 June 2026  
+**Latest:** Panel background unification (`#E4E9F0`); Dashboard transparent page wrapper + sticky header polish; Statements page panel colour; Chat layout/spacing polish (right panel `height: 100%`); Transactions anomaly-toggle click-outside fix  
+**Docs last updated:** 13 June 2026  
 **Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.
@@ -190,7 +190,7 @@ Built as part of the AI Integration Capstone Program · 2026
 
 ---
 
-*Documentation last updated: 10 June 2026 — Transactions page UI parity (folder tabs, date filter, donut, category pills), Dashboard folder-tab switcher.*
+*Documentation last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*
 
 ## License
 
