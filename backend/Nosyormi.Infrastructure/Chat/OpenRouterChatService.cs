@@ -15,6 +15,7 @@ public class OpenRouterChatService : IChatService
     private const string ChatCompletionsUrl = "https://openrouter.ai/api/v1/chat/completions";
     private const string ApiKeyEnvVar = "OPENROUTER_API_KEY";
     private const string ModelEnvVar = "MODEL_CHAT";
+    private const string LightModelEnvVar = "MODEL_LIGHT";
 
     private const string SystemPrompt =
         """
@@ -136,6 +137,8 @@ public class OpenRouterChatService : IChatService
                 return;
             }
 
+            var classifiedChartType = await ClassifyChartIntentAsync(userMessage, apiKey, cancellationToken);
+
             using var request = BuildRequest(messages, model, apiKey);
 
             HttpResponseMessage response;
@@ -199,7 +202,8 @@ public class OpenRouterChatService : IChatService
                     accumulated.ToString(),
                     validCategories,
                     userMessage,
-                    transactions);
+                    transactions,
+                    classifiedChartType);
 
                 var words = parsed.Answer.Split(' ');
                 foreach (var word in words)
@@ -425,11 +429,78 @@ public class OpenRouterChatService : IChatService
         return request;
     }
 
+    private async Task<string?> ClassifyChartIntentAsync(
+        string userMessage,
+        string apiKey,
+        CancellationToken cancellationToken)
+    {
+        var lightModel = Environment.GetEnvironmentVariable(LightModelEnvVar);
+        if (string.IsNullOrWhiteSpace(lightModel)) return null;
+
+        var prompt = $"""
+            You are a chart type classifier for a personal finance app.
+            Given a user question, return ONLY one of these chart type names — nothing else, no explanation:
+            pie, bar, line, anomalies, forecast, stacked, horizontal, treemap, topN, categoryMonthly
+
+            Rules:
+            - topN → questions about biggest/largest/top N individual transactions or expenses
+            - stacked → questions about which month had highest/most spending, monthly breakdown, month by month
+            - forecast → questions about next month, future spending, predictions
+            - anomalies → questions about unusual, flagged, weird, suspicious transactions
+            - horizontal → questions comparing categories, ranking categories highest to lowest
+            - categoryMonthly → questions about one specific category trend over months
+            - line → questions about spending over time, trends, history
+            - pie → questions about breakdown, distribution, proportion, percentage split
+            - treemap → questions about spending map, where does money go, visualize spending
+            - bar → general spending questions, totals, summaries
+
+            User question: {userMessage}
+
+            Reply with only the chart type name.
+            """;
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, ChatCompletionsUrl);
+        request.Headers.Add("Authorization", $"Bearer {apiKey}");
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(new
+            {
+                model = lightModel,
+                max_tokens = 10,
+                messages = new[] { new { role = "user", content = prompt } }
+            }, JsonOptions),
+            Encoding.UTF8,
+            "application/json");
+
+        try
+        {
+            var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (!response.IsSuccessStatusCode) return null;
+
+            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var parsed = JsonSerializer.Deserialize<JsonElement>(body, JsonOptions);
+            var result = parsed
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString()
+                ?.Trim()
+                .ToLowerInvariant();
+
+            string[] validTypes = ["pie", "bar", "line", "anomalies", "forecast", "stacked", "horizontal", "treemap", "topN", "categoryMonthly"];
+            return validTypes.Contains(result) ? result : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static ChatResponse ParseChatResponse(
         string? content,
         HashSet<string> validCategories,
         string userMessage,
-        IReadOnlyList<Transaction> transactions)
+        IReadOnlyList<Transaction> transactions,
+        string? classifiedChartType = null)
     {
         if (string.IsNullOrWhiteSpace(content))
             return FallbackResponse;
@@ -754,6 +825,33 @@ public class OpenRouterChatService : IChatService
                     {
                         chartUpdate = new ChartUpdate(chartUpdate.Type, chartUpdate.Category, matchingIds);
                     }
+                }
+            }
+
+            // AI Intent Classifier override — highest priority, overrides all keyword logic
+            if (!string.IsNullOrWhiteSpace(classifiedChartType))
+            {
+                if (classifiedChartType == "topN")
+                {
+                    var topIds = transactions
+                        .Where(t => t.Amount < 0)
+                        .OrderByDescending(t => Math.Abs(t.Amount))
+                        .Take(ExtractN())
+                        .Select(t => t.Id.ToString())
+                        .ToArray();
+                    chartUpdate = new ChartUpdate("topN", null, topIds);
+                }
+                else if (classifiedChartType == "anomalies")
+                {
+                    chartUpdate = new ChartUpdate("anomalies", null, null);
+                }
+                else if (classifiedChartType == "forecast")
+                {
+                    chartUpdate = new ChartUpdate("forecast", null, null);
+                }
+                else
+                {
+                    chartUpdate = new ChartUpdate(classifiedChartType, chartUpdate?.Category, chartUpdate?.HighlightTransactionIds);
                 }
             }
 
