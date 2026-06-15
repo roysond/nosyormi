@@ -3,7 +3,7 @@
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Program: AI Integration Capstone · .NET 10 + React  
 > Deadline: Before 4 June 2026  
-> Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix
+> Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4
 
 ---
 
@@ -134,6 +134,7 @@ handle the kind of work they are best suited for.
   accent, emerald icon glow, Inter font, collapsible sidebar
 - ✅ ARCHITECTURE.md, DECISIONS.md, LEARNING-LOG.md
 - ✅ 6 architectural diagrams in `docs/diagrams/` (regenerated 29 May to match codebase)
+- ✅ Interactive architecture HTML at repo root: `NOSYORMI-Architecture-Technical.html` + `NOSYORMI-Architecture-PlainEnglish.html` (14 June 2026 — aligned with §4 of `ARCHITECTURE.md`)
 - ✅ PROJECT-DOCUMENTATION.md (this file)
 
 ---
@@ -195,6 +196,7 @@ handle the kind of work they are best suited for.
   transfer/month comparison prompt fixes
 - ✅ Chart UI: draggable chat/chart divider, height/sort polish
 - ✅ All 6 architectural diagrams in `docs/diagrams/` regenerated to match codebase
+- ✅ Interactive architecture HTML: `NOSYORMI-Architecture-Technical.html` + `NOSYORMI-Architecture-PlainEnglish.html` (14 June 2026)
 
 ---
 
@@ -398,6 +400,17 @@ Stories are listed by epic. Status reflects the state at submission.
 ---
 
 ## 4. AI Integration Details
+
+### Architecture documentation (submission artifacts)
+
+| Format | File | Audience |
+|---|---|---|
+| Markdown source of truth | `ARCHITECTURE.md` §4 | Developers — prose + decision log |
+| Technical HTML | `../NOSYORMI-Architecture-Technical.html` | Developers — 6 interactive sections, API table, deployment |
+| Plain English HTML | `../NOSYORMI-Architecture-PlainEnglish.html` | Everyone — analogies, 7-step journey, light tech hints |
+| PNG diagrams | `docs/diagrams/` | Submission — six PNGs matching HTML sections |
+
+The six sections are identical across all formats: **System Architecture · AI Integration Flow · Database Schema · API Endpoint Map · Deployment · User Flow**.
 
 ### Model Strategy
 
@@ -669,4 +682,4 @@ Beyond the base FinSight brief, NOSYOR.M.I includes:
 
 ---
 
-*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*
+*Last updated: 14 June 2026 — Interactive architecture HTML (Technical + Plain English) aligned with ARCHITECTURE.md §4.*

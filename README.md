@@ -137,7 +137,9 @@ Manual QA cases: see [QA-TEST-CASES.md](./docs/QA-TEST-CASES.md).
 
 | Document | Purpose |
 |---|---|
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, four-layer model, decision log |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | System design, four-layer model, runtime topology (§4), decision log |
+| [NOSYORMI-Architecture-Technical.html](../NOSYORMI-Architecture-Technical.html) | Interactive technical architecture — 6 diagrams, API table, deployment (repo root) |
+| [NOSYORMI-Architecture-PlainEnglish.html](../NOSYORMI-Architecture-PlainEnglish.html) | Plain-English “How It Works” — same 6 sections, no IT background required |
 | [PROJECT-DOCUMENTATION.md](./PROJECT-DOCUMENTATION.md) | Capstone submission: sprint log, user stories, AI details |
 | [DECISIONS.md](./DECISIONS.md) | Key product and technical decisions |
 | [docs/QA-TEST-CASES.md](./docs/QA-TEST-CASES.md) | Manual test cases and results |
@@ -167,8 +169,8 @@ See [PROJECT-DOCUMENTATION.md §8](./PROJECT-DOCUMENTATION.md#8-known-issues--li
 
 **Submission-ready (app + docs + tests)** · AI Integration Capstone · Solo build  
 **Capstone presentation:** 14 June 2026  
-**Latest:** Panel background unification (`#E4E9F0`); Dashboard transparent page wrapper + sticky header polish; Statements page panel colour; Chat layout/spacing polish (right panel `height: 100%`); Transactions anomaly-toggle click-outside fix  
-**Docs last updated:** 13 June 2026  
+**Latest:** Interactive architecture HTML (Technical + Plain English) aligned with `ARCHITECTURE.md` §4; 47 tests passing; six diagram sections  
+**Docs last updated:** 14 June 2026  
 **Remaining submission artifacts:** PowerPoint deck · product demo video (3–5 min)
 
 See the [project board](https://github.com/users/roysond/projects/2) for live progress.
@@ -190,7 +192,7 @@ Built as part of the AI Integration Capstone Program · 2026
 
 ---
 
-*Documentation last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*
+*Documentation last updated: 14 June 2026 — Interactive architecture HTML (Technical + Plain English) aligned with ARCHITECTURE.md §4.*
 
 ## License
 

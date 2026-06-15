@@ -6,7 +6,18 @@ This document is the architectural source of truth for NOSYOR.M.I. It describes 
 
 The document is intentionally written as a **living blueprint**. Sections are added as the architecture they describe is built. What is documented here is committed to; what is not yet documented is not yet binding.
 
-> **Last updated:** 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.
+> **Last updated:** 14 June 2026 — Aligned with interactive architecture HTML (`NOSYORMI-Architecture-Technical.html`, `NOSYORMI-Architecture-PlainEnglish.html`). Capstone presentation: 14 June 2026.
+
+### Architecture documentation formats
+
+| Format | Audience | Location |
+|---|---|---|
+| **Technical Architecture (HTML)** | Developers, reviewers, capstone submission | [`NOSYORMI-Architecture-Technical.html`](../NOSYORMI-Architecture-Technical.html) (repo root) |
+| **How It Works (HTML)** | Everyone — plain English with light technical hints | [`NOSYORMI-Architecture-PlainEnglish.html`](../NOSYORMI-Architecture-PlainEnglish.html) (repo root) |
+| **PNG diagrams** | Submission artifacts, quick reference | [`docs/diagrams/`](./docs/diagrams/) (six diagrams matching the HTML sections) |
+| **This file (`ARCHITECTURE.md`)** | Developers — source-of-truth prose + decision log | `nosyormi/ARCHITECTURE.md` |
+
+**Stack at a glance:** .NET 10 Clean Architecture · React 19 + TypeScript + Vite + Recharts + Urbanist · PostgreSQL 16 + pgvector 0.8.1 · OpenRouter 3-tier model routing · Docker Compose · Minikube · xUnit + Playwright · **47 tests passing**
 
 ---
 
@@ -132,9 +143,16 @@ When LLM work is required, the system routes between three model tiers. This rou
 |---|---|---|---|
 | **LIGHT** | High-volume, low-complexity tasks | Categorization fallback, simple labeling, structured tagging | Cost & latency |
 | **NARRATION** | Mid-complexity explanation tasks | Dashboard statement summaries (shipped); anomaly explanations, forecast summaries (deferred) | Balance of cost and quality |
-| **CHAT** | Premium reasoning tasks | Conversational interface, multi-step reasoning, tool-using agentic flows | Quality |
+| **CHAT** | Premium reasoning tasks | Conversational interface, multi-step reasoning, chart-driving responses | Quality |
 
-The roles are decoupled from specific models. The configuration in `.env.example` provides recommended models for each tier (`openai/gpt-4o-mini` for LIGHT and NARRATION, `openai/gpt-4o` for CHAT at the time of writing), but the architecture treats these as swappable. The canonical source of truth for which model is in use is `.env.example`; any change to the model assignment is reflected there first.
+The roles are decoupled from specific models. Current production assignments (see also §4.1):
+
+| Tier | Model | Service |
+|---|---|---|
+| LIGHT | `openai/gpt-4o-mini` | `OpenRouterCategoryClassifier` |
+| NARRATION | `anthropic/claude-sonnet-4-5` | `NarrationService` (hardcoded; env var provisioned) |
+| CHAT | `anthropic/claude-sonnet-4-5` | `OpenRouterChatService` |
+| EMBED | `openai/text-embedding-3-small` | `OpenRouterEmbeddingService` |
 
 This routing approach exists for two reasons. The first is cost: routing every request to a premium model would burn through OpenRouter credits during development and produce a poor cost profile if the application ever scaled. The second is latency: cheaper models respond faster, and for high-volume tasks like categorization, the speed difference is felt by the user.
 
@@ -145,6 +163,187 @@ This routing approach exists for two reasons. The first is cost: routing every r
 Unlike LLMs, embeddings use a single model across the entire system. This is not a stylistic choice — it is a correctness requirement. Embeddings from different models are not comparable to each other; switching the embedding model after data has been embedded would require re-embedding the entire dataset. The model is therefore fixed early and changed deliberately, with a full re-embedding cycle if it is ever changed.
 
 The selected model is `openai/text-embedding-3-small`, producing 1536-dimensional vectors. The rationale: financial transaction descriptions are short, repetitive, and semantically compact. Larger embedding dimensions (3072 or 4096) offer no meaningful retrieval improvement for this kind of text while adding storage cost, query latency, and indexing overhead.
+
+---
+
+## 4. Architecture Diagrams & Runtime Topology
+
+The six diagrams below mirror the interactive HTML architecture documents and the PNG set in `docs/diagrams/`. Each subsection includes a plain-English summary (from the Plain English edition) plus the technical detail developers need.
+
+### 4.1 System Architecture
+
+**Simply put:** Three main parts — what you see on screen (Frontend), the server that does all the work (API ★), and the database that stores your data. The server is the boss: AI, stats, and storage all answer to it. Think of it like a bank branch: your screen is the teller window; the API is back-office staff; PostgreSQL is the secure filing room; AI specialists are consultants the staff calls when needed.
+
+**Four-layer Clean Architecture.** The .NET API is the **single orchestrator** — all browser requests flow through it. No direct browser-to-AI calls. No direct browser-to-database calls.
+
+```
+React Frontend  ──HTTP/SSE──►  ★ .NET 10 Web API  ──EF Core──►  PostgreSQL 16 + pgvector
+(React 19 · TS · Vite ·        (Clean Arch: Domain · App ·           (Statement · Transaction
+ Recharts · Urbanist ·           Infra · Api)                          vector(1536))
+ 4 pages)
+```
+
+**OpenRouter model tiers (when LLM work is required):**
+
+| Tier | Model (current) | Role |
+|---|---|---|
+| **LIGHT** | `gpt-4o-mini` | Categorization — rule bypass first, then LLM fallback |
+| **NARRATION** | `claude-sonnet-4-5` | Dashboard summary — generated once, cached in DB |
+| **CHAT** | `claude-sonnet-4-5` | Conversational AI — full context injection, SSE streaming |
+| **EMBED** | `text-embedding-3-small` | 1536D vectors at upload; query-time retrieval deferred |
+
+**Deterministic services (no LLM):**
+
+| Service | Purpose |
+|---|---|
+| `ZScoreAnomalyDetector` | Statistical anomaly flagging at upload — exact, auditable |
+| `MovingAverageForecastingService` | Weighted moving average forecast — no hallucination risk |
+
+### 4.2 AI Integration Flow
+
+**Simply put:** Three separate AI journeys — (1) upload → AI labels everything; (2) chat → AI reads your data and answers live; (3) dashboard → AI writes a summary once and saves it forever.
+
+All three pipelines are coordinated by the .NET API. The browser never calls OpenRouter directly.
+
+#### Pipeline 1 — Upload
+
+```
+POST /api/statements
+  → SHA-256 duplicate check (409 if exists)
+  → CsvStatementParser (Standard / Huntington / BOA — case-insensitive headers)
+  → LIGHT tier (rule bypass → gpt-4o-mini fallback)
+  → Embed (text-embedding-3-small → pgvector 1536D)
+  → Z-Score anomaly detection (IsAnomaly per transaction)
+  → DB persist (Statement + Transactions[])
+```
+
+#### Pipeline 2 — Chat (full context injection — not query-time RAG)
+
+```
+User message + history[] + statementId
+  → Context build: all transactions [ID:uuid], INCOME/EXPENSE, monthly summaries
+  → CHAT tier (claude-sonnet-4-5, MaxTokens=1500)
+  → ParseChatResponse → { answer, chartUpdate } (topN + isMonthSpecific + server fallback)
+  → SSE stream to browser: text (word-by-word) · chart · done · error
+```
+
+> **~750 transaction ceiling:** pgvector embeddings are stored at upload; query-time retrieval is deferred (Epic 6 story 26). Full-context injection is reliable for typical single-statement CSVs; beyond ~750 rows, RAG becomes necessary.
+
+#### Pipeline 3 — Narration (DB-cached)
+
+```
+GET /api/narration/{id}
+  → Cache check: Statement.Narration nullable column
+  → If null: NARRATION tier (NarrationService → claude-sonnet-4-5)
+  → EF Core UPDATE → save to Statement.Narration
+  → Return { narration: string } — cached forever on subsequent visits
+```
+
+### 4.3 Database Schema
+
+**Simply put:** One "folder" per uploaded file (`Statement`). Many "receipts" per folder (`Transaction`). Delete the folder and all receipts go with it automatically (CASCADE DELETE). Each receipt carries a 1,536-number "fingerprint" (`Embedding`) for future smart search.
+
+**PostgreSQL 16 + pgvector.** Two entities: `Statement` (1) → `Transaction` (N).
+
+**Statement**
+
+| Column | Type | Notes |
+|---|---|---|
+| `Id` | `Guid` | PRIMARY KEY |
+| `FileName` | `string` | NOT NULL |
+| `UploadedAt` | `DateTime` | UTC |
+| `FileHash` | `string` | UNIQUE INDEX — SHA-256 deduplication |
+| `Narration` | `string?` | Nullable — cached AI Dashboard summary (migration: `AddNarrationToStatement`) |
+
+**Transaction**
+
+| Column | Type | Notes |
+|---|---|---|
+| `Id` | `Guid` | PRIMARY KEY |
+| `StatementId` | `Guid` | FK → `Statement.Id` — CASCADE DELETE |
+| `Date` | `DateTime` | Transaction date |
+| `Description` | `string` | Merchant / payee text |
+| `Amount` | `decimal` | Negative = expense; positive = income |
+| `Category` | `string` | One of 15 taxonomy categories |
+| `IsAnomaly` | `bool` | Z-score at upload |
+| `IsIncome` | `bool` | Derived from `Amount > 0` |
+| `Embedding` | `vector(1536)` | pgvector — stored at upload; retrieval deferred |
+
+**CategoryTaxonomy.All — 15 categories** (synced in DB + classifier prompt):
+
+Groceries · Dining & Takeaway · Transport · Subscriptions · Shopping · Health & Pharmacy · Entertainment · Utilities · Travel · ATM & Cash · Transfers & Payments · Parking & Tolls · Education · Government & Fees · Other
+
+### 4.4 API Endpoint Map
+
+**Simply put:** Seven "doors" between your screen and the server. Each door does one specific thing. Your browser always goes through one of these — it never bypasses them.
+
+All endpoints under `/api/*`. CORS scoped to `FRONTEND_ORIGIN`. Secrets in gitignored env files. Run `./scripts/check-secrets.sh` before every push.
+
+| Method | Path | Controller | Request → Response |
+|---|---|---|---|
+| `POST` | `/api/statements` | `StatementsController.Upload` | `multipart/form-data` → `200 Statement` \| `409 Conflict` |
+| `GET` | `/api/statements` | `StatementsController.GetAll` | → `Statement[]` by `UploadedAt DESC` |
+| `DELETE` | `/api/statements/{id}` | `StatementsController.Delete` | → `204 No Content` (cascade deletes Transactions) |
+| `POST` | `/api/chat/stream/{id}` | `ChatController.StreamChat` | `{ message, history[] }` → SSE `text/event-stream` |
+| `GET` | `/api/narration/{id}` | `NarrationController.Get` | → `{ narration: string }` (DB cache or NARRATION tier) |
+| `GET` | `/api/forecast/{id}` | `ForecastController.Get` | → `ForecastResult[]` (moving average, deterministic) |
+| `GET` | `/api/timeseries/{id}` | `TimeSeriesController.Get` | → `TimeSeriesResult[]` (monthly totals) |
+
+**SSE event schema (`/api/chat/stream/{id}`):**
+
+```
+data: {"type":"text","content":"word "}
+data: {"type":"chart","chartUpdate":{"type":"bar","highlightTransactionIds":["uuid"]}}
+data: {"type":"done"}
+data: {"type":"error","message":"..."}
+```
+
+### 4.5 Deployment Architecture
+
+**Simply put:** Three isolated "rooms" on your machine. Room 1 = website. Room 2 = server. Room 3 = database. Room 3 lives outside Kubernetes so restarting the app never wipes your data.
+
+#### Docker Compose (local dev + DB tier)
+
+| Service | Image / role | Port | Notes |
+|---|---|---|---|
+| `nosyormi-frontend` | nginx:alpine · React build | `5173:80` | Proxies `/api` → `nosyormi-api:5034`. Zero hardcoded URLs in bundle. |
+| `nosyormi-api` ★ | .NET 10 multi-stage | `5034` | Reads `.env.docker`. API keys injected at runtime, never in image. |
+| `nosyormi-postgres` | `pgvector/pgvector:pg16` | `5433` | Named volume `postgres_data`. Healthcheck before API starts. |
+
+```bash
+docker compose --env-file .env.docker up -d
+# Open: http://localhost:5173
+```
+
+#### Minikube (Kubernetes submission deployment)
+
+| Component | Manifest | Port | Notes |
+|---|---|---|---|
+| frontend Pod | `k8s/frontend-deployment.yaml` | NodePort / tunnel | `minikube service nosyormi-frontend --url` |
+| api Pod ★ | `k8s/api-deployment.yaml` | ClusterIP `:5034` | ConfigMap + `k8s/secrets.yaml` (gitignored) |
+| postgres (Docker, **outside K8s**) | Docker Compose | `5433` (host) | Intentional: pod lifecycle ≠ data persistence |
+
+```bash
+minikube start
+docker compose --env-file .env.docker up -d postgres
+kubectl apply -f k8s/
+minikube service nosyormi-frontend --url
+# Keep terminal open — use the URL provided
+```
+
+### 4.6 User Flow
+
+**Simply put:** Upload → Press Reflect → Dashboard loads → Browse Transactions → Ask in Chat → Get live answer + chart. Five routed pages, seven user steps, everything connected.
+
+| Step | Route / trigger | What happens |
+|---|---|---|
+| **01** | `/statements` | Upload CSV → full upload pipeline (parse, categorize, embed, Z-score, persist) |
+| **02** | Reflect button | `sessionStorage.setItem('activeStatementId', id)` + `CustomEvent('nosyormi-statement-switched')` — all pages re-fetch; `StatementPill` shows selected filename |
+| **03** | `/` (Dashboard) | Stats, donut, folder-tab Spending/Income, date filter; `GET /api/narration/{id}` (DB cache or NARRATION tier) |
+| **04** | `/transactions` | Folder-tab, date filter, donut click-to-filter, anomaly toggle, coloured category pills, hysteresis sticky header |
+| **05** | `/chat` | `POST /api/chat/stream/{id}` → SSE → word-by-word bubble → chart event → memoized `renderChart()`; history in sessionStorage |
+
+**Chat chart types the AI can trigger:** `pie` · `bar` · `line` · `anomalies` · `forecast` · `stacked` · `horizontal` · `treemap` · `topN`
 
 ---
 
@@ -609,6 +808,13 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 - **Summary sidebar:** Tab-conditional rows — Total Spending (red) vs Total Income (green); income largest/average values use green (`#10B981`). Anomaly callout shortened to “Review Highlighted Transactions.”
 - **Hysteresis scroll:** Transactions sticky header compacts when `main` scrollTop > 40 and only re-expands when scrollTop < 20 — prevents header size flicker at the boundary.
 
+### 2026-06-14 — Interactive Architecture HTML (Technical + Plain English)
+
+- **Decision:** Published two standalone HTML architecture documents at repo root, aligned with the six PNG diagrams in `docs/diagrams/`.
+- **Files:** `NOSYORMI-Architecture-Technical.html` (developer edition — Urbanist + JetBrains Mono, code blocks, API table, deployment manifests) and `NOSYORMI-Architecture-PlainEnglish.html` (everyone edition — analogies, 7-step user journey, light technical hints).
+- **Content:** Six sections each — System Architecture, AI Integration Flow, Database Schema, API Endpoint Map, Deployment, User Flow. Key decisions surfaced: API as orchestrator, full context vs RAG, DB-cached narration, 4-layer architecture, 47 tests passing.
+- **Rationale:** Submission-ready architecture artifacts readable in any browser without tooling; Plain English edition supports capstone presentation to non-technical reviewers; Technical edition is the developer reference companion to `ARCHITECTURE.md`.
+
 ### 2026-06-13 — Panel Background Unification (#E4E9F0)
 
 - **Decision:** Standardised the main content panel surface to `#E4E9F0` across App shell and page-level wrappers. Dashboard `styles.page` and Transactions outer wrapper use `transparent` so the App main panel colour shows through between sticky headers and white cards; Dashboard/Transactions sticky headers and Statements `styles.page` use `#E4E9F0` directly. White card/chart backgrounds unchanged.
@@ -626,4 +832,4 @@ Backend exposes CORS policy `AllowFrontend`, scoped to the origin in `FRONTEND_O
 
 ---
 
-*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*
+*Last updated: 14 June 2026 — Interactive architecture HTML aligned; Section 4 (Architecture Diagrams & Runtime Topology) added. Capstone presentation: 14 June 2026.*

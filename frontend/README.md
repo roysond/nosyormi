@@ -2,9 +2,11 @@
 
 React 19 + TypeScript single-page app built with Vite. Talks to the .NET API over HTTP; renders financial charts with Recharts and a shared visual system (`palette.ts` + `chartEffects.tsx`).
 
-> **Chat:** `POST /api/chat/{statementId}` returns **Server-Sent Events** (`text/event-stream`). The backend buffers the OpenRouter stream, parses JSON (`answer` + `chartUpdate`), then streams the parsed answer word-by-word. Chart updates arrive in a separate `chart` event. Full statement context is injected server-side (not query-time pgvector RAG; reliable for roughly ≤ 750 transactions).
+> **Chat:** `POST /api/chat/stream/{statementId}` returns **Server-Sent Events** (`text/event-stream`). The backend buffers the OpenRouter stream, parses JSON (`answer` + `chartUpdate`), then streams the parsed answer word-by-word. Chart updates arrive in a separate `chart` event. Full statement context is injected server-side (not query-time pgvector RAG; reliable for roughly ≤ 750 transactions).
 >
 > **Narration:** `GET /api/narration/{statementId}` returns a cached statement summary paragraph for the Dashboard (`Statement.Narration` in the DB; one OpenRouter call per statement on first load).
+>
+> **Architecture docs:** See `../ARCHITECTURE.md` §4, `../../NOSYORMI-Architecture-Technical.html`, and `../../NOSYORMI-Architecture-PlainEnglish.html` for the six diagram sections (system, AI flow, schema, API, deployment, user flow).
 
 ---
 

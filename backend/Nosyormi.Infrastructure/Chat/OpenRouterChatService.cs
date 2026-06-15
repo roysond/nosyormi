@@ -564,12 +564,20 @@ public class OpenRouterChatService : IChatService
                 lower.Contains("unexpected") || lower.Contains("flagged") || lower.Contains("weird") ||
                 lower.Contains("suspicious") || lower.Contains("outlier");
 
+            // MOST EXPENSIVE MONTH — must be checked before isTopN to prevent "most expensive" triggering topN
+            bool isMostExpensiveMonth = lower.Contains("most expensive month") ||
+                lower.Contains("expensive month") ||
+                lower.Contains("highest month") ||
+                lower.Contains("which month") ||
+                lower.Contains("what month") ||
+                lower.Contains("worst month");
+
             // TOPN — biggest purchases, top transactions
-            bool isTopN = lower.Contains("biggest purchase") || lower.Contains("largest expense") ||
+            bool isTopN = !isMostExpensiveMonth && (lower.Contains("biggest purchase") || lower.Contains("largest expense") ||
                 lower.Contains("largest purchase") || lower.Contains("most expensive") ||
                 lower.Contains("top 7") || lower.Contains("top 10") || lower.Contains("top 5") ||
                 lower.Contains("top 3") || lower.Contains("top transactions") || lower.Contains("biggest expense") ||
-                lower.Contains("highest spending") || lower.Contains("what are my top");
+                lower.Contains("highest spending") || lower.Contains("what are my top"));
 
             // CATEGORY MONTHLY / DRILL-DOWN — specific category mentioned in message
             string? mentionedCategory = FindCategoryInMessage(validCategories);
@@ -627,6 +635,10 @@ public class OpenRouterChatService : IChatService
             else if (isAnomalies)
             {
                 chartUpdate = new ChartUpdate("anomalies", null, null);
+            }
+            else if (isMostExpensiveMonth)
+            {
+                chartUpdate = new ChartUpdate("stacked", null, null);
             }
             else if (isTopN)
             {

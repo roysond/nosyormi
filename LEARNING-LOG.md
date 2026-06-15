@@ -2,7 +2,7 @@
 > NOSYOR.M.I — What I Learned Building This  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)  
 > Background: No prior IT or coding experience before this program  
-> **Last updated:** 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix
+> **Last updated:** 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4
 
 This document captures the real learning that happened during the build —
 the errors encountered, how they were fixed, and what the fix taught me.
@@ -543,4 +543,35 @@ viewport height ignores it.
 
 ---
 
-*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix.*
+---
+
+## Week 11 — Architecture Documentation (June 2026)
+
+### Two editions of the same architecture
+
+For capstone submission I produced architecture documentation in three
+parallel formats:
+
+1. **`ARCHITECTURE.md` §4** — markdown source of truth for developers
+2. **`NOSYORMI-Architecture-Technical.html`** — interactive technical edition
+   (Urbanist + JetBrains Mono, code blocks, API table, deployment manifests)
+3. **`NOSYORMI-Architecture-PlainEnglish.html`** — same six sections in plain
+   English with analogies (bank branch, filing cabinet, seven communication
+   doors) and small technical hints
+
+All three mirror the six PNG diagrams in `docs/diagrams/`. The Plain English
+edition answers “what does this do?” for reviewers without an IT background.
+The Technical edition answers “how is it wired?” for developers. Keeping them
+in sync forces me to know the system well enough to explain it twice.
+
+### The orchestrator principle in documentation
+
+Hannan’s orchestration quote — one coordinator responsible for moving
+everyone in the right direction — is now explicit in every architecture
+artifact: the browser never calls OpenRouter or PostgreSQL directly. Every
+action goes through the .NET API. Documenting that rule in HTML, markdown,
+and diagrams makes it harder to accidentally violate it in future features.
+
+---
+
+*Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4.*

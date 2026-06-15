@@ -1,6 +1,6 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix
+> Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4
 
 ---
 
@@ -135,8 +135,8 @@ The .NET API is the **orchestrator** — all browser requests go through it, and
 4. `20260521031445_AddFileHashToStatement`
 5. `AddNarrationToStatement` — nullable `Statement.Narration` for cached AI Dashboard summary
 
-**Category taxonomy (15 categories as of 31 May):**
-Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Utilities & Bills, Income, Healthcare, Entertainment, Dining & Takeaway, Transfers & Payments, ATM & Cash, Education, Government & Fees, Other
+**Category taxonomy (15 categories — `CategoryTaxonomy.All`, synced with classifier prompt):**
+Groceries, Dining & Takeaway, Transport, Subscriptions, Shopping, Health & Pharmacy, Entertainment, Utilities, Travel, ATM & Cash, Transfers & Payments, Parking & Tolls, Education, Government & Fees, Other
 
 **Rule-based categorization bypass (before MODEL_LIGHT):** Square terminal (`TST*`, `SQ *`) → Dining & Takeaway; DoorDash food orders (not DashPass) → Dining & Takeaway; subscription keywords → Subscriptions; ATM/cash keywords → ATM & Cash; Zelle/Payment ID → Transfers & Payments; education keywords → Education; government/USCIS/DMV/IRS → Government & Fees; direction-aware wire transfer rules (Axis Bank income vs transfer split).
 
@@ -145,16 +145,17 @@ Food & Groceries, Transport & Fuel, Parking & Tolls, Subscriptions, Shopping, Ut
 ## 7. API ENDPOINTS
 
 ```
-GET    /api/statements              — list all statements (summary)
-GET    /api/statements/{id}         — get statement with transactions
-POST   /api/statements/upload       — upload CSV (multipart/form-data, field: "file")
-DELETE /api/statements/{id}         — hard delete statement + cascade transactions
-POST   /api/chat/{statementId}      — chat (body: { message, history[] })
-GET    /api/forecast/{statementId}  — moving average forecast by category
-GET    /api/timeseries/{statementId}— spending over time
-GET    /api/narration/{statementId} — AI Dashboard statement summary (cached in Statement.Narration)
-GET    /health                       — health check
+POST   /api/statements              — upload CSV (multipart/form-data) → 200 Statement | 409 Conflict
+GET    /api/statements              — list all statements (by UploadedAt DESC)
+DELETE /api/statements/{id}         — hard delete statement + cascade transactions → 204
+POST   /api/chat/stream/{id}        — chat SSE stream (body: { message, history[] })
+GET    /api/narration/{id}          — AI Dashboard summary (cached in Statement.Narration)
+GET    /api/forecast/{id}           — moving average forecast by category
+GET    /api/timeseries/{id}         — monthly spending totals
+GET    /health                      — health check
 ```
+
+> See `ARCHITECTURE.md` §4.4 and `NOSYORMI-Architecture-Technical.html` §04 for full request/response shapes and SSE event schema.
 
 ---
 
@@ -511,8 +512,21 @@ feat(chat): topN chart type, highlightTransactionIds, server-side topN fallback
 > - MovingAverageForecastingService (time-series prediction)
 > - PostgreSQL (persistence)
 > 
-> **This must appear prominently in ARCHITECTURE.md and the System Architecture diagram.**
+> **This must appear prominently in ARCHITECTURE.md §4.1 and the System Architecture diagram.**
+
+## 20. ARCHITECTURE DOCUMENTATION (HTML)
+
+| File | Location | Purpose |
+|---|---|---|
+| `NOSYORMI-Architecture-Technical.html` | Repo root | Developer edition — 6 sections, API table, SSE schema, deployment |
+| `NOSYORMI-Architecture-PlainEnglish.html` | Repo root | Plain English — bank-branch analogy, 7-step user journey |
+| `ARCHITECTURE.md` §4 | `nosyormi/` | Markdown source of truth aligned with both HTML files |
+| PNG diagrams | `docs/diagrams/` | Six submission PNGs matching HTML sections |
+
+**Presentation:** 14 June 2026 · Royson D'Souza · Capstone Project 11 · 47 tests passing
 
 ---
 
 *This file is Claude's memory anchor. Read it before every session. Update it after every session.*
+
+*Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4.*

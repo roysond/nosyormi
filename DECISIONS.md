@@ -2,7 +2,7 @@
 > NOSYOR.M.I — Key Architectural & Product Decisions  
 > Student: Royson D'Souza · Capstone Project 11 (FinSight)
 
-> **Last updated:** 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix; Week 10 decisions added.
+> **Last updated:** 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4
 
 This document summarises the most significant decisions made during the 
 build. Full rationale for each is in ARCHITECTURE.md Section 9.
@@ -182,4 +182,14 @@ build. Full rationale for each is in ARCHITECTURE.md Section 9.
 
 ---
 
-*Last updated: 13 June 2026 — Panel background unification (#E4E9F0), Chat layout polish, Transactions anomaly-toggle click-outside fix*
+## Week 11 Decisions (June 2026)
+
+| Decision | Choice | Why |
+|---|---|---|
+| Architecture docs format | HTML (Technical + Plain English) + `ARCHITECTURE.md` §4 + PNG diagrams | Browser-readable submission artifacts; Plain English for non-technical reviewers; Technical for developers |
+| Six diagram sections | System · AI Flow · Schema · API · Deployment · User Flow | Consistent structure across HTML, PNG, and markdown — one mental model |
+| API path documentation | Canonical paths from Technical HTML (`POST /api/chat/stream/{id}`, etc.) | Aligns docs with shipping controllers; replaces outdated `/upload` and `/chat/{statementId}` references |
+
+---
+
+*Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4*
