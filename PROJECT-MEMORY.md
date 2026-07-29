@@ -1,6 +1,7 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
-> Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4
+> **This is now the sole markdown documentation file for the project.** `ARCHITECTURE.md`, `PROJECT-DOCUMENTATION.md`, `DECISIONS.md`, and `LEARNING-LOG.md` were consolidated into this file and removed on 28 July 2026 — see §25 for the full record. The two HTML architecture docs (`NOSYORMI-Architecture-Technical.html`, `NOSYORMI-Architecture-PlainEnglish.html`) and the six PNG diagrams in `docs/diagrams/` remain as separate submission artifacts.
+> Last updated: 28 July 2026 — Consolidated all project documentation into this single file; removed unused frontend assets and stray build/OS artifacts
 
 ---
 
@@ -62,6 +63,22 @@ Nosyormi.Api             — Controllers: StatementsController, ForecastControll
 ```
 
 **Known technical debt:** `StatementUploadService` is in Application but still injects `DbContext` directly. Accepted and documented.
+
+**Dependency direction (sacred):** `Api → Application → Domain`, with `Infrastructure → Application` (transitively → Domain). Enforced by .NET project references — Domain depends on nothing external; Application depends only on Domain; Infrastructure depends on Application; Api depends on both (the latter so the composition root in `Program.cs` can wire concrete implementations to interfaces).
+
+**Repo folder structure:**
+```
+nosyormi/
+├── backend/            — .NET 10 Web API (4 projects, see above)
+├── frontend/           — React + TypeScript (Vite); src/pages, src/components, src/constants, src/assets, e2e/
+├── docs/                — QA-TEST-CASES.md + 6 architectural diagram PNGs (docs/diagrams/)
+├── k8s/                 — api-deployment.yaml, frontend-deployment.yaml, configmap.yaml, secrets.yaml (gitignored)
+├── scripts/              — check-secrets.sh
+├── PROJECT-MEMORY.md    — sole markdown documentation source (this file)
+├── README.md, LICENSE (PolyForm Noncommercial 1.0.0), docker-compose.yml, .env.example, .gitignore
+```
+
+**SOLID / Clean Code commitment:** Every significant Cursor coding session opens with an architectural directive (kept separately at the outer NOSYORMI folder root: `Cursor prompt architectural directive.txt`) requiring Single Responsibility per class, dependency injection over direct instantiation, strict Controller/Service/Repository/Model separation, interfaces over concrete implementations, methods kept short and self-explanatory, no magic strings/numbers, and meaningful (non-swallowed) exceptions.
 
 ---
 
@@ -518,15 +535,130 @@ feat(chat): topN chart type, highlightTransactionIds, server-side topN fallback
 
 | File | Location | Purpose |
 |---|---|---|
-| `NOSYORMI-Architecture-Technical.html` | Repo root | Developer edition — 6 sections, API table, SSE schema, deployment |
-| `NOSYORMI-Architecture-PlainEnglish.html` | Repo root | Plain English — bank-branch analogy, 7-step user journey |
-| `ARCHITECTURE.md` §4 | `nosyormi/` | Markdown source of truth aligned with both HTML files |
+| `NOSYORMI-Architecture-Technical.html` | Outer NOSYORMI folder root | Developer edition — 6 sections, API table, SSE schema, deployment |
+| `NOSYORMI-Architecture-PlainEnglish.html` | Outer NOSYORMI folder root | Plain English — bank-branch analogy, 7-step user journey |
+| `PROJECT-MEMORY.md` (this file) | `nosyormi/` | Sole markdown source of truth — architecture, decisions, stories, lessons |
 | PNG diagrams | `docs/diagrams/` | Six submission PNGs matching HTML sections |
+
+> As of 28 July 2026, `ARCHITECTURE.md`, `PROJECT-DOCUMENTATION.md`, `DECISIONS.md`, and `LEARNING-LOG.md` no longer exist as separate files — their content was consolidated here (§§21–25) to eliminate overlapping/redundant documentation. See §25 for the full record.
 
 **Presentation:** 14 June 2026 · Royson D'Souza · Capstone Project 11 · 47 tests passing
 
 ---
 
+## 21. PROJECT PHILOSOPHY & GUIDING PRINCIPLES
+
+*(Consolidated from the former `ARCHITECTURE.md` §1.)*
+
+NOSYOR.M.I is not an AI app. It is a **finance engine with an AI conversation layer on top.** Most student AI projects collapse the entire system into a single LLM and route every user interaction through it — NOSYOR.M.I deliberately resists that pattern. The parts that must be exact (totals, forecasts, anomaly thresholds) are exact; the parts that benefit from natural language (explanations, conversation, narrative) are conversational.
+
+Three non-negotiable principles:
+1. **Determinism over probability for numerical work.** LLMs are never used as calculators, forecasters, or anomaly detectors — deterministic code and statistical models own anything with a single correct answer.
+2. **The right tool for the right job.** CSV parsing is a library problem, forecasting is a statistical problem, semantic search is an embedding problem, conversation is an LLM problem — the architecture matches tool to problem.
+3. **Cost-conscious model routing.** The cheapest model that can do a job well is used for that job; premium models are reserved for where reasoning genuinely matters (see the 3-tier routing in §3).
+
+If a future feature appears to require violating one of these, the feature gets redesigned — not the principle.
+
+---
+
+## 22. FULL USER STORY LIST (56 stories, 11 epics)
+
+*(Consolidated from the former `PROJECT-DOCUMENTATION.md` §3. Status reflects state at capstone submission, 14 June 2026.)*
+
+### Epic 1 — Project Setup & Architecture (6 stories) — all ✅ Done
+Initialize monorepo structure · Set up .NET 10 Clean Architecture layers · Scaffold React+Vite+TS frontend · Configure env vars for API keys/DB · Set up Git repo with README/LICENSE/.gitignore · Write ARCHITECTURE.md (now consolidated into this file)
+
+### Epic 2 — Data Persistence Layer (5 stories) — all ✅ Done
+Configure PostgreSQL 16 + pgvector · Design Domain entity models · EF Core DbContext + migrations · pgvector value converter (1536D) · Cascade delete Statement → Transactions
+
+### Epic 3 — CSV Upload & Parsing (5 stories)
+Upload endpoint (multipart) ✅ · CsvHelper standard-format parser ✅ · SHA-256 duplicate detection (409) ✅ · **PDF support via PdfPig — ❌ Not Started (deferred)** · Multi-bank formats (Huntington, BOA) ✅
+
+### Epic 4 — AI Categorization (4 stories) — all ✅ Done
+OpenRouter 3-tier routing integration · Per-transaction MODEL_LIGHT categorization · Structured JSON category schema · AI failure handling/fallbacks
+
+### Epic 5 — Anomaly Detection (3 stories) — all ✅ Done
+Z-score detector · Flag anomalies at upload · Anomaly badge/highlight in UI
+
+### Epic 6 — Semantic Embeddings & RAG (3 stories)
+Generate embeddings per transaction ✅ · Store in pgvector w/ cosine similarity index ✅ · **RAG retrieval (embed query → similarity search → context) — ⏳ Partial: embeddings at upload done, query-time retrieval deferred, required above ~750 txns**
+
+### Epic 7 — Forecasting & Time-Series (4 stories) — all ✅ Done
+Weighted moving average forecasting · Forecast API endpoint · Time-series spending endpoint · Forecast chart in chat panel
+
+### Epic 8 — Conversational AI Chat (5 stories)
+Full-context LLM chat endpoint ✅ (query-time RAG deferred) · Streaming token delivery ✅ (SSE) · Guardrailed system prompt ✅ · `chartUpdate` JSON contract ✅ · On-brand deflections for off-topic queries ✅
+
+### Epic 9 — Frontend Application (14 stories)
+Dashboard w/ stat cards + donut ✅ · Transactions page (search/filter/sort) ✅ · Statements page (upload/list) ✅ · Chat page ✅ · `StatementDetailPage` ✅ → **⛔ Removed** (Week 4, superseded by Dashboard date-range filter) · Connect pages to live APIs ✅ · Dynamic chart rendering from `chartUpdate` ✅ · Spending/income tab switching ✅ (folder-tab style) · Expandable transaction rows ✅ · sessionStorage chat persistence ✅ · Clear chat + auto-clear on delete ✅ · Restyle `StatementDetailPage` — **⛔ Dropped** (page removed) · Dashboard sparklines/vs-last-month — **❌ Not Started (deferred)** · Persistent statement pill ✅
+
+### Epic 10 — Testing & QA (5 stories) — all ✅ Done
+Unit tests (Domain/Application) · Integration tests (API/AI layer) · QA manual test cases documented · E2E tests · Test coverage reports
+
+### Epic 11 — Deployment & Submission (10 stories)
+Dockerize .NET API ✅ · Dockerize React+nginx ✅ · Docker Compose (3 services) ✅ · Minikube K8s deploy ✅ · nginx API proxy ✅ · PowerPoint deck — ⏳ In Progress (as of 14 June) · 6 architectural diagrams ✅ · Project documentation ✅ · Demo video (Animaker) — ⏳ In Progress (as of 14 June) · Creativity expansions documented ✅
+
+---
+
+## 23. CREATIVITY & EXPANSION POINTS (submission scoring)
+
+*(Consolidated from the former `PROJECT-DOCUMENTATION.md` §9 — beyond the base FinSight brief.)*
+
+- **Novel AI Pattern (+High):** four-layer AI architecture (deterministic → statistical → semantic → reasoning) instead of one LLM doing everything; chat-to-visualization bridge where the AI's structured `chartUpdate` JSON drives live chart rendering; server-side keyword routing (`isMonthSpecific`, `topN` fallback) corrects the model when it picks the wrong chart.
+- **UX That Surprises (+Medium):** Design v1.1 floating white sidebar, Urbanist typography, teal-gold brand system; `NosyormiLogo` with hidden I.M.ROYSON wordmark; macOS glass upload modal; teal-gold animated chat bubble borders; the **Reflect** workflow for one-click statement switching app-wide.
+- **Feature Expansion (+Medium):** multi-bank CSV support (Standard, Huntington, BOA, Wells Fargo-style headers) with automatic format detection; nine AI-triggerable chart types including month-scoped and ranked-expense views; Dashboard/Transactions date-range filters; unified `#E4E9F0` panel chrome; AI Dashboard narration cached per statement; centralised `palette.ts` + `chartEffects.tsx` chart visual system; 15-category taxonomy.
+- **Production-Grade Engineering (+Medium):** SHA-256 dedup enforced at DB level; nginx reverse proxy for zero hardcoded API URLs in K8s; four-level test suite (unit, integration, QA manual, E2E).
+- **Completely Original Idea (+High):** NOSYOR.M.I is not FinSight — it's a personal finance mirror with its own brand identity, a four-layer AI architecture well beyond the brief, and a product vision grounded in reflection.
+
+---
+
+## 24. KEY LESSONS LEARNED (condensed)
+
+*(Consolidated from the former `LEARNING-LOG.md` — the full narrative version, with plain-English explanations of each concept, is no longer kept as a separate file; these are the durable takeaways.)*
+
+- **Clean Architecture / Dependency Inversion in practice:** moving `StatementQueryService` from Application to Infrastructure (May 20) broke nothing because the rest of the system depended on `IStatementQueryService`, not the concrete class.
+- **Embeddings are model-locked:** switching embedding models mid-project would require re-embedding everything, since vectors from different models aren't comparable — this is why `openai/text-embedding-3-small` is fixed as a constant.
+- **Config must come from data, not code:** the early hardcoded-statement-ID bug (broke the moment a second statement was uploaded) was fixed by always calling `GET /api/statements` rather than baking an ID into page files.
+- **RAG, honestly scoped:** embeddings stored at upload ≠ query-time retrieval. Full context injection is simpler and sufficient below ~750 transactions; beyond that, retrieval becomes architecturally necessary. Early docs mislabelled the chat pipeline as "RAG" — corrected 29 May.
+- **Docker envs don't share:** `.env` and `.env.docker` are completely separate — the missing `EMBEDDING_MODEL` in `.env.docker` caused every upload to 500 until it was mirrored manually.
+- **Real-world data breaks naive parsers:** Huntington's `Payee Name`/`Memo` split (not a single `Description` column) caused everything to categorize as "Other"; BOA's 6-row preamble crashed header detection entirely. Lesson: test with real data early, and parse defensively.
+- **`DotNetEnv` overwrites shell env vars** — always pass `--connection` explicitly when running EF migrations against Docker Postgres, or `Env.Load()` silently substitutes the wrong connection string.
+- **Four levels of testing are genuinely different jobs:** unit (isolated class), integration (real DB + controller), QA manual (human-run scenarios), E2E (Playwright, full user journey) — each catches different failure classes.
+- **nginx exists so the frontend bundle never hardcodes an API URL** — it proxies `/api/*` to the API service by Kubernetes DNS name, which is why the app doesn't break when the API pod's address changes.
+- **Color theory is functional, not decorative:** the original Crystal Teal accent became invisible against a same-hue-family background; Honey Amber (a complementary warm color) fixed the contrast. Also: `filter: drop-shadow` only works on SVG icons, not emoji — this is why nav icons became Tabler Icons.
+- **Deleting code is progress too:** `StatementDetailPage` was fully built, then deleted in Week 4 once the Dashboard date-range filter made it redundant — "I built it" isn't a reason to keep something.
+- **Dead config is worth naming out loud:** `MODEL_NARRATION` sat unread in `.env`/Docker/K8s config for weeks before `NarrationService` was wired in June — documented honestly as a known limitation rather than silently ignored.
+- **Prompts guide behavior; deterministic code guarantees critical UX:** the `topN` chart type needed a server-side fallback because prompt rules alone weren't reliable enough for a must-work case.
+- **"Streaming" can mean streaming *parsed* output, not raw model bytes:** since the chat model returns a JSON object (not plain sentences), the server buffers the full JSON, parses it, then streams the parsed answer word-by-word — streaming the raw tokens would have shown `{` and `"answer"` on screen.
+- **Global dismiss/click-outside handlers need an explicit exclusion list**, or they'll clear state a user didn't intend to clear (the anomaly-toggle-resets-donut-selection bug, fixed the same way as the date-picker guard).
+- **Percentage height respects its container; viewport height (`100vh`) does not** — this caused Chat's right panel to overflow inside `App.tsx`'s already-scrolling flex main.
+- **The overarching lesson:** working software is built in three passes — make it work, make it correct, make it clean — not perfectly on the first attempt. AI tools amplify understanding, they don't replace it: generated code only became verifiable/debuggable once the underlying concept was actually understood.
+
+---
+
+## 25. REPOSITORY CLEANUP LOG (2026-07-28)
+
+Following a full audit of the NOSYORMI folder (root assets + `nosyormi/` backend + frontend):
+
+**Deleted — confirmed unused, zero risk:**
+- `frontend/src/assets/react.svg`, `vite.svg` — unreferenced Vite/React scaffolding leftovers
+- `frontend/src/assets/hero.png` — unreferenced image, superseded design asset
+- `frontend/test-results/.last-run.json` (and the now-empty `test-results/` dir) — local Playwright leftover, already gitignored/untracked
+- Five stray `.DS_Store` files (root, `frontend/`, `frontend/dist/`, `docs/`, `.git/`) — macOS clutter, already gitignored/untracked
+
+**Deleted — user decision:**
+- `nosyormi/test-results.txt` — raw pasted `dotnet restore`/build terminal log; name collided confusingly with `frontend/test-results/`, decided not worth keeping
+- `ARCHITECTURE.md`, `PROJECT-DOCUMENTATION.md`, `DECISIONS.md`, `LEARNING-LOG.md` — consolidated into this file (§§21–24 above) to eliminate five overlapping documentation files; `PROJECT-MEMORY.md` is now the single markdown source of truth, paired with the `project-memory-update` skill for future sessions
+
+**Confirmed clean, left untouched:**
+- Backend (49 `.cs` files): zero debug prints, TODO/FIXME markers, commented-out code, or orphaned services — every interface/service/controller traced to an active reference
+- `bin/`, `obj/`, `node_modules/`, `dist/` — properly gitignored, untracked, normal regenerable build output
+- `k8s/secrets.yaml` — gitignored, untracked, contains only a placeholder value (no real key exposure)
+- `NOSYORMI-Architecture-Technical.html`, `NOSYORMI-Architecture-PlainEnglish.html` (outer folder root) — left as-is, not part of this consolidation
+- Vector/embedding storage code — explicitly out of scope for this pass per Royson's instruction
+
+---
+
 *This file is Claude's memory anchor. Read it before every session. Update it after every session.*
 
-*Last updated: 14 June 2026 — Interactive architecture HTML aligned with ARCHITECTURE.md §4.*
+*Last updated: 28 July 2026 — Consolidated ARCHITECTURE.md, PROJECT-DOCUMENTATION.md, DECISIONS.md, and LEARNING-LOG.md into this file (§§21–25); removed unused frontend assets and stray build/OS artifacts. See §25 for full record.*
