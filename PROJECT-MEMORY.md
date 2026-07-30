@@ -1,7 +1,7 @@
 # PROJECT-MEMORY.md
 > Claude's context anchor for NOSYOR.M.I. Read this at the start of every session.
 > **This is now the sole markdown documentation file for the project.** `ARCHITECTURE.md`, `PROJECT-DOCUMENTATION.md`, `DECISIONS.md`, and `LEARNING-LOG.md` were consolidated into this file and removed on 28 July 2026 — see §25 for the full record. The two HTML architecture docs (`NOSYORMI-Architecture-Technical.html`, `NOSYORMI-Architecture-PlainEnglish.html`) and the six PNG diagrams in `docs/diagrams/` remain as separate submission artifacts.
-> Last updated: 28 July 2026 — Consolidated all project documentation into this single file; removed unused frontend assets and stray build/OS artifacts
+> Last updated: 29 July 2026 — LLM cost/latency telemetry instrumented across all 6 OpenRouter operations; `scripts/start.sh` local launcher added. See §26.
 
 ---
 
@@ -454,7 +454,13 @@ UniversalTooltip  — frosted glass tooltip. Used on ALL charts across all pages
 
 ---
 
-## 16. PENDING WORK (as of 13 June 2026)
+## 16. PENDING WORK (as of 29 July 2026)
+
+**IN PROGRESS — Observability feature (see §26):**
+- [ ] Stage 4 — `DeveloperController` (`GET /api/developer/metrics`, `GET /api/developer/calls`) — prompt written, not yet run
+- [ ] Stage 5 — `DeveloperPage.tsx` + `/developer` route + `IconCode` nav item — prompt written, not yet run
+- [ ] Verify the hardcoded price table in `LlmCallRecorder` against OpenRouter's actual current pricing (Cursor invented plausible-looking numbers; unverified)
+- [ ] **Owed explanation:** step-by-step walkthrough of how `scripts/start.sh` works (background jobs, `trap`/signals, `wait`, `$PATH` vs `./`). Royson explicitly asked to revisit this slowly — the compressed explanation did not land.
 
 **SUBMISSION CRITICAL:**
 - [ ] PowerPoint deck (8+ slides, real screenshots) — story #60
@@ -659,6 +665,106 @@ Following a full audit of the NOSYORMI folder (root assets + `nosyormi/` backend
 
 ---
 
+## 26. OBSERVABILITY & COST TELEMETRY (2026-07-29)
+
+### Why this exists
+
+A cost/efficiency review found the app had **zero instrumentation** — no way to know what any AI call costs or how long it takes. Optimisation hypotheses were therefore unverifiable. Principle established: **measure before optimising**; cost observability comes before any performance work.
+
+### Concept split (established this session)
+
+| | Tracing / Observability | Evaluation (evals) |
+|---|---|---|
+| Question | *What did the system do?* | *Was the output any good?* |
+| Data | Latency, tokens, errors, calls. Cost is **derived** (tokens × price). | Quality scores vs. known-good test cases |
+| Source | Real production traffic, continuous | Fixed dataset, run deliberately |
+| Nature | Objective | Judgment-based (human or LLM-as-judge) |
+| Cost to run | ~Free (metadata on calls already happening) | Costs money (fires real LLM calls) |
+
+Both are needed to make a model-swap decision: tracing gives the cost/latency delta, evals give the quality delta. Neither alone is sufficient. *That pairing is what "A/B testing an LLM change" actually means.*
+
+### AD — Custom Developer page over the .NET Aspire Dashboard
+
+**Decision:** Store telemetry in our own Postgres table and surface it on an in-app `/developer` page, rather than adding the standalone Aspire Dashboard container.
+
+**Why:** The Aspire Dashboard holds telemetry **in memory** — it's lost on container restart, so it cannot answer "what did this app cost me in June." A Postgres table gives persistent, queryable cost history, reuses the existing stack (EF Core + Recharts), avoids a fourth container, and has demo value for a capstone reviewer.
+
+**Tradeoff accepted:** we get flat records, not **distributed traces** — no parent/child span waterfall for debugging a single slow request. Acceptable for cost analysis; less good for latency forensics.
+
+**Mitigation:** entity property names deliberately mirror the **OpenTelemetry GenAI semantic conventions** (`gen_ai.usage.input_tokens`, `gen_ai.request.model`, `gen_ai.operation.name`, `error.type`, etc.), so adding an OTLP exporter later is additive rather than a rewrite. Cost nothing today; keeps the option.
+
+### AD — Ambient correlation context, not an interface parameter
+
+**Decision:** Correlate telemetry to a statement via `LlmCallContext` (an `AsyncLocal<Guid?>` scope), not by adding a `statementId` parameter to `ICategoryClassifier` / `IEmbeddingService`.
+
+**Why:** A classifier does not need a statement id to classify a description. Adding one would be **interface pollution** — leaking an observability concern into a business contract, violating Interface Segregation, and rippling into unit tests. **Cross-cutting concerns must not appear in domain interfaces.** This mirrors how real OpenTelemetry works via `Activity.Current`.
+
+**Implementation:** `LlmCallContext.BeginStatementScope(id)` returns an `IDisposable`; the recorder falls back to `LlmCallContext.CurrentStatementId` when the explicit argument is null (explicit wins). Scopes are opened in `StatementUploadService` (wrapping classify → anomaly → embed) and in `OpenRouterChatService.StreamChatAsync`.
+
+### What shipped
+
+**`LlmCall` entity** (`Nosyormi.Domain/Entities/`) — `Timestamp`, `System`, `OperationName`, `RequestModel`, `ResponseModel`, `InputTokens`, `OutputTokens`, `DurationMs`, `IsSuccess`, `ErrorType`, `StatementId`, `EstimatedCostUsd`. Migration `20260729190426_AddLlmCallTelemetry`; descending index on `Timestamp`, index on `StatementId`, **deliberately no FK to `Statement`** so telemetry survives statement deletion.
+
+**`ILlmCallRecorder`** (Application) / **`LlmCallRecorder`** (Infrastructure) — registered as a **singleton** taking `IServiceScopeFactory`. Creates its own `DbContext` scope per write so telemetry never shares a change tracker with business writes (500 telemetry rows would otherwise pollute the upload's `SaveChanges`). **Swallows all exceptions** — a failed metrics write must never break a user's upload. Derives `EstimatedCostUsd` from a hardcoded per-million-token price table; unknown models record cost 0.
+
+**Six instrumented operations, 18 record sites** — each with a success / `HttpRequestException` / non-success-status triad:
+
+| `OperationName` | Service | Tier |
+|---|---|---|
+| `categorize` | `OpenRouterCategoryClassifier` | LIGHT |
+| `embeddings` | `OpenRouterEmbeddingService` | EMBED |
+| `narrate` | `NarrationService` | NARRATION |
+| `bank_detect` | `BankDetectionService` | — |
+| `chat` | `OpenRouterChatService.StreamChatAsync` | CHAT |
+| `chat_intent` | `OpenRouterChatService.ClassifyChartIntentAsync` | LIGHT |
+
+**Deliberately not recorded:** rule-based categorisation bypasses, filename-based bank-detection bypasses, and missing-env early returns. These make no HTTP call — recording them would corrupt cost data.
+
+**Key finding — `chat_intent` was a blind spot.** `ClassifyChartIntentAsync` makes its own `MODEL_LIGHT` call, so **every chat turn is two LLM calls, not one.** It was initially missed. Kept as a separate `OperationName` (not merged into `chat`) because it's a candidate for replacement with deterministic keyword routing. *Lesson: an uninstrumented call path is worse than no instrumentation — it produces confident numbers that are quietly wrong.*
+
+**Chat streaming usage:** request sends `stream_options: { include_usage: true }`; usage is read from the final SSE chunk before `[DONE]`. Per OpenRouter docs usage is always included in that final chunk (`stream_options` is effectively a no-op there). Falls back to 0 tokens if absent.
+
+### Evaluation — approach agreed, not yet built
+
+`Microsoft.Extensions.AI.Evaluation` (v10.8.0) is the chosen path when evals are tackled: first-party .NET, integrates with the existing **xUnit** suite, ships evaluators for Relevance/Truth/Completeness/Fluency/Coherence/Retrieval/Equivalence/Groundedness, and has built-in **response caching** so re-runs don't re-pay for LLM calls. Reports are generated via the `dotnet aieval` CLI (`Microsoft.Extensions.AI.Evaluation.Console`) as a standalone HTML file with hierarchical scenario drill-down and historical trend tracking.
+
+**Decision:** do *not* rebuild the eval UI inside React. Generate the HTML report separately, drop it in `frontend/public/`, and link to `/eval-report.html` from the Developer page. Evals are offline/on-demand; tracing is live/continuous — different lifecycles, so different surfaces.
+
+**Sequencing decision:** tracing first (small, mechanical, no subjective calls), evals later when there's a specific change to validate.
+
+### Deferred: `/developer` route security
+
+Currently **no auth guard** — deliberate, local-only for now. Before any public deployment the route and its API endpoints need an environment guard (`IsDevelopment()` or a feature flag). Royson asked to park this and revisit with a full explanation when the page becomes a proper interface.
+
+### Identified cost inefficiencies (not yet fixed — hypotheses to confirm with the new telemetry)
+
+1. **N+1 API calls** — `StatementUploadService` has two sequential `foreach` loops each `await`ing inside: classification (line ~68) and embeddings (line ~110). A 500-row statement ≈ 1,000 sequential HTTP round trips. Fixes: **batching** (the embeddings API accepts an input array), **bounded parallelism** (`SemaphoreSlim` / `Parallel.ForEachAsync` with a concurrency cap — unbounded will hit rate limits), and **deduplication/memoisation** (repeated merchants are re-classified today; a normalised-description dictionary should cut LLM calls 40–60%).
+2. **No prompt caching** — the long chat system prompt is re-sent in full every turn. Providers now bill cached prefixes at ~10% of normal input cost. Likely the highest value-per-hour change; verify OpenRouter pass-through support.
+3. **Unconditional context assembly** — chat injects full transaction rows *plus* monthly totals, all-time totals, top-10 expenses, and merchant summaries. For many queries the pre-computed blocks alone suffice; **conditional context assembly** would cut typical chat cost without quality loss.
+4. **No caching layer** — no `IMemoryCache` anywhere. `Statement.Narration` is the one **cache-aside** implementation and works well; forecast and time-series results are deterministic per statement and currently recomputed on every request.
+5. **Model right-sizing** — narration summarises pre-computed figures; possibly viable on a cheaper tier via **cascading** (try cheap, escalate on quality drop). Needs evals to decide, not assumption.
+
+---
+
+## 27. LOCAL DEV LAUNCHER — `scripts/start.sh` (2026-07-29)
+
+Single command to bring up API + frontend together. Matches the house style of `scripts/check-secrets.sh` (`#!/usr/bin/env bash`, `set -euo pipefail`, `ROOT="$(cd "$(dirname "$0")/.." && pwd)"` then `cd "$ROOT"` — which is why the script works from any invocation directory).
+
+**Preflight (fails fast with readable errors):** `.env` present · `frontend/node_modules` present · `dotnet` and `npm` on `PATH` · **Postgres actually listening** — port parsed out of `DATABASE_CONNECTION_STRING` via `sed` (currently resolves to **5432**, i.e. Postgres.app; auto-detects 5433 if switched to the Docker container).
+
+**Process handling:** both launched as background jobs (`&`), PIDs captured via `$!`; `trap cleanup INT TERM EXIT`; `wait` holds the script in the foreground so Ctrl+C reaches the trap. Teardown kills **children before parents** (`pkill -P` then `kill`) because `dotnet run` spawns the built app as a child — killing only the parent leaves a zombie holding port 5034.
+
+**To make `nosyormi` work from anywhere** — `chmod +x` alone is *not* enough; that only enables `./scripts/start.sh`. The script must be discoverable on `$PATH`:
+```bash
+chmod +x scripts/start.sh
+sudo ln -s "/Users/roysondsouza/AI Projects/NOSYORMI/nosyormi/scripts/start.sh" /usr/local/bin/nosyormi
+```
+(Alternative without `sudo`: a shell function in `~/.zshrc`.)
+
+**Known cosmetic issue:** `dotnet` and `vite` output interleave in one terminal. Fix would be prefixing each stream, but piping complicates `$!` PID capture — deferred until it actually becomes annoying.
+
+---
+
 *This file is Claude's memory anchor. Read it before every session. Update it after every session.*
 
-*Last updated: 28 July 2026 — Consolidated ARCHITECTURE.md, PROJECT-DOCUMENTATION.md, DECISIONS.md, and LEARNING-LOG.md into this file (§§21–25); removed unused frontend assets and stray build/OS artifacts. See §25 for full record.*
+*Last updated: 29 July 2026 — Added §26 (observability & cost telemetry: 6 instrumented operations, ambient correlation, Aspire-vs-custom-page decision, eval approach, cost inefficiency hypotheses) and §27 (`scripts/start.sh` launcher). Stages 4–5 of the Developer page remain pending; see §16.*

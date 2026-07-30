@@ -1,21 +1,27 @@
-using Microsoft.Extensions.Configuration;
-using Nosyormi.Domain.Entities;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using Nosyormi.Application.Telemetry;
+using Nosyormi.Domain.Entities;
 
 namespace Nosyormi.Infrastructure.Chat;
 
 public class NarrationService
 {
+    private const string RequestModel = "anthropic/claude-sonnet-4-5";
+
     private readonly HttpClient _http;
+    private readonly ILlmCallRecorder _recorder;
     private readonly string _apiKey;
     private static readonly JsonSerializerOptions JsonOptions =
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public NarrationService(HttpClient http, IConfiguration config)
+    public NarrationService(HttpClient http, IConfiguration config, ILlmCallRecorder recorder)
     {
         _http = http;
+        _recorder = recorder;
         _apiKey = config["OpenRouter:ApiKey"] ??
             throw new InvalidOperationException("OpenRouter:ApiKey not configured.");
     }
@@ -66,7 +72,7 @@ public class NarrationService
 
         var requestBody = new
         {
-            model = "anthropic/claude-sonnet-4-5",
+            model = RequestModel,
             max_tokens = 200,
             temperature = 0.4,
             messages = new[]
@@ -82,15 +88,84 @@ public class NarrationService
             JsonSerializer.Serialize(requestBody, JsonOptions),
             Encoding.UTF8, "application/json");
 
-        var response = await _http.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
+        var stopwatch = Stopwatch.StartNew();
+        HttpResponseMessage response;
+        try
+        {
+            response = await _http.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "narrate",
+                RequestModel,
+                responseModel: null,
+                inputTokens: 0,
+                outputTokens: 0,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: false,
+                errorType: "HttpRequestException",
+                statementId: null,
+                cancellationToken);
+            throw;
+        }
 
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        using var doc = JsonDocument.Parse(json);
-        return doc.RootElement
-            .GetProperty("choices")[0]
-            .GetProperty("message")
-            .GetProperty("content")
-            .GetString() ?? "Your financial story is taking shape.";
+        using (response)
+        {
+            if (!response.IsSuccessStatusCode)
+            {
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "narrate",
+                    RequestModel,
+                    responseModel: null,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: false,
+                    errorType: $"HTTP_{(int)response.StatusCode}",
+                    statementId: null,
+                    cancellationToken);
+                response.EnsureSuccessStatusCode();
+            }
+
+            var json = await response.Content.ReadAsStringAsync(cancellationToken);
+            using var doc = JsonDocument.Parse(json);
+            var root = doc.RootElement;
+
+            var responseModel = root.TryGetProperty("model", out var modelProp)
+                ? modelProp.GetString()
+                : null;
+
+            var inputTokens = 0;
+            var outputTokens = 0;
+            if (root.TryGetProperty("usage", out var usage))
+            {
+                if (usage.TryGetProperty("prompt_tokens", out var promptTokens))
+                    inputTokens = promptTokens.GetInt32();
+                if (usage.TryGetProperty("completion_tokens", out var completionTokens))
+                    outputTokens = completionTokens.GetInt32();
+            }
+
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "narrate",
+                RequestModel,
+                responseModel,
+                inputTokens,
+                outputTokens,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: true,
+                errorType: null,
+                statementId: null,
+                cancellationToken);
+
+            return root
+                .GetProperty("choices")[0]
+                .GetProperty("message")
+                .GetProperty("content")
+                .GetString() ?? "Your financial story is taking shape.";
+        }
     }
 }

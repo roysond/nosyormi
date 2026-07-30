@@ -4,6 +4,7 @@ using Nosyormi.Application.Analysis;
 using Nosyormi.Application.Categorization;
 using Nosyormi.Application.Csv;
 using Nosyormi.Application.Embeddings;
+using Nosyormi.Application.Telemetry;
 using Nosyormi.Domain.Entities;
 
 namespace Nosyormi.Application.Statements;
@@ -61,59 +62,62 @@ public class StatementUploadService
             UploadedAt = DateTime.UtcNow
         };
 
-        // 3. Classify rows and convert into Transaction entities
         var transactions = new List<Transaction>();
         var categoryNamesById = new Dictionary<Guid, string>();
 
-        foreach (var row in rows)
+        using (LlmCallContext.BeginStatementScope(statement.Id))
         {
-            var result = await _classifier.ClassifyAsync(
-                row.Description,
-                row.Amount,
-                cancellationToken);
-
-            var category = await GetOrCreateCategoryAsync(result.Category, cancellationToken);
-
-            categoryNamesById[category.Id] = category.Name;
-
-            transactions.Add(new Transaction
+            // 3. Classify rows and convert into Transaction entities
+            foreach (var row in rows)
             {
-                Id = Guid.NewGuid(),
-                StatementId = statement.Id,
-                TransactionDate = row.TransactionDate,
-                Description = row.Description,
-                Amount = row.Amount,
-                CategoryId = category.Id,
-                IsAnomaly = false,
-                CreatedAt = DateTime.UtcNow
-            });
-        }
+                var result = await _classifier.ClassifyAsync(
+                    row.Description,
+                    row.Amount,
+                    cancellationToken);
 
-        // 4. Detect anomalies
-        var transactionInputs = transactions
-            .Select(t => new TransactionInput(
-                t.Id,
-                categoryNamesById[t.CategoryId!.Value],
-                t.Amount))
-            .ToList();
+                var category = await GetOrCreateCategoryAsync(result.Category, cancellationToken);
 
-        var anomalyResults = await _anomalyDetector.DetectAsync(
-            transactionInputs,
-            cancellationToken);
+                categoryNamesById[category.Id] = category.Name;
 
-        var transactionsById = transactions.ToDictionary(t => t.Id);
+                transactions.Add(new Transaction
+                {
+                    Id = Guid.NewGuid(),
+                    StatementId = statement.Id,
+                    TransactionDate = row.TransactionDate,
+                    Description = row.Description,
+                    Amount = row.Amount,
+                    CategoryId = category.Id,
+                    IsAnomaly = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
 
-        foreach (var result in anomalyResults.Where(r => r.IsAnomaly))
-            transactionsById[result.TransactionId].IsAnomaly = true;
+            // 4. Detect anomalies
+            var transactionInputs = transactions
+                .Select(t => new TransactionInput(
+                    t.Id,
+                    categoryNamesById[t.CategoryId!.Value],
+                    t.Amount))
+                .ToList();
 
-        // 5. Generate embeddings
-        foreach (var transaction in transactions)
-        {
-            var embedding = await _embeddingService.GetEmbeddingAsync(
-                transaction.Description,
+            var anomalyResults = await _anomalyDetector.DetectAsync(
+                transactionInputs,
                 cancellationToken);
 
-            transaction.Embedding = embedding;
+            var transactionsById = transactions.ToDictionary(t => t.Id);
+
+            foreach (var result in anomalyResults.Where(r => r.IsAnomaly))
+                transactionsById[result.TransactionId].IsAnomaly = true;
+
+            // 5. Generate embeddings
+            foreach (var transaction in transactions)
+            {
+                var embedding = await _embeddingService.GetEmbeddingAsync(
+                    transaction.Description,
+                    cancellationToken);
+
+                transaction.Embedding = embedding;
+            }
         }
 
         // 6. Save everything in one transaction

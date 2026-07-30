@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Nosyormi.Application.Chat;
+using Nosyormi.Application.Telemetry;
 using Nosyormi.Domain.Entities;
 
 namespace Nosyormi.Infrastructure.Chat;
@@ -93,11 +95,13 @@ public class OpenRouterChatService : IChatService
 
     private readonly HttpClient _httpClient;
     private readonly DbContext _db;
+    private readonly ILlmCallRecorder _recorder;
 
-    public OpenRouterChatService(HttpClient httpClient, DbContext db)
+    public OpenRouterChatService(HttpClient httpClient, DbContext db, ILlmCallRecorder recorder)
     {
         _httpClient = httpClient;
         _db = db;
+        _recorder = recorder;
     }
 
     public async Task StreamChatAsync(
@@ -137,10 +141,13 @@ public class OpenRouterChatService : IChatService
                 return;
             }
 
+            using var statementScope = LlmCallContext.BeginStatementScope(statementId);
+
             var classifiedChartType = await ClassifyChartIntentAsync(userMessage, apiKey, cancellationToken);
 
             using var request = BuildRequest(messages, model, apiKey);
 
+            var stopwatch = Stopwatch.StartNew();
             HttpResponseMessage response;
             try
             {
@@ -151,6 +158,18 @@ public class OpenRouterChatService : IChatService
             }
             catch (HttpRequestException)
             {
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "chat",
+                    model,
+                    responseModel: null,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: false,
+                    errorType: "HttpRequestException",
+                    statementId: statementId,
+                    cancellationToken);
                 await WriteErrorAsync();
                 return;
             }
@@ -159,11 +178,26 @@ public class OpenRouterChatService : IChatService
             {
                 if (!response.IsSuccessStatusCode)
                 {
+                    stopwatch.Stop();
+                    await _recorder.RecordAsync(
+                        "chat",
+                        model,
+                        responseModel: null,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        stopwatch.Elapsed.TotalMilliseconds,
+                        isSuccess: false,
+                        errorType: $"HTTP_{(int)response.StatusCode}",
+                        statementId: statementId,
+                        cancellationToken);
                     await WriteErrorAsync();
                     return;
                 }
 
                 var accumulated = new StringBuilder();
+                string? responseModel = null;
+                var inputTokens = 0;
+                var outputTokens = 0;
                 await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 using var reader = new StreamReader(stream);
 
@@ -191,12 +225,34 @@ public class OpenRouterChatService : IChatService
                         continue;
                     }
 
+                    if (chunk?.Model is not null)
+                        responseModel = chunk.Model;
+
+                    if (chunk?.Usage is not null)
+                    {
+                        inputTokens = chunk.Usage.PromptTokens;
+                        outputTokens = chunk.Usage.CompletionTokens;
+                    }
+
                     var delta = chunk?.Choices?.FirstOrDefault()?.Delta?.Content;
                     if (string.IsNullOrEmpty(delta))
                         continue;
 
                     accumulated.Append(delta);
                 }
+
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "chat",
+                    model,
+                    responseModel,
+                    inputTokens,
+                    outputTokens,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: true,
+                    errorType: null,
+                    statementId: statementId,
+                    cancellationToken);
 
                 var parsed = ParseChatResponse(
                     accumulated.ToString(),
@@ -415,7 +471,8 @@ public class OpenRouterChatService : IChatService
             Messages = messages,
             MaxTokens = 1500,
             Temperature = 0.3f,
-            Stream = true
+            Stream = true,
+            StreamOptions = new StreamOptionsPayload { IncludeUsage = true }
         };
 
         var request = new HttpRequestMessage(HttpMethod.Post, ChatCompletionsUrl)
@@ -471,23 +528,74 @@ public class OpenRouterChatService : IChatService
             Encoding.UTF8,
             "application/json");
 
+        var stopwatch = Stopwatch.StartNew();
+        HttpResponseMessage response;
         try
         {
-            var response = await _httpClient.SendAsync(request, cancellationToken);
-            if (!response.IsSuccessStatusCode) return null;
+            response = await _httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "chat_intent",
+                lightModel,
+                responseModel: null,
+                inputTokens: 0,
+                outputTokens: 0,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: false,
+                errorType: "HttpRequestException",
+                statementId: null,
+                cancellationToken);
+            return null;
+        }
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
-            var parsed = JsonSerializer.Deserialize<JsonElement>(body, JsonOptions);
-            var result = parsed
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString()
-                ?.Trim()
-                .ToLowerInvariant();
+        try
+        {
+            using (response)
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    stopwatch.Stop();
+                    await _recorder.RecordAsync(
+                        "chat_intent",
+                        lightModel,
+                        responseModel: null,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        stopwatch.Elapsed.TotalMilliseconds,
+                        isSuccess: false,
+                        errorType: $"HTTP_{(int)response.StatusCode}",
+                        statementId: null,
+                        cancellationToken);
+                    return null;
+                }
 
-            string[] validTypes = ["pie", "bar", "line", "anomalies", "forecast", "stacked", "horizontal", "treemap", "topN", "categoryMonthly"];
-            return validTypes.Contains(result) ? result : null;
+                var completion = await response.Content.ReadFromJsonAsync<ChartIntentCompletionResponse>(
+                    JsonOptions,
+                    cancellationToken);
+
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "chat_intent",
+                    lightModel,
+                    completion?.Model,
+                    completion?.Usage?.PromptTokens ?? 0,
+                    completion?.Usage?.CompletionTokens ?? 0,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: true,
+                    errorType: null,
+                    statementId: null,
+                    cancellationToken);
+
+                var result = completion?.Choices?.FirstOrDefault()?.Message?.Content
+                    ?.Trim()
+                    .ToLowerInvariant();
+
+                string[] validTypes = ["pie", "bar", "line", "anomalies", "forecast", "stacked", "horizontal", "treemap", "topN", "categoryMonthly"];
+                return validTypes.Contains(result) ? result : null;
+            }
         }
         catch
         {
@@ -906,11 +1014,48 @@ public class OpenRouterChatService : IChatService
         public int MaxTokens { get; init; }
         public float Temperature { get; init; }
         public bool Stream { get; init; }
+
+        [JsonPropertyName("stream_options")]
+        public StreamOptionsPayload? StreamOptions { get; init; }
+    }
+
+    private sealed class StreamOptionsPayload
+    {
+        [JsonPropertyName("include_usage")]
+        public bool IncludeUsage { get; init; }
     }
 
     private sealed class ChatStreamChunk
     {
         public List<ChatStreamChoice>? Choices { get; init; }
+        public ChatCompletionUsage? Usage { get; init; }
+        public string? Model { get; init; }
+    }
+
+    private sealed class ChatCompletionUsage
+    {
+        [JsonPropertyName("prompt_tokens")]
+        public int PromptTokens { get; init; }
+
+        [JsonPropertyName("completion_tokens")]
+        public int CompletionTokens { get; init; }
+    }
+
+    private sealed class ChartIntentCompletionResponse
+    {
+        public List<ChartIntentChoice>? Choices { get; init; }
+        public ChatCompletionUsage? Usage { get; init; }
+        public string? Model { get; init; }
+    }
+
+    private sealed class ChartIntentChoice
+    {
+        public ChartIntentMessage? Message { get; init; }
+    }
+
+    private sealed class ChartIntentMessage
+    {
+        public string? Content { get; init; }
     }
 
     private sealed class ChatStreamChoice

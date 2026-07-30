@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Nosyormi.Application.Embeddings;
+using Nosyormi.Application.Telemetry;
 
 namespace Nosyormi.Infrastructure.Embeddings;
 
@@ -20,10 +22,12 @@ public class OpenRouterEmbeddingService : IEmbeddingService
     };
 
     private readonly HttpClient _httpClient;
+    private readonly ILlmCallRecorder _recorder;
 
-    public OpenRouterEmbeddingService(HttpClient httpClient)
+    public OpenRouterEmbeddingService(HttpClient httpClient, ILlmCallRecorder recorder)
     {
         _httpClient = httpClient;
+        _recorder = recorder;
     }
 
     public async Task<float[]> GetEmbeddingAsync(
@@ -35,6 +39,7 @@ public class OpenRouterEmbeddingService : IEmbeddingService
 
         using var request = BuildRequest(text, model, apiKey);
 
+        var stopwatch = Stopwatch.StartNew();
         HttpResponseMessage response;
         try
         {
@@ -42,6 +47,18 @@ public class OpenRouterEmbeddingService : IEmbeddingService
         }
         catch (HttpRequestException ex)
         {
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "embeddings",
+                model,
+                responseModel: null,
+                inputTokens: 0,
+                outputTokens: 0,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: false,
+                errorType: "HttpRequestException",
+                statementId: null,
+                cancellationToken);
             throw new InvalidOperationException(
                 "Failed to call OpenRouter embeddings API.",
                 ex);
@@ -53,11 +70,38 @@ public class OpenRouterEmbeddingService : IEmbeddingService
 
             if (!response.IsSuccessStatusCode)
             {
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "embeddings",
+                    model,
+                    responseModel: null,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: false,
+                    errorType: $"HTTP_{(int)response.StatusCode}",
+                    statementId: null,
+                    cancellationToken);
                 throw new InvalidOperationException(
                     $"OpenRouter embeddings API returned {(int)response.StatusCode} {response.StatusCode}. Response: {responseBody}");
             }
 
-            return ParseEmbedding(responseBody);
+            var (embedding, responseModel, inputTokens) = ParseEmbedding(responseBody);
+
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "embeddings",
+                model,
+                responseModel,
+                inputTokens,
+                outputTokens: 0,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: true,
+                errorType: null,
+                statementId: null,
+                cancellationToken);
+
+            return embedding;
         }
     }
 
@@ -93,7 +137,7 @@ public class OpenRouterEmbeddingService : IEmbeddingService
         return request;
     }
 
-    private static float[] ParseEmbedding(string responseBody)
+    private static (float[] Embedding, string? ResponseModel, int InputTokens) ParseEmbedding(string responseBody)
     {
         try
         {
@@ -106,7 +150,7 @@ public class OpenRouterEmbeddingService : IEmbeddingService
                     "OpenRouter embeddings response did not contain a valid embedding.");
             }
 
-            return embedding;
+            return (embedding, response?.Model, response?.Usage?.PromptTokens ?? 0);
         }
         catch (JsonException ex)
         {
@@ -125,6 +169,17 @@ public class OpenRouterEmbeddingService : IEmbeddingService
     private sealed class EmbeddingResponse
     {
         public List<EmbeddingData>? Data { get; init; }
+        public EmbeddingUsage? Usage { get; init; }
+        public string? Model { get; init; }
+    }
+
+    private sealed class EmbeddingUsage
+    {
+        [JsonPropertyName("prompt_tokens")]
+        public int PromptTokens { get; init; }
+
+        [JsonPropertyName("completion_tokens")]
+        public int CompletionTokens { get; init; }
     }
 
     private sealed class EmbeddingData

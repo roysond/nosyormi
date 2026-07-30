@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Nosyormi.Application.Categorization;
+using Nosyormi.Application.Telemetry;
 
 namespace Nosyormi.Infrastructure.Categorization;
 
@@ -25,10 +27,12 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
     };
 
     private readonly HttpClient _httpClient;
+    private readonly ILlmCallRecorder _recorder;
 
-    public OpenRouterCategoryClassifier(HttpClient httpClient)
+    public OpenRouterCategoryClassifier(HttpClient httpClient, ILlmCallRecorder recorder)
     {
         _httpClient = httpClient;
+        _recorder = recorder;
     }
 
     public async Task<CategoryResult> ClassifyAsync(
@@ -171,6 +175,7 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
 
         using var request = BuildRequest(description, amount, model, apiKey);
 
+        var stopwatch = Stopwatch.StartNew();
         HttpResponseMessage response;
         try
         {
@@ -178,16 +183,55 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
         }
         catch (HttpRequestException)
         {
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "categorize",
+                model,
+                responseModel: null,
+                inputTokens: 0,
+                outputTokens: 0,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: false,
+                errorType: "HttpRequestException",
+                statementId: null,
+                cancellationToken);
             return FallbackResult;
         }
 
         using (response)
         {
             if (!response.IsSuccessStatusCode)
+            {
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "categorize",
+                    model,
+                    responseModel: null,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: false,
+                    errorType: $"HTTP_{(int)response.StatusCode}",
+                    statementId: null,
+                    cancellationToken);
                 return FallbackResult;
+            }
 
             var completion = await response.Content.ReadFromJsonAsync<ChatCompletionResponse>(
                 JsonOptions,
+                cancellationToken);
+
+            stopwatch.Stop();
+            await _recorder.RecordAsync(
+                "categorize",
+                model,
+                completion?.Model,
+                completion?.Usage?.PromptTokens ?? 0,
+                completion?.Usage?.CompletionTokens ?? 0,
+                stopwatch.Elapsed.TotalMilliseconds,
+                isSuccess: true,
+                errorType: null,
+                statementId: null,
                 cancellationToken);
 
             var content = completion?.Choices?.FirstOrDefault()?.Message?.Content;
@@ -289,6 +333,17 @@ public class OpenRouterCategoryClassifier : ICategoryClassifier
     private sealed class ChatCompletionResponse
     {
         public List<ChatChoice>? Choices { get; init; }
+        public ChatCompletionUsage? Usage { get; init; }
+        public string? Model { get; init; }
+    }
+
+    private sealed class ChatCompletionUsage
+    {
+        [JsonPropertyName("prompt_tokens")]
+        public int PromptTokens { get; init; }
+
+        [JsonPropertyName("completion_tokens")]
+        public int CompletionTokens { get; init; }
     }
 
     private sealed class ChatChoice

@@ -1,21 +1,27 @@
-using Microsoft.Extensions.Configuration;
-using Nosyormi.Domain.Entities;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
+using Nosyormi.Application.Telemetry;
+using Nosyormi.Domain.Entities;
 
 namespace Nosyormi.Infrastructure.Chat;
 
 public class BankDetectionService
 {
+    private const string RequestModel = "openai/gpt-4o-mini";
+
     private readonly HttpClient _http;
+    private readonly ILlmCallRecorder _recorder;
     private readonly string _apiKey;
     private static readonly JsonSerializerOptions JsonOptions =
         new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
-    public BankDetectionService(HttpClient http, IConfiguration config)
+    public BankDetectionService(HttpClient http, IConfiguration config, ILlmCallRecorder recorder)
     {
         _http = http;
+        _recorder = recorder;
         _apiKey = config["OpenRouter:ApiKey"] ??
             throw new InvalidOperationException("OpenRouter:ApiKey not configured.");
     }
@@ -109,7 +115,7 @@ public class BankDetectionService
 
         var requestBody = new
         {
-            model = "openai/gpt-4o-mini",
+            model = RequestModel,
             max_tokens = 30,
             temperature = 0,
             messages = new object[]
@@ -132,16 +138,85 @@ public class BankDetectionService
                 JsonSerializer.Serialize(requestBody, JsonOptions),
                 Encoding.UTF8, "application/json");
 
-            var response = await _http.SendAsync(request, cancellationToken);
-            response.EnsureSuccessStatusCode();
+            var stopwatch = Stopwatch.StartNew();
+            HttpResponseMessage response;
+            try
+            {
+                response = await _http.SendAsync(request, cancellationToken);
+            }
+            catch (HttpRequestException)
+            {
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "bank_detect",
+                    RequestModel,
+                    responseModel: null,
+                    inputTokens: 0,
+                    outputTokens: 0,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: false,
+                    errorType: "HttpRequestException",
+                    statementId: null,
+                    cancellationToken);
+                return "Unknown Bank";
+            }
 
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            using var doc = JsonDocument.Parse(json);
-            return doc.RootElement
-                .GetProperty("choices")[0]
-                .GetProperty("message")
-                .GetProperty("content")
-                .GetString()?.Trim() ?? "Unknown Bank";
+            using (response)
+            {
+                if (!response.IsSuccessStatusCode)
+                {
+                    stopwatch.Stop();
+                    await _recorder.RecordAsync(
+                        "bank_detect",
+                        RequestModel,
+                        responseModel: null,
+                        inputTokens: 0,
+                        outputTokens: 0,
+                        stopwatch.Elapsed.TotalMilliseconds,
+                        isSuccess: false,
+                        errorType: $"HTTP_{(int)response.StatusCode}",
+                        statementId: null,
+                        cancellationToken);
+                    return "Unknown Bank";
+                }
+
+                var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                using var doc = JsonDocument.Parse(json);
+                var root = doc.RootElement;
+
+                var responseModel = root.TryGetProperty("model", out var modelProp)
+                    ? modelProp.GetString()
+                    : null;
+
+                var inputTokens = 0;
+                var outputTokens = 0;
+                if (root.TryGetProperty("usage", out var usage))
+                {
+                    if (usage.TryGetProperty("prompt_tokens", out var promptTokens))
+                        inputTokens = promptTokens.GetInt32();
+                    if (usage.TryGetProperty("completion_tokens", out var completionTokens))
+                        outputTokens = completionTokens.GetInt32();
+                }
+
+                stopwatch.Stop();
+                await _recorder.RecordAsync(
+                    "bank_detect",
+                    RequestModel,
+                    responseModel,
+                    inputTokens,
+                    outputTokens,
+                    stopwatch.Elapsed.TotalMilliseconds,
+                    isSuccess: true,
+                    errorType: null,
+                    statementId: null,
+                    cancellationToken);
+
+                return root
+                    .GetProperty("choices")[0]
+                    .GetProperty("message")
+                    .GetProperty("content")
+                    .GetString()?.Trim() ?? "Unknown Bank";
+            }
         }
         catch
         {

@@ -5,6 +5,7 @@ using Nosyormi.Application.Categorization;
 using Nosyormi.Application.Chat;
 using Nosyormi.Application.Csv;
 using Nosyormi.Application.Embeddings;
+using Nosyormi.Application.Telemetry;
 using Nosyormi.Infrastructure.Analysis;
 using Nosyormi.Infrastructure.Chat;
 using Nosyormi.Infrastructure.Categorization;
@@ -13,6 +14,7 @@ using Nosyormi.Infrastructure.Parsing;
 using Nosyormi.Infrastructure.Persistence;
 using Nosyormi.Application.Statements;
 using Nosyormi.Infrastructure.Statements;
+using Nosyormi.Infrastructure.Telemetry;
 
 // ─────────────────────────────────────────────────────────────────────
 // NOSYOR.M.I — API Entry Point
@@ -68,6 +70,7 @@ builder.Configuration["OpenRouter:ApiKey"] =
 builder.Services.AddScoped<IAnomalyDetector, ZScoreAnomalyDetector>();
 builder.Services.AddScoped<IForecastingService, MovingAverageForecastingService>();
 builder.Services.AddScoped<ITimeSeriesService, TimeSeriesService>();
+builder.Services.AddSingleton<ILlmCallRecorder, LlmCallRecorder>();
 
 var app = builder.Build();
 

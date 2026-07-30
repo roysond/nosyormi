@@ -15,6 +15,7 @@ public class NosyormiDbContext : DbContext
     public DbSet<Statement> Statements => Set<Statement>();
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
+    public DbSet<LlmCall> LlmCalls => Set<LlmCall>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -43,6 +44,13 @@ public class NosyormiDbContext : DbContext
         modelBuilder.Entity<Statement>()
             .HasIndex(s => s.FileHash)
             .IsUnique();
+
+        modelBuilder.Entity<LlmCall>()
+            .HasIndex(c => c.Timestamp)
+            .IsDescending();
+
+        modelBuilder.Entity<LlmCall>()
+            .HasIndex(c => c.StatementId);
 
         base.OnModelCreating(modelBuilder);
     }
